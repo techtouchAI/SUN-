@@ -57,6 +57,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
   @override
   Widget build(BuildContext context) {
     final loads = ref.watch(loadListProvider);
+    final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -154,6 +155,17 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                     ),
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 2,
+              child: SwitchListTile(
+                title: const Text(AppStrings.daytimeOnlyMode),
+                value: isDaytimeOnly,
+                onChanged: (value) {
+                  ref.read(isDaytimeOnlyProvider.notifier).state = value;
+                },
               ),
             ),
             const Divider(),

@@ -36,11 +36,15 @@ final loadListProvider = StateNotifierProvider<LoadListNotifier, List<LoadModel>
 // Provider for dynamic panel capacity
 final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
 
+// Provider for daytime only mode
+final isDaytimeOnlyProvider = StateProvider<bool>((ref) => false);
+
 // Derived provider for the calculation results
 final systemResultProvider = Provider<SystemResultModel>((ref) {
   final loads = ref.watch(loadListProvider);
   final panelCapacity = ref.watch(panelCapacityProvider);
+  final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
   final repository = ref.watch(solarCalculationRepositoryProvider);
 
-  return repository.calculateSystem(loads, panelCapacity: panelCapacity);
+  return repository.calculateSystem(loads, panelCapacity: panelCapacity, isDaytimeOnly: isDaytimeOnly);
 });

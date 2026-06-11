@@ -24,62 +24,78 @@ class SolarCalculationRepository {
     }
   }
 
-  double calculateTotalConsumption(List<LoadModel> loads) {
-    if (loads.isEmpty) return 0.0;
+  Map<String, double> calculateConsumptionDetails(List<LoadModel> loads, {double nightUsageFraction = 0.6}) {
+    if (loads.isEmpty) {
+      return {'total': 0.0, 'daytime': 0.0, 'nighttime': 0.0};
+    }
 
     double totalWh = 0.0;
     for (var load in loads) {
       double watts = _convertToWatts(load);
 
-      if (load.isInverterDevice && load.unit == PowerUnit.ton) {
-        // Apply efficiency factor for inverter ACs over time
+      if (load.isInverterDevice) {
+        // Inverter ACs reduce consumption over time by ~40% (efficiency multiplier = 0.6)
         totalWh += watts * load.dailyUsageHours * inverterAcEfficiencyFactor;
       } else {
         totalWh += watts * load.dailyUsageHours;
       }
     }
-    return totalWh;
+
+    double nighttime = totalWh * nightUsageFraction;
+    double daytime = totalWh - nighttime;
+
+    return {'total': totalWh, 'daytime': daytime, 'nighttime': nighttime};
   }
 
-  double calculateInverterCapacity(List<LoadModel> loads) {
-    if (loads.isEmpty) return 0.0;
+  Map<String, double> calculateInverterDetails(List<LoadModel> loads) {
+    if (loads.isEmpty) return {'peakLoad': 0.0, 'safetyMargin': 0.0, 'totalCapacity': 0.0};
 
     double peakWatts = 0.0;
     for (var load in loads) {
       double watts = _convertToWatts(load);
-      peakWatts += watts * load.startingCurrentMultiplier;
+      double multiplier = load.startingCurrentMultiplier;
+
+      if (load.isInverterDevice) {
+        multiplier = 1.0; // Inverter ACs do not have a sudden high surge power
+      } else if (load.unit == PowerUnit.ton) {
+        multiplier = 2.0; // Standard ACs have higher surge
+      }
+
+      peakWatts += watts * multiplier;
     }
 
-    // Add 25% safety margin
-    return peakWatts * 1.25;
+    double safetyMargin = peakWatts * 0.25; // 25% safety margin
+    double totalCapacity = peakWatts + safetyMargin;
+
+    return {'peakLoad': peakWatts, 'safetyMargin': safetyMargin, 'totalCapacity': totalCapacity};
   }
 
-  double calculateBatteryCapacity(List<LoadModel> loads, {double nightUsageFraction = 0.6}) {
-    if (loads.isEmpty) return 0.0;
-
-    double totalWh = calculateTotalConsumption(loads);
-    // Assume a fraction of total consumption happens at night (e.g., 60%)
-    double nightConsumptionWh = totalWh * nightUsageFraction;
+  double calculateBatteryCapacity(double nighttimeConsumptionWh, bool isDaytimeOnly) {
+    if (isDaytimeOnly || nighttimeConsumptionWh <= 0) return 0.0;
 
     // Ah = (Wh / System Voltage) / DoD
-    double requiredAh = (nightConsumptionWh / systemVoltage) / batteryDoD;
-
-    return requiredAh;
+    return (nighttimeConsumptionWh / systemVoltage) / batteryDoD;
   }
 
-  int calculatePanelsRequired(List<LoadModel> loads, double panelCapacity) {
-    if (loads.isEmpty) return 0;
-
-    double totalWh = calculateTotalConsumption(loads);
+  Map<String, int> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, bool isDaytimeOnly) {
+    if (daytimeWh == 0 && nighttimeWh == 0) return {'daytimePanels': 0, 'batteryPanels': 0, 'totalPanels': 0};
 
     // Total Wh to produce = Consumption * System Losses
-    double requiredDailyProductionWh = totalWh * systemLossFactor;
+    double requiredDaytimeProductionWh = daytimeWh * systemLossFactor;
+    double requiredNighttimeProductionWh = isDaytimeOnly ? 0 : nighttimeWh * systemLossFactor;
 
     // Required total panel wattage = Required Production / Peak Sun Hours
-    double requiredTotalPanelWattage = requiredDailyProductionWh / peakSunHours;
+    double requiredDaytimePanelWattage = requiredDaytimeProductionWh / peakSunHours;
+    double requiredNighttimePanelWattage = requiredNighttimeProductionWh / peakSunHours;
 
-    // Number of panels
-    return (requiredTotalPanelWattage / panelCapacity).ceil();
+    int panelsForDaytime = (requiredDaytimePanelWattage / panelCapacity).ceil();
+    int panelsForBatteries = (requiredNighttimePanelWattage / panelCapacity).ceil();
+
+    return {
+      'daytimePanels': panelsForDaytime,
+      'batteryPanels': panelsForBatteries,
+      'totalPanels': panelsForDaytime + panelsForBatteries
+    };
   }
 
   List<double> calculateDailyProductionCurve(int numPanels, double panelCapacity) {
@@ -98,23 +114,42 @@ class SolarCalculationRepository {
     ];
   }
 
-  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0}) {
+  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0, bool isDaytimeOnly = false}) {
     try {
       if (loads.isEmpty) {
         return SystemResultModel.empty();
       }
 
-      double totalConsumption = calculateTotalConsumption(loads);
-      double inverterCapacity = calculateInverterCapacity(loads);
-      double batteryCapacity = calculateBatteryCapacity(loads);
-      int panelsRequired = calculatePanelsRequired(loads, panelCapacity);
-      List<double> productionCurve = calculateDailyProductionCurve(panelsRequired, panelCapacity);
+      final consumptionDetails = calculateConsumptionDetails(loads);
+      final totalConsumption = consumptionDetails['total']!;
+      final daytimeConsumption = consumptionDetails['daytime']!;
+      final nighttimeConsumption = consumptionDetails['nighttime']!;
+
+      final inverterDetails = calculateInverterDetails(loads);
+      final peakLoad = inverterDetails['peakLoad']!;
+      final safetyMargin = inverterDetails['safetyMargin']!;
+      final totalInverterCapacity = inverterDetails['totalCapacity']!;
+
+      final batteryCapacity = calculateBatteryCapacity(nighttimeConsumption, isDaytimeOnly);
+
+      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, isDaytimeOnly);
+      final panelsForDaytime = panelsDetails['daytimePanels']!;
+      final panelsForBatteries = panelsDetails['batteryPanels']!;
+      final totalPanelsRequired = panelsDetails['totalPanels']!;
+
+      final productionCurve = calculateDailyProductionCurve(totalPanelsRequired, panelCapacity);
 
       return SystemResultModel(
         totalDailyConsumptionWh: totalConsumption,
-        requiredInverterCapacityW: inverterCapacity,
+        daytimeConsumptionWh: daytimeConsumption,
+        nighttimeConsumptionWh: nighttimeConsumption,
+        peakLoadW: peakLoad,
+        safetyMarginW: safetyMargin,
+        requiredInverterCapacityW: totalInverterCapacity,
         requiredBatteryCapacityAh: batteryCapacity,
-        requiredPanels: panelsRequired,
+        requiredPanels: totalPanelsRequired,
+        panelsForDaytime: panelsForDaytime,
+        panelsForBatteries: panelsForBatteries,
         dailyProductionCurve: productionCurve,
       );
     } catch (e) {

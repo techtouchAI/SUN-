@@ -23,6 +23,20 @@ class AppStrings {
   static const String solarPanels = 'الألواح الشمسية';
   static const String panelsUnit = 'ألواح';
   static const String panelCapacityWatts = 'قدرة اللوح الشمسي (واط)';
+  static const String daytimeOnlyMode = 'تشغيل نهاري المباشر فقط (بدون بطاريات)';
+
+  // Explanations
+  static const String batteryExplanationTitle = 'تفاصيل البطاريات';
+  static const String batteryExplanationBody = 'تم حساب هذه السعة بناءً على الاستهلاك الليلي، مع أخذ نسبة تفريغ آمنة (DoD 50%) للحفاظ على عمر البطاريات لتغطية فترات غياب الشمس.';
+  static const String panelsExplanationTitle = 'تفاصيل الألواح الشمسية';
+  static const String consumptionExplanationTitle = 'تفاصيل الاستهلاك';
+  static const String inverterExplanationTitle = 'تفاصيل الإنفرتر';
+  static const String safetyMargin = 'هامش الأمان';
+  static const String peakLoad = 'الحمل الأقصى اللحظي';
+  static const String daytimeConsumption = 'الاستهلاك النهاري';
+  static const String nighttimeConsumption = 'الاستهلاك الليلي';
+  static const String panelsDaytime = 'ألواح للتشغيل المباشر';
+  static const String panelsBattery = 'ألواح لشحن البطاريات';
 
   // Chart Screen
   static const String dailyProductionCurve = 'منحنى الإنتاج اليومي';

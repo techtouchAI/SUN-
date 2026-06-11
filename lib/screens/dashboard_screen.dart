@@ -10,6 +10,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final result = ref.watch(systemResultProvider);
+    final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -65,25 +66,46 @@ class DashboardScreen extends ConsumerWidget {
                     value: '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
                     icon: Icons.electrical_services,
                     color: Colors.blue,
+                    onTap: () => _showExplanationModal(context, AppStrings.consumptionExplanationTitle, [
+                      '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} W',
+                      '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} W',
+                      if (!isDaytimeOnly) '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} W',
+                    ]),
                   ),
                   _buildResultCard(
                     title: AppStrings.requiredInverter,
                     value: '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
                     icon: Icons.power,
                     color: Colors.orange,
+                    onTap: () => _showExplanationModal(context, AppStrings.inverterExplanationTitle, [
+                      'حجم الإنفرتر تم اختياره بناءً على أقصى حمل لحظي يمكن أن يعمل في نفس الوقت، مع إضافة هامش أمان لحماية الجهاز.',
+                      'يوضح هذا أيضاً تأثير الأجهزة الإنفرتر في تقليل الحمل المبدئي (Surge).',
+                      '${AppStrings.peakLoad}: ${result.peakLoadW.toStringAsFixed(0)} W',
+                      '${AppStrings.safetyMargin}: ${result.safetyMarginW.toStringAsFixed(0)} W',
+                    ]),
                   ),
+                  if (!isDaytimeOnly)
+                    _buildResultCard(
+                      title: AppStrings.batteryBank,
+                      value: '${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
+                      icon: Icons.battery_charging_full,
+                      color: Colors.green,
+                      onTap: () => _showExplanationModal(context, AppStrings.batteryExplanationTitle, [
+                        AppStrings.batteryExplanationBody,
+                        'السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
+                      ]),
+                    ),
                   _buildResultCard(
-                    title: AppStrings.batteryBank,
-                    value: '${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
-                    icon: Icons.battery_charging_full,
-                    color: Colors.green,
+                    title: AppStrings.solarPanels,
+                    value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                    icon: Icons.solar_power,
+                    color: Colors.amber,
+                    onTap: () => _showExplanationModal(context, AppStrings.panelsExplanationTitle, [
+                      '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
+                      if (!isDaytimeOnly) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
+                      'المجموع الكلي: ${result.requiredPanels} لوح',
+                    ]),
                   ),
-                        _buildResultCard(
-                          title: AppStrings.solarPanels,
-                          value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
-                          icon: Icons.solar_power,
-                          color: Colors.amber,
-                        ),
                       ],
                     ),
                   ),
@@ -93,19 +115,71 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  void _showExplanationModal(BuildContext context, String title, List<String> details) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              ...details.map((detail) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(fontSize: 18)),
+                        Expanded(
+                          child: Text(
+                            detail,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.center,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('حسناً'),
+                ),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildResultCard({
     required String title,
     required String value,
     String? subtitle,
     required IconData icon,
     required Color color,
+    VoidCallback? onTap,
   }) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Expanded(
@@ -138,6 +212,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ]
           ],
+        ),
         ),
       ),
     );
