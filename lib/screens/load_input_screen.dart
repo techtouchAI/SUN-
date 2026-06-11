@@ -73,15 +73,19 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
           )
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Form(
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              flex: 3,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Card(
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -136,19 +140,22 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                           : null, // Only enable for Air Conditioners (Ton) conceptually
                       ),
                       const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _addLoad,
-                        child: const Text(AppStrings.addLoadButton),
+                            ElevatedButton(
+                              onPressed: _addLoad,
+                              child: const Text(AppStrings.addLoadButton),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const Divider(),
-          Expanded(
-            child: loads.isEmpty
+            const Divider(),
+            Expanded(
+              flex: 2,
+              child: loads.isEmpty
                 ? const Center(child: Text(AppStrings.noLoadsAddedYet))
                 : ListView.builder(
                     itemCount: loads.length,
@@ -166,7 +173,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                     },
                   ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }
