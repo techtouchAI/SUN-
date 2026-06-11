@@ -111,10 +111,14 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                             flex: 1,
                             child: DropdownButtonFormField<PowerUnit>(
                               initialValue: _selectedUnit,
+                              isExpanded: true, // This strictly prevents right overflow in dropdowns
                               items: PowerUnit.values.map((unit) {
                                 return DropdownMenuItem(
                                   value: unit,
-                                  child: Text(unit.name.toUpperCase()),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(unit.name.toUpperCase()),
+                                  ),
                                 );
                               }).toList(),
                               onChanged: (value) {
