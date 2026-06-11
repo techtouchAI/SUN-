@@ -22,6 +22,7 @@ class AppStrings {
   static const String batteryBank = 'بنك البطاريات';
   static const String solarPanels = 'الألواح الشمسية';
   static const String panelsUnit = 'ألواح';
+  static const String panelCapacityWatts = 'قدرة اللوح الشمسي (واط)';
 
   // Chart Screen
   static const String dailyProductionCurve = 'منحنى الإنتاج اليومي';

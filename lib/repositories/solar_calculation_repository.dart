@@ -12,7 +12,6 @@ class SolarCalculationRepository {
   static const double systemLossFactor = 1.3; // 30% losses (temperature, wiring, inverter efficiency)
   static const double batteryDoD = 0.5; // 50% Depth of Discharge for Gel/Lead-Acid. (80% for Lithium, let's stick to 50% as default for safety or parameterize it)
   static const double peakSunHours = 4.5; // Average PSH
-  static const double singlePanelWattage = 550.0; // Assume 550W panels
 
   double _convertToWatts(LoadModel load) {
     switch (load.unit) {
@@ -68,7 +67,7 @@ class SolarCalculationRepository {
     return requiredAh;
   }
 
-  int calculatePanelsRequired(List<LoadModel> loads) {
+  int calculatePanelsRequired(List<LoadModel> loads, double panelCapacity) {
     if (loads.isEmpty) return 0;
 
     double totalWh = calculateTotalConsumption(loads);
@@ -80,13 +79,13 @@ class SolarCalculationRepository {
     double requiredTotalPanelWattage = requiredDailyProductionWh / peakSunHours;
 
     // Number of panels
-    return (requiredTotalPanelWattage / singlePanelWattage).ceil();
+    return (requiredTotalPanelWattage / panelCapacity).ceil();
   }
 
-  List<double> calculateDailyProductionCurve(int numPanels) {
+  List<double> calculateDailyProductionCurve(int numPanels, double panelCapacity) {
     if (numPanels <= 0) return [0, 0, 0, 0, 0];
 
-    double totalPeakPower = numPanels * singlePanelWattage;
+    double totalPeakPower = numPanels * panelCapacity;
 
     // Simulating production curve across Dawn, Morning, Noon (Peak), Afternoon, Evening
     // This is a simplified bell curve-like distribution
@@ -99,7 +98,7 @@ class SolarCalculationRepository {
     ];
   }
 
-  SystemResultModel calculateSystem(List<LoadModel> loads) {
+  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0}) {
     try {
       if (loads.isEmpty) {
         return SystemResultModel.empty();
@@ -108,8 +107,8 @@ class SolarCalculationRepository {
       double totalConsumption = calculateTotalConsumption(loads);
       double inverterCapacity = calculateInverterCapacity(loads);
       double batteryCapacity = calculateBatteryCapacity(loads);
-      int panelsRequired = calculatePanelsRequired(loads);
-      List<double> productionCurve = calculateDailyProductionCurve(panelsRequired);
+      int panelsRequired = calculatePanelsRequired(loads, panelCapacity);
+      List<double> productionCurve = calculateDailyProductionCurve(panelsRequired, panelCapacity);
 
       return SystemResultModel(
         totalDailyConsumptionWh: totalConsumption,

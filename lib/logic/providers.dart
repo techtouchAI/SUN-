@@ -33,10 +33,14 @@ final loadListProvider = StateNotifierProvider<LoadListNotifier, List<LoadModel>
   return LoadListNotifier();
 });
 
+// Provider for dynamic panel capacity
+final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
+
 // Derived provider for the calculation results
 final systemResultProvider = Provider<SystemResultModel>((ref) {
   final loads = ref.watch(loadListProvider);
+  final panelCapacity = ref.watch(panelCapacityProvider);
   final repository = ref.watch(solarCalculationRepositoryProvider);
 
-  return repository.calculateSystem(loads);
+  return repository.calculateSystem(loads, panelCapacity: panelCapacity);
 });

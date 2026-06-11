@@ -33,13 +33,33 @@ class DashboardScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 18),
               ),
             )
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16.0,
-                mainAxisSpacing: 16.0,
-                children: [
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextFormField(
+                    initialValue: ref.read(panelCapacityProvider).toString(),
+                    decoration: const InputDecoration(
+                      labelText: AppStrings.panelCapacityWatts,
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      final parsedValue = double.tryParse(value);
+                      if (parsedValue != null && parsedValue > 0) {
+                        ref.read(panelCapacityProvider.notifier).state = parsedValue;
+                      }
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16.0,
+                      mainAxisSpacing: 16.0,
+                      children: [
                   _buildResultCard(
                     title: AppStrings.totalConsumption,
                     value: '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
@@ -58,14 +78,17 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.battery_charging_full,
                     color: Colors.green,
                   ),
-                  _buildResultCard(
-                    title: AppStrings.solarPanels,
-                    value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
-                    icon: Icons.solar_power,
-                    color: Colors.amber,
+                        _buildResultCard(
+                          title: AppStrings.solarPanels,
+                          value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                          icon: Icons.solar_power,
+                          color: Colors.amber,
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }
