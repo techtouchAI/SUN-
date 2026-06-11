@@ -35,3 +35,4 @@ jobs:
 
     - name: Build APK
       run: flutter build apk --release
+
