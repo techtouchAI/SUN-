@@ -1,6 +1,5 @@
 import '../models/load_model.dart';
 import '../models/system_result_model.dart';
-import 'dart:math';
 
 class SolarCalculationRepository {
   // Constants for calculations

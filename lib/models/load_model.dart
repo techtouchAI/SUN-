@@ -30,7 +30,7 @@ class LoadModel {
     bool? isInverterDevice,
   }) {
     return LoadModel(
-      id: this.id,
+      id: id,
       name: name ?? this.name,
       unit: unit ?? this.unit,
       powerValue: powerValue ?? this.powerValue,
