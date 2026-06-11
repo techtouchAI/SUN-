@@ -103,6 +103,8 @@ class DashboardScreen extends ConsumerWidget {
                     onTap: () => _showExplanationModal(context, AppStrings.panelsExplanationTitle, [
                       '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
                       if (!isDaytimeOnly) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
+                      if (result.gridContributionPercent > 0) 'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
+                      if (result.panelsSavedByGrid > 0) 'عدد الألواح التي تم توفيرها بسبب وجود الوطنية: ${result.panelsSavedByGrid} لوح',
                       'المجموع الكلي: ${result.requiredPanels} لوح',
                     ]),
                   ),

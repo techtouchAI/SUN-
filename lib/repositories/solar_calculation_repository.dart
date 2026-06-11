@@ -1,5 +1,6 @@
 import '../models/load_model.dart';
 import '../models/system_result_model.dart';
+import '../models/grid_schedule_model.dart';
 
 class SolarCalculationRepository {
   // Constants for calculations
@@ -77,8 +78,10 @@ class SolarCalculationRepository {
     return (nighttimeConsumptionWh / systemVoltage) / batteryDoD;
   }
 
-  Map<String, int> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, bool isDaytimeOnly) {
-    if (daytimeWh == 0 && nighttimeWh == 0) return {'daytimePanels': 0, 'batteryPanels': 0, 'totalPanels': 0};
+  Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, bool isDaytimeOnly, GridScheduleModel gridSchedule) {
+    if (daytimeWh == 0 && nighttimeWh == 0) {
+      return {'daytimePanels': 0, 'batteryPanels': 0, 'totalPanels': 0, 'gridContributionPercent': 0.0, 'panelsSavedByGrid': 0};
+    }
 
     // Total Wh to produce = Consumption * System Losses
     double requiredDaytimeProductionWh = daytimeWh * systemLossFactor;
@@ -89,12 +92,30 @@ class SolarCalculationRepository {
     double requiredNighttimePanelWattage = requiredNighttimeProductionWh / peakSunHours;
 
     int panelsForDaytime = (requiredDaytimePanelWattage / panelCapacity).ceil();
-    int panelsForBatteries = (requiredNighttimePanelWattage / panelCapacity).ceil();
+    int originalPanelsForBatteries = (requiredNighttimePanelWattage / panelCapacity).ceil();
+
+    // Grid Integration Logic
+    int panelsForBatteries = originalPanelsForBatteries;
+    double gridContributionPercent = 0.0;
+    int panelsSavedByGrid = 0;
+
+    if (!gridSchedule.isOffGrid && gridSchedule.gridOnHours > 0) {
+      // Assuming nighttime is 14 hours. Grid ON hours during night reduces need for solar charging.
+      // A simple proportion: if grid is ON for 7 hours, it covers 50% of the charging needs.
+      double effectiveGridNightHours = (gridSchedule.gridOnHours / 24.0) * 14.0;
+      gridContributionPercent = (effectiveGridNightHours / 14.0).clamp(0.0, 1.0);
+
+      panelsForBatteries = (originalPanelsForBatteries * (1 - gridContributionPercent)).ceil();
+      panelsSavedByGrid = originalPanelsForBatteries - panelsForBatteries;
+      gridContributionPercent = gridContributionPercent * 100; // to percentage
+    }
 
     return {
       'daytimePanels': panelsForDaytime,
       'batteryPanels': panelsForBatteries,
-      'totalPanels': panelsForDaytime + panelsForBatteries
+      'totalPanels': panelsForDaytime + panelsForBatteries,
+      'gridContributionPercent': gridContributionPercent,
+      'panelsSavedByGrid': panelsSavedByGrid,
     };
   }
 
@@ -114,7 +135,7 @@ class SolarCalculationRepository {
     ];
   }
 
-  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0, bool isDaytimeOnly = false}) {
+  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0, bool isDaytimeOnly = false, GridScheduleModel gridSchedule = const GridScheduleModel()}) {
     try {
       if (loads.isEmpty) {
         return SystemResultModel.empty();
@@ -132,10 +153,12 @@ class SolarCalculationRepository {
 
       final batteryCapacity = calculateBatteryCapacity(nighttimeConsumption, isDaytimeOnly);
 
-      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, isDaytimeOnly);
-      final panelsForDaytime = panelsDetails['daytimePanels']!;
-      final panelsForBatteries = panelsDetails['batteryPanels']!;
-      final totalPanelsRequired = panelsDetails['totalPanels']!;
+      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, isDaytimeOnly, gridSchedule);
+      final panelsForDaytime = panelsDetails['daytimePanels'] as int;
+      final panelsForBatteries = panelsDetails['batteryPanels'] as int;
+      final totalPanelsRequired = panelsDetails['totalPanels'] as int;
+      final gridContributionPercent = panelsDetails['gridContributionPercent'] as double;
+      final panelsSavedByGrid = panelsDetails['panelsSavedByGrid'] as int;
 
       final productionCurve = calculateDailyProductionCurve(totalPanelsRequired, panelCapacity);
 
@@ -150,6 +173,8 @@ class SolarCalculationRepository {
         requiredPanels: totalPanelsRequired,
         panelsForDaytime: panelsForDaytime,
         panelsForBatteries: panelsForBatteries,
+        gridContributionPercent: gridContributionPercent,
+        panelsSavedByGrid: panelsSavedByGrid,
         dailyProductionCurve: productionCurve,
       );
     } catch (e) {

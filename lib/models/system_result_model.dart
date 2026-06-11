@@ -9,6 +9,8 @@ class SystemResultModel {
   final int requiredPanels; // Number of panels needed based on total consumption and PSH
   final int panelsForDaytime;
   final int panelsForBatteries;
+  final double gridContributionPercent;
+  final int panelsSavedByGrid;
   final List<double> dailyProductionCurve; // Curve showing power production at different times of day (e.g., Dawn, Morning, Noon, Afternoon, Evening)
 
   SystemResultModel({
@@ -22,6 +24,8 @@ class SystemResultModel {
     required this.requiredPanels,
     required this.panelsForDaytime,
     required this.panelsForBatteries,
+    required this.gridContributionPercent,
+    required this.panelsSavedByGrid,
     required this.dailyProductionCurve,
   });
 
@@ -37,6 +41,8 @@ class SystemResultModel {
       requiredPanels: 0,
       panelsForDaytime: 0,
       panelsForBatteries: 0,
+      gridContributionPercent: 0,
+      panelsSavedByGrid: 0,
       dailyProductionCurve: [0, 0, 0, 0, 0], // Dawn, Morning, Noon, Afternoon, Evening
     );
   }
