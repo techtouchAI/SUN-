@@ -14,6 +14,18 @@ class AppStrings {
   static const String noLoadsAddedYet = 'لم تتم إضافة أي أحمال بعد.';
   static const String hrsDay = 'ساعات/يوم';
 
+  // Tab Navigation & Quick Input & Grid
+  static const String tabDetailedInput = 'إدخال مفصل';
+  static const String tabQuickInput = 'إدخال سريع';
+  static const String quickLoadTitle = 'حمل كلي مجمع';
+  static const String gridSettingsTitle = 'إعدادات شبكة الكهرباء الوطنية';
+  static const String gridOnHours = 'ساعات التوفر';
+  static const String gridOffHours = 'ساعات الانقطاع';
+  static const String offGridMode = 'غير متوفرة نهائياً (Off-Grid)';
+  static const String editLoadTitle = 'تعديل الحمل';
+  static const String saveChanges = 'حفظ التعديلات';
+  static const String cancel = 'إلغاء';
+
   // Dashboard Screen
   static const String systemDashboard = 'لوحة تحكم النظام';
   static const String noLoadDataAvailable = 'لا تتوفر بيانات أحمال. الرجاء إضافة الأحمال.';
