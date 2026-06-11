@@ -35,5 +35,13 @@ jobs:
     - name: Run tests
       run: flutter test
 
+    # بناء النسخة النهائية السريعة والمحسنة
     - name: Build APK
       run: flutter build apk --release
+
+    # رفع وحفظ الملف لكي يظهر لك زر التحميل
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release-apk
+        path: build/app/outputs/flutter-apk/*.apk
