@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/providers.dart';
+import '../logic/app_strings.dart';
 import 'chart_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -12,7 +13,7 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('System Dashboard'),
+        title: const Text(AppStrings.systemDashboard),
         actions: [
           IconButton(
             icon: const Icon(Icons.show_chart),
@@ -28,7 +29,7 @@ class DashboardScreen extends ConsumerWidget {
       body: result.totalDailyConsumptionWh == 0
           ? const Center(
               child: Text(
-                'No load data available. Please add loads.',
+                AppStrings.noLoadDataAvailable,
                 style: TextStyle(fontSize: 18),
               ),
             )
@@ -40,27 +41,26 @@ class DashboardScreen extends ConsumerWidget {
                 mainAxisSpacing: 16.0,
                 children: [
                   _buildResultCard(
-                    title: 'Total Consumption',
+                    title: AppStrings.totalConsumption,
                     value: '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
                     icon: Icons.electrical_services,
                     color: Colors.blue,
                   ),
                   _buildResultCard(
-                    title: 'Required Inverter',
+                    title: AppStrings.requiredInverter,
                     value: '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
                     icon: Icons.power,
                     color: Colors.orange,
                   ),
                   _buildResultCard(
-                    title: 'Battery Bank',
+                    title: AppStrings.batteryBank,
                     value: '${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
                     icon: Icons.battery_charging_full,
                     color: Colors.green,
                   ),
                   _buildResultCard(
-                    title: 'Solar Panels',
-                    value: '${result.requiredPanels} Panels',
-                    subtitle: '(Assuming 550W each)',
+                    title: AppStrings.solarPanels,
+                    value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
                     icon: Icons.solar_power,
                     color: Colors.amber,
                   ),

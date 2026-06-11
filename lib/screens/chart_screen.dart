@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/providers.dart';
+import '../logic/app_strings.dart';
 
 class ChartScreen extends ConsumerWidget {
   const ChartScreen({super.key});
@@ -12,20 +13,26 @@ class ChartScreen extends ConsumerWidget {
     final curve = result.dailyProductionCurve;
 
     // Time labels: Dawn, Morning, Noon, Afternoon, Evening
-    final timeLabels = ['Dawn', 'Morning', 'Noon', 'Afternoon', 'Evening'];
+    final timeLabels = [
+      AppStrings.dawn,
+      AppStrings.morning,
+      AppStrings.noon,
+      AppStrings.afternoon,
+      AppStrings.evening
+    ];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daily Production Curve'),
+        title: const Text(AppStrings.dailyProductionCurve),
       ),
       body: result.requiredPanels == 0
-          ? const Center(child: Text('No solar production data. Add loads first.'))
+          ? const Center(child: Text(AppStrings.noSolarProductionData))
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
                   const Text(
-                    'Estimated Solar Production vs Time',
+                    AppStrings.estimatedSolarProductionVsTime,
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 24),
@@ -87,7 +94,7 @@ class ChartScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Y-Axis: Power (Watts)',
+                    AppStrings.yAxisPowerWatts,
                     style: TextStyle(fontStyle: FontStyle.italic),
                   ),
                 ],

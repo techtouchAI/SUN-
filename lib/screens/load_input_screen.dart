@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/providers.dart';
 import '../models/load_model.dart';
+import '../logic/app_strings.dart';
 import 'dashboard_screen.dart';
 
 class LoadInputScreen extends ConsumerStatefulWidget {
@@ -59,7 +60,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Electrical Loads'),
+        title: const Text(AppStrings.addElectricalLoads),
         actions: [
           IconButton(
             icon: const Icon(Icons.analytics),
@@ -87,8 +88,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(labelText: 'Device Name'),
-                        validator: (value) => value!.isEmpty ? 'Please enter a name' : null,
+                        decoration: const InputDecoration(labelText: AppStrings.deviceName),
+                        validator: (value) => value!.isEmpty ? AppStrings.pleaseEnterName : null,
                       ),
                       Row(
                         children: [
@@ -96,9 +97,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                             flex: 2,
                             child: TextFormField(
                               controller: _powerValueController,
-                              decoration: const InputDecoration(labelText: 'Power/Capacity'),
+                              decoration: const InputDecoration(labelText: AppStrings.powerCapacity),
                               keyboardType: TextInputType.number,
-                              validator: (value) => value!.isEmpty ? 'Enter value' : null,
+                              validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -123,12 +124,12 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                       ),
                       TextFormField(
                         controller: _dailyHoursController,
-                        decoration: const InputDecoration(labelText: 'Daily Usage (Hours)'),
+                        decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
                         keyboardType: TextInputType.number,
-                        validator: (value) => value!.isEmpty ? 'Enter hours' : null,
+                        validator: (value) => value!.isEmpty ? AppStrings.enterHours : null,
                       ),
                       SwitchListTile(
-                        title: const Text('Is Inverter AC?'),
+                        title: const Text(AppStrings.isInverterAC),
                         value: _isInverter,
                         onChanged: _selectedUnit == PowerUnit.ton
                           ? (value) => setState(() => _isInverter = value)
@@ -137,7 +138,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _addLoad,
-                        child: const Text('Add Load'),
+                        child: const Text(AppStrings.addLoadButton),
                       ),
                     ],
                   ),
@@ -148,14 +149,13 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
           const Divider(),
           Expanded(
             child: loads.isEmpty
-                ? const Center(child: Text('No loads added yet.'))
+                ? const Center(child: Text(AppStrings.noLoadsAddedYet))
                 : ListView.builder(
                     itemCount: loads.length,
                     itemBuilder: (context, index) {
                       final load = loads[index];
                       return ListTile(
                         title: Text(load.name),
-                        subtitle: Text('${load.powerValue} ${load.unit.name} - ${load.dailyUsageHours} hrs/day'),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () {
