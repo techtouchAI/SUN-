@@ -105,7 +105,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                           Expanded(
                             flex: 1,
                             child: DropdownButtonFormField<PowerUnit>(
-                              value: _selectedUnit,
+                              initialValue: _selectedUnit,
                               items: PowerUnit.values.map((unit) {
                                 return DropdownMenuItem(
                                   value: unit,
