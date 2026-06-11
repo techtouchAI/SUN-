@@ -85,18 +85,26 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            Expanded(
+              child: Icon(icon, size: 40, color: color),
             ),
             const SizedBox(height: 8),
-            Text(
-              value,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 20, color: color, fontWeight: FontWeight.bold),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 20, color: color, fontWeight: FontWeight.bold),
+              ),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
