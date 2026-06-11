@@ -36,10 +36,4 @@ jobs:
       run: flutter test
 
     - name: Build APK
-      run: flutter build apk --debug
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-release-apk
-        path: build/app/outputs/flutter-apk/*.apk
+      run: flutter build apk --release
