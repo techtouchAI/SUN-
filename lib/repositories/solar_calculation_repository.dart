@@ -8,7 +8,8 @@ class SolarCalculationRepository {
   static const double electricalWattsPerTon = 1200.0; // Rough estimate for AC conversion
   static const double gridVoltage = 220.0; // Used for Ampere conversion
   static const double inverterAcEfficiencyFactor = 0.6; // Inverter ACs run at ~60% load over time
-  static const double systemLossFactor = 1.3; // 30% losses (wiring, temp, inverter)
+  static const double energyLossPercentageValue = 18.0; // 18% geometric loss (NREL PVWatts)
+  static const double systemLossFactor = 1.0 / (1.0 - (energyLossPercentageValue / 100.0)); // ~1.22
   static const double peakSunHours = 4.5; // Average PSH
 
   double _convertToWatts(LoadModel load) {
@@ -242,6 +243,9 @@ class SolarCalculationRepository {
         dailyProductionCurve: productionCurve,
         requiredGridChargingAmps: requiredGridChargingAmps,
         suggestedInverterType: suggestedInverterType,
+        energyLossPercentage: '15% - 18%',
+        recommendedInverterBrands: 'Deye, Growatt, Huawei, Victron Energy',
+        recommendedPanelBrands: 'Longi, Jinko Solar, JA Solar, Trina Solar',
         pvDcBreakerAmps: pvDcBreakerAmps,
         batteryDcBreakerAmps: batteryDcBreakerAmps,
         acBreakerAmps: acBreakerAmps,
