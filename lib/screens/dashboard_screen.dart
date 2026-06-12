@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import 'chart_screen.dart';
-import 'settings_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -26,18 +25,9 @@ class DashboardScreen extends ConsumerWidget {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
-          ),
         ],
       ),
-      body: result.totalDailyConsumptionWh == 0 && result.requiredInverterCapacityW == 0
+      body: result.requiredPanels == 0
           ? const Center(
               child: Text(
                 AppStrings.noLoadDataAvailable,
@@ -86,18 +76,6 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Text(
-                    AppStrings.interactiveHint,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blueAccent,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -124,7 +102,6 @@ class DashboardScreen extends ConsumerWidget {
                     color: Colors.orange,
                     onTap: () => _showExplanationModal(context, AppStrings.inverterExplanationTitle, [
                       'النوع المقترح: ${result.suggestedInverterType}',
-                      AppStrings.recommendedInverterBrands,
                       'حجم الإنفرتر تم اختياره بناءً على أقصى حمل لحظي يمكن أن يعمل في نفس الوقت، مع إضافة هامش أمان لحماية الجهاز.',
                       'يوضح هذا أيضاً تأثير الأجهزة الإنفرتر في تقليل الحمل المبدئي (Surge).',
                       '${AppStrings.peakLoad}: ${result.peakLoadW.toStringAsFixed(0)} W',
@@ -150,7 +127,6 @@ class DashboardScreen extends ConsumerWidget {
                       icon: Icons.solar_power,
                       color: Colors.amber,
                       onTap: () => _showExplanationModal(context, AppStrings.panelsExplanationTitle, [
-                        AppStrings.recommendedPanelBrands,
                         '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
                         if (!isDaytimeOnly) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
                         if (result.gridContributionPercent > 0) 'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
@@ -158,18 +134,6 @@ class DashboardScreen extends ConsumerWidget {
                         'المجموع الكلي: ${result.requiredPanels} لوح',
                       ]),
                     ),
-                  _buildResultCard(
-                    title: AppStrings.energyLossTitle,
-                    value: result.energyLossPercentage,
-                    icon: Icons.warning_amber_rounded,
-                    color: Colors.deepOrange,
-                    onTap: () => _showExplanationModal(context, AppStrings.energyLossExplanationTitle, [
-                      AppStrings.energyLossTemp,
-                      AppStrings.energyLossInverter,
-                      AppStrings.energyLossWiring,
-                      AppStrings.energyLossSoiling,
-                    ]),
-                  ),
                   _buildResultCard(
                     title: AppStrings.safetyStandardsTitle,
                     value: 'NEC Standards',
@@ -180,18 +144,6 @@ class DashboardScreen extends ConsumerWidget {
                       if (result.batteryDcBreakerAmps > 0) '${AppStrings.batteryBreaker}: ${result.batteryDcBreakerAmps.toStringAsFixed(1)} A',
                       if (result.acBreakerAmps > 0) '${AppStrings.acBreaker}: ${result.acBreakerAmps.toStringAsFixed(1)} A',
                       if (result.wireSizeMm2 > 0) '${AppStrings.dcWireSize}: ${result.wireSizeMm2} ${AppStrings.wireMm2}',
-                    ]),
-                  ),
-                  _buildResultCard(
-                    title: AppStrings.estimatedSystemCost,
-                    value: '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
-                    icon: Icons.attach_money,
-                    color: Colors.green.shade700,
-                    onTap: () => _showExplanationModal(context, AppStrings.estimatedSystemCost, [
-                      '${result.estimatedCostUsd.toStringAsFixed(2)} ${AppStrings.costInUsd}',
-                      '${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ${AppStrings.costInWarqa}',
-                      '${(result.estimatedCostUsd * 1500).toStringAsFixed(0)} ${AppStrings.costInIqd}',
-                      '\n${AppStrings.pricingDisclaimer}',
                     ]),
                   ),
                       ],

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/load_model.dart';
 import '../models/system_result_model.dart';
@@ -44,15 +43,6 @@ final panelIscProvider = StateProvider<double>((ref) => 0.0);
 // Provider for daytime only mode
 final isDaytimeOnlyProvider = StateProvider<bool>((ref) => false);
 
-// ThemeMode Provider
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
-
-// Providers for pricing settings
-final solarWattPriceProvider = StateProvider<double>((ref) => 0.16);
-final batteryAmperePriceProvider = StateProvider<double>((ref) => 0.85);
-final breakerPriceProvider = StateProvider<double>((ref) => 0.0);
-final wiringCostProvider = StateProvider<double>((ref) => 0.0);
-
 // Provider for grid schedule
 final gridScheduleProvider = StateProvider<GridScheduleModel>((ref) => const GridScheduleModel());
 
@@ -63,23 +53,7 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
   final panelIsc = ref.watch(panelIscProvider);
   final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
   final gridSchedule = ref.watch(gridScheduleProvider);
-
-  final solarWattPrice = ref.watch(solarWattPriceProvider);
-  final batteryAmperePrice = ref.watch(batteryAmperePriceProvider);
-  final breakerPrice = ref.watch(breakerPriceProvider);
-  final wiringCost = ref.watch(wiringCostProvider);
-
   final repository = ref.watch(solarCalculationRepositoryProvider);
 
-  return repository.calculateSystem(
-    loads,
-    panelCapacity: panelCapacity,
-    panelIsc: panelIsc,
-    isDaytimeOnly: isDaytimeOnly,
-    gridSchedule: gridSchedule,
-    solarWattPrice: solarWattPrice,
-    batteryAmperePrice: batteryAmperePrice,
-    breakerPrice: breakerPrice,
-    wiringCost: wiringCost,
-  );
+  return repository.calculateSystem(loads, panelCapacity: panelCapacity, panelIsc: panelIsc, isDaytimeOnly: isDaytimeOnly, gridSchedule: gridSchedule);
 });

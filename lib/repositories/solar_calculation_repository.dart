@@ -8,8 +8,7 @@ class SolarCalculationRepository {
   static const double electricalWattsPerTon = 1200.0; // Rough estimate for AC conversion
   static const double gridVoltage = 220.0; // Used for Ampere conversion
   static const double inverterAcEfficiencyFactor = 0.6; // Inverter ACs run at ~60% load over time
-  static const double energyLossPercentageValue = 18.0; // 18% geometric loss (NREL PVWatts)
-  static const double systemLossFactor = 1.0 / (1.0 - (energyLossPercentageValue / 100.0)); // ~1.22
+  static const double systemLossFactor = 1.3; // 30% losses (wiring, temp, inverter)
   static const double peakSunHours = 4.5; // Average PSH
 
   double _convertToWatts(LoadModel load) {
@@ -142,16 +141,7 @@ class SolarCalculationRepository {
     return 25; // per prompt up to 100A
   }
 
-  SystemResultModel calculateSystem(List<LoadModel> loads, {
-    double panelCapacity = 540.0,
-    double panelIsc = 0.0,
-    bool isDaytimeOnly = false,
-    GridScheduleModel gridSchedule = const GridScheduleModel(),
-    double solarWattPrice = 0.16,
-    double batteryAmperePrice = 0.85,
-    double breakerPrice = 0.0,
-    double wiringCost = 0.0,
-  }) {
+  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0, double panelIsc = 0.0, bool isDaytimeOnly = false, GridScheduleModel gridSchedule = const GridScheduleModel()}) {
     try {
       if (loads.isEmpty) {
         return SystemResultModel.empty();
@@ -214,19 +204,6 @@ class SolarCalculationRepository {
 
       int wireSizeMm2 = _calculateWireSize(maxAmpsForWire);
 
-      // Pricing Calculations
-      int totalBreakersCount = 0;
-      if (pvDcBreakerAmps > 0) totalBreakersCount++;
-      if (batteryDcBreakerAmps > 0) totalBreakersCount++;
-      if (acBreakerAmps > 0) totalBreakersCount++;
-
-      double inverterCost = (totalInverterCapacity / 1000.0) * 100.0; // $100 per kW
-      double solarPanelsCost = totalPanelsRequired * panelCapacity * solarWattPrice;
-      double batteriesCost = batteryCapacity * batteryAmperePrice;
-      double breakersCost = totalBreakersCount * breakerPrice;
-
-      double totalEstimatedCostUsd = solarPanelsCost + batteriesCost + inverterCost + breakersCost + wiringCost;
-
       return SystemResultModel(
         totalDailyConsumptionWh: totalConsumption,
         daytimeConsumptionWh: daytimeConsumption,
@@ -243,15 +220,10 @@ class SolarCalculationRepository {
         dailyProductionCurve: productionCurve,
         requiredGridChargingAmps: requiredGridChargingAmps,
         suggestedInverterType: suggestedInverterType,
-        energyLossPercentage: '15% - 18%',
-        recommendedInverterBrands: 'Deye, Growatt, Huawei, Victron Energy',
-        recommendedPanelBrands: 'Longi, Jinko Solar, JA Solar, Trina Solar',
         pvDcBreakerAmps: pvDcBreakerAmps,
         batteryDcBreakerAmps: batteryDcBreakerAmps,
         acBreakerAmps: acBreakerAmps,
         wireSizeMm2: wireSizeMm2,
-        estimatedCostUsd: totalEstimatedCostUsd,
-        totalBreakersCount: totalBreakersCount,
       );
     } catch (e) {
       // Fallback logic to prevent crashes and "no data" errors

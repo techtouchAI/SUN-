@@ -5,8 +5,6 @@ import '../models/load_model.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import 'dashboard_screen.dart';
-import '../services/update_service.dart';
-import 'settings_screen.dart';
 
 class LoadInputScreen extends ConsumerStatefulWidget {
   const LoadInputScreen({super.key});
@@ -27,15 +25,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   PowerUnit _selectedUnit = PowerUnit.ampere;
   bool _isInverter = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Schedule the update check after the first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      UpdateService().checkForUpdatesAndShowDialog(context);
-    });
-  }
 
   void _addDetailedLoad() {
     if (_detailedFormKey.currentState!.validate()) {
@@ -294,15 +283,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
             ],
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                );
-              },
-            ),
             IconButton(
               icon: const Icon(Icons.analytics),
               onPressed: () {
