@@ -37,6 +37,9 @@ final loadListProvider = StateNotifierProvider<LoadListNotifier, List<LoadModel>
 // Provider for dynamic panel capacity
 final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
 
+// Provider for dynamic panel Isc
+final panelIscProvider = StateProvider<double>((ref) => 0.0);
+
 // Provider for daytime only mode
 final isDaytimeOnlyProvider = StateProvider<bool>((ref) => false);
 
@@ -47,9 +50,10 @@ final gridScheduleProvider = StateProvider<GridScheduleModel>((ref) => const Gri
 final systemResultProvider = Provider<SystemResultModel>((ref) {
   final loads = ref.watch(loadListProvider);
   final panelCapacity = ref.watch(panelCapacityProvider);
+  final panelIsc = ref.watch(panelIscProvider);
   final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
   final gridSchedule = ref.watch(gridScheduleProvider);
   final repository = ref.watch(solarCalculationRepositoryProvider);
 
-  return repository.calculateSystem(loads, panelCapacity: panelCapacity, isDaytimeOnly: isDaytimeOnly, gridSchedule: gridSchedule);
+  return repository.calculateSystem(loads, panelCapacity: panelCapacity, panelIsc: panelIsc, isDaytimeOnly: isDaytimeOnly, gridSchedule: gridSchedule);
 });

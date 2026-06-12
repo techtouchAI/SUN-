@@ -12,6 +12,14 @@ class SystemResultModel {
   final double gridContributionPercent;
   final int panelsSavedByGrid;
   final List<double> dailyProductionCurve; // Curve showing power production at different times of day (e.g., Dawn, Morning, Noon, Afternoon, Evening)
+  final double requiredGridChargingAmps;
+  final String suggestedInverterType;
+
+  // Safety Standards
+  final double pvDcBreakerAmps;
+  final double batteryDcBreakerAmps;
+  final double acBreakerAmps;
+  final int wireSizeMm2;
 
   SystemResultModel({
     required this.totalDailyConsumptionWh,
@@ -27,6 +35,12 @@ class SystemResultModel {
     required this.gridContributionPercent,
     required this.panelsSavedByGrid,
     required this.dailyProductionCurve,
+    this.requiredGridChargingAmps = 0.0,
+    this.suggestedInverterType = '',
+    this.pvDcBreakerAmps = 0.0,
+    this.batteryDcBreakerAmps = 0.0,
+    this.acBreakerAmps = 0.0,
+    this.wireSizeMm2 = 0,
   });
 
   factory SystemResultModel.empty() {
@@ -44,6 +58,12 @@ class SystemResultModel {
       gridContributionPercent: 0,
       panelsSavedByGrid: 0,
       dailyProductionCurve: [0, 0, 0, 0, 0], // Dawn, Morning, Noon, Afternoon, Evening
+      requiredGridChargingAmps: 0.0,
+      suggestedInverterType: '',
+      pvDcBreakerAmps: 0.0,
+      batteryDcBreakerAmps: 0.0,
+      acBreakerAmps: 0.0,
+      wireSizeMm2: 0,
     );
   }
 }

@@ -78,7 +78,7 @@ class SolarCalculationRepository {
   }
 
   Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, bool isDaytimeOnly, GridScheduleModel gridSchedule) {
-    if (daytimeWh == 0 && nighttimeWh == 0) {
+    if ((daytimeWh == 0 && nighttimeWh == 0) || gridSchedule.isUpsMode) {
       return {'daytimePanels': 0, 'batteryPanels': 0, 'totalPanels': 0, 'gridContributionPercent': 0.0, 'panelsSavedByGrid': 0};
     }
 
@@ -134,7 +134,14 @@ class SolarCalculationRepository {
     ];
   }
 
-  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0, bool isDaytimeOnly = false, GridScheduleModel gridSchedule = const GridScheduleModel()}) {
+  int _calculateWireSize(double maxAmps) {
+    if (maxAmps <= 20) return 4;
+    if (maxAmps <= 30) return 6;
+    if (maxAmps <= 50) return 10;
+    return 25; // per prompt up to 100A
+  }
+
+  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0, double panelIsc = 0.0, bool isDaytimeOnly = false, GridScheduleModel gridSchedule = const GridScheduleModel()}) {
     try {
       if (loads.isEmpty) {
         return SystemResultModel.empty();
@@ -161,6 +168,42 @@ class SolarCalculationRepository {
 
       final productionCurve = calculateDailyProductionCurve(totalPanelsRequired, panelCapacity);
 
+      double requiredGridChargingAmps = 0.0;
+      if (gridSchedule.isUpsMode && gridSchedule.gridOnHours > 0) {
+        // Battery needs to be charged within the available grid hours
+        double dailyWhToRecharge = nighttimeConsumption * systemLossFactor;
+        double gridWattsNeeded = dailyWhToRecharge / gridSchedule.gridOnHours;
+        requiredGridChargingAmps = gridWattsNeeded / systemVoltage;
+      }
+
+      String suggestedInverterType = '';
+      if (gridSchedule.isUpsMode) {
+        suggestedInverterType = 'إنفرتر شاحن / UPS';
+      } else if (isDaytimeOnly) {
+        suggestedInverterType = 'إنفرتر أون-جريد (On-Grid Inverter)';
+      } else if (!gridSchedule.isOffGrid && gridSchedule.gridOnHours > 0) {
+        suggestedInverterType = 'إنفرتر هايبرد (Hybrid Inverter)';
+      } else {
+        suggestedInverterType = 'إنفرتر أوف-جريد (Off-Grid Inverter)';
+      }
+
+      // Safety Standards Calculations
+      double pvDcBreakerAmps = panelIsc > 0 ? (panelIsc * 1.56) : 0;
+      double maxContinuousBatteryCurrent = totalInverterCapacity / systemVoltage;
+      double batteryDcBreakerAmps = maxContinuousBatteryCurrent * 1.25;
+      double maxAcOutputCurrent = totalInverterCapacity / gridVoltage;
+      double acBreakerAmps = maxAcOutputCurrent * 1.25;
+
+      // Determine max amps for wire sizing
+      double maxAmpsForWire = [
+        maxContinuousBatteryCurrent,
+        requiredGridChargingAmps,
+        maxAcOutputCurrent,
+        if (panelIsc > 0) panelIsc * 1.56,
+      ].reduce((a, b) => a > b ? a : b);
+
+      int wireSizeMm2 = _calculateWireSize(maxAmpsForWire);
+
       return SystemResultModel(
         totalDailyConsumptionWh: totalConsumption,
         daytimeConsumptionWh: daytimeConsumption,
@@ -175,6 +218,12 @@ class SolarCalculationRepository {
         gridContributionPercent: gridContributionPercent,
         panelsSavedByGrid: panelsSavedByGrid,
         dailyProductionCurve: productionCurve,
+        requiredGridChargingAmps: requiredGridChargingAmps,
+        suggestedInverterType: suggestedInverterType,
+        pvDcBreakerAmps: pvDcBreakerAmps,
+        batteryDcBreakerAmps: batteryDcBreakerAmps,
+        acBreakerAmps: acBreakerAmps,
+        wireSizeMm2: wireSizeMm2,
       );
     } catch (e) {
       // Fallback logic to prevent crashes and "no data" errors
