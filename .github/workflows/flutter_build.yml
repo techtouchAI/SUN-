@@ -39,9 +39,39 @@ jobs:
     - name: Build APK
       run: flutter build apk --release --split-per-abi
 
+    # استخراج رقم الإصدار من pubspec.yaml
+    - name: Extract version
+      id: extract_version
+      run: |
+        VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //')
+        echo "VERSION=v$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    # إنشاء Git Tag تلقائي
+    - name: Create Git Tag
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git tag ${{ env.VERSION }}
+        git push origin ${{ env.VERSION }}
+      continue-on-error: true # In case tag already exists
+
     # رفع وحفظ الملف لكي يظهر لك زر التحميل
-    - name: Upload APK
+    - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-release-apk
         path: build/app/outputs/flutter-apk/*.apk
+
+    # إنشاء GitHub Release أوتوماتيكياً
+    - name: Create GitHub Release
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ env.VERSION }}
+        name: Release ${{ env.VERSION }}
+        files: build/app/outputs/flutter-apk/*.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
