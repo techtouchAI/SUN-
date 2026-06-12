@@ -46,8 +46,24 @@ class AppStrings {
   static const String panelCapacityWatts = 'قدرة اللوح الشمسي (واط)';
   static const String panelIsc = 'تيار القصر للوح (Isc) أمبير';
   static const String daytimeOnlyMode = 'تشغيل نهاري بدون بطاريات';
-  static const String upsMode = 'نظام UPS (بطاريات + وطنية بدون ألواح)';
+  static const String upsMode = 'بطاريات + وطنية بدون ألواح';
   static const String gridAndBatterySettings = 'إعدادات البطاريات والكهرباء الوطنية';
+
+  // Settings Screen
+  static const String settingsTitle = 'الإعدادات';
+  static const String darkModeToggle = 'الوضع الليلي';
+  static const String pricingSettingsTitle = 'إعدادات التسعير (السوق العراقي)';
+  static const String solarWattPriceLabel = 'سعر الواط الشمسي (دولار)';
+  static const String batteryAmperePriceLabel = 'سعر أمبير البطارية (دولار)';
+  static const String breakerPriceLabel = 'سعر قاطع الدائرة "الجوزة" (دولار)';
+  static const String wiringCostLabel = 'التكلفة الإجمالية لأسلاك الربط (دولار)';
+
+  // Pricing Result
+  static const String estimatedSystemCost = 'التكلفة التقديرية للمنظومة';
+  static const String costInUsd = 'دولار';
+  static const String costInWarqa = 'ورقة';
+  static const String costInIqd = 'دينار عراقي';
+  static const String pricingDisclaimer = 'ملاحظة: هذا السعر تقريبي مبني على إعداداتك. لم يتم حساب أسعار الجوزات وأسلاك الربط إلا إذا قمت بإضافتها يدوياً من شاشة الإعدادات، لكونها متغيرة حسب النوع والطول.';
   static const String isOffGridSystem = 'نظام بدون تيار وطني';
 
   // Explanations

@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'logic/app_strings.dart';
+import 'logic/providers.dart';
 import 'screens/load_input_screen.dart';
 
 void main() {
@@ -14,11 +15,13 @@ void main() {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: AppStrings.appTitle,
@@ -31,11 +34,23 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      themeMode: themeMode,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber, brightness: Brightness.light),
         useMaterial3: true,
         textTheme: GoogleFonts.amiriTextTheme(
-          Theme.of(context).textTheme,
+          ThemeData(brightness: Brightness.light).textTheme,
+        ),
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.amber,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF121212),
+        useMaterial3: true,
+        textTheme: GoogleFonts.amiriTextTheme(
+          ThemeData(brightness: Brightness.dark).textTheme,
         ),
       ),
       home: const LoadInputScreen(),

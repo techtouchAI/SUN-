@@ -37,7 +37,7 @@ jobs:
 
     # بناء النسخة النهائية السريعة والمحسنة
     - name: Build APK
-      run: flutter build apk --debug
+      run: flutter build apk --release --split-per-abi
 
     # رفع وحفظ الملف لكي يظهر لك زر التحميل
     - name: Upload APK
