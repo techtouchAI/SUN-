@@ -23,7 +23,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
   final _quickPowerController = TextEditingController();
   final _quickHoursController = TextEditingController();
 
-  PowerUnit _selectedUnit = PowerUnit.watt;
+  PowerUnit _selectedUnit = PowerUnit.ampere;
   bool _isInverter = false;
 
   void _addDetailedLoad() {
@@ -46,9 +46,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
     if (_quickFormKey.currentState!.validate()) {
       final newLoad = LoadModel(
         id: const Uuid().v4(),
-        name: 'Quick Load',
+        name: AppStrings.quickLoadTitle,
         powerValue: double.parse(_quickPowerController.text),
-        unit: PowerUnit.watt,
+        unit: PowerUnit.ampere,
         dailyUsageHours: double.parse(_quickHoursController.text),
         isInverterDevice: false,
       );
@@ -63,7 +63,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
     _powerValueController.clear();
     _dailyHoursController.clear();
     setState(() {
-      _selectedUnit = PowerUnit.watt;
+      _selectedUnit = PowerUnit.ampere;
       _isInverter = false;
     });
   }
@@ -110,9 +110,15 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                             initialValue: editUnit,
                             isExpanded: true,
                             items: PowerUnit.values.map((unit) {
+                              String localizedName = '';
+                              switch (unit) {
+                                case PowerUnit.ampere: localizedName = AppStrings.unitAmpere; break;
+                                case PowerUnit.watt: localizedName = AppStrings.unitWatt; break;
+                                case PowerUnit.ton: localizedName = AppStrings.unitTon; break;
+                              }
                               return DropdownMenuItem(
                                 value: unit,
-                                child: Text(unit.name.toUpperCase()),
+                                child: Text(localizedName),
                               );
                             }).toList(),
                             onChanged: (value) {
@@ -171,9 +177,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -190,8 +196,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               initialValue: gridSchedule.batteryType,
               isExpanded: true,
               items: const [
-                DropdownMenuItem(value: 'Lead-Acid/Gel', child: Text('Lead-Acid/Gel (DoD 50%)')),
-                DropdownMenuItem(value: 'Lithium', child: Text('Lithium (DoD 80%)')),
+                DropdownMenuItem(value: 'Lead-Acid/Gel', child: Text(AppStrings.batteryGel)),
+                DropdownMenuItem(value: 'Lithium', child: Text(AppStrings.batteryLithium)),
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -200,13 +206,28 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               },
             ),
             SwitchListTile(
+              contentPadding: EdgeInsets.zero,
               title: const Text(AppStrings.isOffGridSystem),
               value: gridSchedule.isOffGrid,
               onChanged: (value) {
-                ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(isOffGrid: value);
+                ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(
+                  isOffGrid: value,
+                  isUpsMode: value ? false : gridSchedule.isUpsMode,
+                );
               },
             ),
-            if (!gridSchedule.isOffGrid)
+            if (!gridSchedule.isOffGrid) ...[
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(AppStrings.upsMode),
+                value: gridSchedule.isUpsMode,
+                onChanged: (value) {
+                  ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(isUpsMode: value);
+                  if (value) {
+                    ref.read(isDaytimeOnlyProvider.notifier).state = false;
+                  }
+                },
+              ),
               Row(
                 children: [
                   Expanded(
@@ -238,6 +259,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   ),
                 ],
               ),
+            ],
           ],
         ),
       ),
@@ -319,11 +341,17 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                               initialValue: _selectedUnit,
                                               isExpanded: true,
                                               items: PowerUnit.values.map((unit) {
+                                                String localizedName = '';
+                                                switch (unit) {
+                                                  case PowerUnit.ampere: localizedName = AppStrings.unitAmpere; break;
+                                                  case PowerUnit.watt: localizedName = AppStrings.unitWatt; break;
+                                                  case PowerUnit.ton: localizedName = AppStrings.unitTon; break;
+                                                }
                                                 return DropdownMenuItem(
                                                   value: unit,
                                                   child: FittedBox(
                                                     fit: BoxFit.scaleDown,
-                                                    child: Text(unit.name.toUpperCase()),
+                                                    child: Text(localizedName),
                                                   ),
                                                 );
                                               }).toList(),
@@ -376,7 +404,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                     children: [
                                       TextFormField(
                                         controller: _quickPowerController,
-                                        decoration: const InputDecoration(labelText: '${AppStrings.powerCapacity} (Watts)'),
+                                        decoration: const InputDecoration(labelText: '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})'),
                                         keyboardType: TextInputType.number,
                                         validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
                                       ),

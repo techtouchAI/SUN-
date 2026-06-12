@@ -38,19 +38,42 @@ class DashboardScreen extends ConsumerWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: TextFormField(
-                    initialValue: ref.read(panelCapacityProvider).toString(),
-                    decoration: const InputDecoration(
-                      labelText: AppStrings.panelCapacityWatts,
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (value) {
-                      final parsedValue = double.tryParse(value);
-                      if (parsedValue != null && parsedValue > 0) {
-                        ref.read(panelCapacityProvider.notifier).state = parsedValue;
-                      }
-                    },
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: ref.read(panelCapacityProvider).toString(),
+                          decoration: const InputDecoration(
+                            labelText: AppStrings.panelCapacityWatts,
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            final parsedValue = double.tryParse(value);
+                            if (parsedValue != null && parsedValue > 0) {
+                              ref.read(panelCapacityProvider.notifier).state = parsedValue;
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          initialValue: ref.read(panelIscProvider).toString(),
+                          decoration: const InputDecoration(
+                            labelText: AppStrings.panelIsc,
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            final parsedValue = double.tryParse(value);
+                            if (parsedValue != null && parsedValue >= 0) {
+                              ref.read(panelIscProvider.notifier).state = parsedValue;
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -78,6 +101,7 @@ class DashboardScreen extends ConsumerWidget {
                     icon: Icons.power,
                     color: Colors.orange,
                     onTap: () => _showExplanationModal(context, AppStrings.inverterExplanationTitle, [
+                      'النوع المقترح: ${result.suggestedInverterType}',
                       'حجم الإنفرتر تم اختياره بناءً على أقصى حمل لحظي يمكن أن يعمل في نفس الوقت، مع إضافة هامش أمان لحماية الجهاز.',
                       'يوضح هذا أيضاً تأثير الأجهزة الإنفرتر في تقليل الحمل المبدئي (Surge).',
                       '${AppStrings.peakLoad}: ${result.peakLoadW.toStringAsFixed(0)} W',
@@ -93,19 +117,33 @@ class DashboardScreen extends ConsumerWidget {
                       onTap: () => _showExplanationModal(context, AppStrings.batteryExplanationTitle, [
                         AppStrings.batteryExplanationBody,
                         'السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
+                        if (result.requiredGridChargingAmps > 0) 'أمبير الشحن المطلوب من الوطنية: ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
+                      ]),
+                    ),
+                  if (ref.watch(gridScheduleProvider).isUpsMode == false)
+                    _buildResultCard(
+                      title: AppStrings.solarPanels,
+                      value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                      icon: Icons.solar_power,
+                      color: Colors.amber,
+                      onTap: () => _showExplanationModal(context, AppStrings.panelsExplanationTitle, [
+                        '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
+                        if (!isDaytimeOnly) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
+                        if (result.gridContributionPercent > 0) 'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
+                        if (result.panelsSavedByGrid > 0) 'عدد الألواح التي تم توفيرها بسبب وجود الوطنية: ${result.panelsSavedByGrid} لوح',
+                        'المجموع الكلي: ${result.requiredPanels} لوح',
                       ]),
                     ),
                   _buildResultCard(
-                    title: AppStrings.solarPanels,
-                    value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
-                    icon: Icons.solar_power,
-                    color: Colors.amber,
-                    onTap: () => _showExplanationModal(context, AppStrings.panelsExplanationTitle, [
-                      '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
-                      if (!isDaytimeOnly) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
-                      if (result.gridContributionPercent > 0) 'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
-                      if (result.panelsSavedByGrid > 0) 'عدد الألواح التي تم توفيرها بسبب وجود الوطنية: ${result.panelsSavedByGrid} لوح',
-                      'المجموع الكلي: ${result.requiredPanels} لوح',
+                    title: AppStrings.safetyStandardsTitle,
+                    value: 'NEC Standards',
+                    icon: Icons.health_and_safety,
+                    color: Colors.redAccent,
+                    onTap: () => _showExplanationModal(context, AppStrings.safetyStandardsTitle, [
+                      if (result.pvDcBreakerAmps > 0) '${AppStrings.pvBreaker}: ${result.pvDcBreakerAmps.toStringAsFixed(1)} A',
+                      if (result.batteryDcBreakerAmps > 0) '${AppStrings.batteryBreaker}: ${result.batteryDcBreakerAmps.toStringAsFixed(1)} A',
+                      if (result.acBreakerAmps > 0) '${AppStrings.acBreaker}: ${result.acBreakerAmps.toStringAsFixed(1)} A',
+                      if (result.wireSizeMm2 > 0) '${AppStrings.dcWireSize}: ${result.wireSizeMm2} ${AppStrings.wireMm2}',
                     ]),
                   ),
                       ],

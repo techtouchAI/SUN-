@@ -14,6 +14,11 @@ class AppStrings {
   static const String noLoadsAddedYet = 'لم تتم إضافة أي أحمال بعد.';
   static const String hrsDay = 'ساعات/يوم';
 
+  // Unit localized names
+  static const String unitAmpere = 'Ampere (أمبير)';
+  static const String unitWatt = 'Watt (واط)';
+  static const String unitTon = 'Ton (طن)';
+
   // Tab Navigation & Quick Input & Grid
   static const String tabDetailedInput = 'إدخال مفصل';
   static const String tabQuickInput = 'إدخال سريع';
@@ -27,6 +32,8 @@ class AppStrings {
   static const String save = 'حفظ التعديلات';
   static const String cancel = 'إلغاء';
   static const String batteryType = 'نوع البطارية';
+  static const String batteryLithium = 'ليثيوم نسبة تفريغ 80%';
+  static const String batteryGel = 'جل/رصاص نسبة تفريغ 50%';
 
   // Dashboard Screen
   static const String systemDashboard = 'لوحة تحكم النظام';
@@ -37,9 +44,11 @@ class AppStrings {
   static const String solarPanels = 'الألواح الشمسية';
   static const String panelsUnit = 'ألواح';
   static const String panelCapacityWatts = 'قدرة اللوح الشمسي (واط)';
-  static const String daytimeOnlyMode = 'تشغيل نهاري المباشر فقط (بدون بطاريات)';
+  static const String panelIsc = 'تيار القصر للوح (Isc) أمبير';
+  static const String daytimeOnlyMode = 'تشغيل نهاري بدون بطاريات';
+  static const String upsMode = 'نظام UPS (بطاريات + وطنية بدون ألواح)';
   static const String gridAndBatterySettings = 'إعدادات البطاريات والكهرباء الوطنية';
-  static const String isOffGridSystem = 'نظام بدون تيار وطني (Off-grid)';
+  static const String isOffGridSystem = 'نظام بدون تيار وطني';
 
   // Explanations
   static const String batteryExplanationTitle = 'تفاصيل البطاريات';
@@ -53,6 +62,13 @@ class AppStrings {
   static const String nighttimeConsumption = 'الاستهلاك الليلي';
   static const String panelsDaytime = 'ألواح للتشغيل المباشر';
   static const String panelsBattery = 'ألواح لشحن البطاريات';
+
+  static const String safetyStandardsTitle = 'معايير السلامة العالمية (NEC)';
+  static const String pvBreaker = 'جوزات الألواح (DC Breakers)';
+  static const String batteryBreaker = 'جوزات البطاريات (DC Breakers)';
+  static const String acBreaker = 'جوزات التيار المتردد (AC Breakers)';
+  static const String dcWireSize = 'أحجام الأسلاك (DC Wire Sizing)';
+  static const String wireMm2 = 'mm²';
 
   // Chart Screen
   static const String dailyProductionCurve = 'منحنى الإنتاج اليومي';
