@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - 'main'
+  workflow_dispatch: # هذا السطر هو الذي يُفعل زر التشغيل اليدوي!
 
 permissions:
   contents: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
