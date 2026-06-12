@@ -15,6 +15,11 @@ class SystemResultModel {
   final double requiredGridChargingAmps;
   final String suggestedInverterType;
 
+  // Energy Loss & Brands
+  final String energyLossPercentage;
+  final String recommendedInverterBrands;
+  final String recommendedPanelBrands;
+
   // Safety Standards
   final double pvDcBreakerAmps;
   final double batteryDcBreakerAmps;
@@ -41,6 +46,9 @@ class SystemResultModel {
     required this.dailyProductionCurve,
     this.requiredGridChargingAmps = 0.0,
     this.suggestedInverterType = '',
+    this.energyLossPercentage = '',
+    this.recommendedInverterBrands = '',
+    this.recommendedPanelBrands = '',
     this.pvDcBreakerAmps = 0.0,
     this.batteryDcBreakerAmps = 0.0,
     this.acBreakerAmps = 0.0,
@@ -66,6 +74,9 @@ class SystemResultModel {
       dailyProductionCurve: [0, 0, 0, 0, 0], // Dawn, Morning, Noon, Afternoon, Evening
       requiredGridChargingAmps: 0.0,
       suggestedInverterType: '',
+      energyLossPercentage: '',
+      recommendedInverterBrands: '',
+      recommendedPanelBrands: '',
       pvDcBreakerAmps: 0.0,
       batteryDcBreakerAmps: 0.0,
       acBreakerAmps: 0.0,

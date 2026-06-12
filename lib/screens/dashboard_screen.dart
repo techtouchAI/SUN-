@@ -112,6 +112,7 @@ class DashboardScreen extends ConsumerWidget {
                     color: Colors.orange,
                     onTap: () => _showExplanationModal(context, AppStrings.inverterExplanationTitle, [
                       'النوع المقترح: ${result.suggestedInverterType}',
+                      AppStrings.recommendedInverterBrands,
                       'حجم الإنفرتر تم اختياره بناءً على أقصى حمل لحظي يمكن أن يعمل في نفس الوقت، مع إضافة هامش أمان لحماية الجهاز.',
                       'يوضح هذا أيضاً تأثير الأجهزة الإنفرتر في تقليل الحمل المبدئي (Surge).',
                       '${AppStrings.peakLoad}: ${result.peakLoadW.toStringAsFixed(0)} W',
@@ -137,6 +138,7 @@ class DashboardScreen extends ConsumerWidget {
                       icon: Icons.solar_power,
                       color: Colors.amber,
                       onTap: () => _showExplanationModal(context, AppStrings.panelsExplanationTitle, [
+                        AppStrings.recommendedPanelBrands,
                         '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
                         if (!isDaytimeOnly) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
                         if (result.gridContributionPercent > 0) 'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
@@ -144,6 +146,18 @@ class DashboardScreen extends ConsumerWidget {
                         'المجموع الكلي: ${result.requiredPanels} لوح',
                       ]),
                     ),
+                  _buildResultCard(
+                    title: AppStrings.energyLossTitle,
+                    value: result.energyLossPercentage,
+                    icon: Icons.warning_amber_rounded,
+                    color: Colors.deepOrange,
+                    onTap: () => _showExplanationModal(context, AppStrings.energyLossExplanationTitle, [
+                      AppStrings.energyLossTemp,
+                      AppStrings.energyLossInverter,
+                      AppStrings.energyLossWiring,
+                      AppStrings.energyLossSoiling,
+                    ]),
+                  ),
                   _buildResultCard(
                     title: AppStrings.safetyStandardsTitle,
                     value: 'NEC Standards',

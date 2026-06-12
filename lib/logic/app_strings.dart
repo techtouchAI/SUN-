@@ -79,6 +79,16 @@ class AppStrings {
   static const String panelsDaytime = 'ألواح للتشغيل المباشر';
   static const String panelsBattery = 'ألواح لشحن البطاريات';
 
+  // Energy Loss & Brands
+  static const String recommendedInverterBrands = 'الماركات العالمية الموصى بها للعواكس: Deye, Growatt, Huawei, Victron Energy';
+  static const String recommendedPanelBrands = 'المصنعين من فئة (Tier 1) المعتمدة للألواح: Longi, Jinko Solar, JA Solar, Trina Solar';
+  static const String energyLossTitle = 'نسبة ضياع الطاقة المتوقعة';
+  static const String energyLossExplanationTitle = 'تفاصيل ضياع الطاقة';
+  static const String energyLossTemp = 'عامل الحرارة (Temperature Coefficient): انخفاض كفاءة الخلايا الشمسية عند ارتفاع درجات حرارة الألواح فوق 25 درجة مئوية (وهو عامل حاسم في الصيف).';
+  static const String energyLossInverter = 'كفاءة التحويل (Inverter Efficiency): الفقد الطبيعي أثناء تحويل التيار المستمر (DC) من الألواح إلى تيار متردد (AC) للمنزل (بنسبة تفقد حوالي 3% إلى 5%).';
+  static const String energyLossWiring = 'مقاومة الأسلاك (Wiring/DC Losses): الضياع الناتجة عن المقاومة الكهربائية في الكابلات المسؤولة عن نقل الطاقة من الألواح إلى العاكس ومن العاكس إلى البطاريات.';
+  static const String energyLossSoiling = 'الغبار والأوساخ (Soiling Losses): انخفاض امتصاص الضوء بسبب تراكم الأتربة على سطح الألواح.';
+
   static const String safetyStandardsTitle = 'معايير السلامة العالمية (NEC)';
   static const String pvBreaker = 'جوزات الألواح (DC Breakers)';
   static const String batteryBreaker = 'جوزات البطاريات (DC Breakers)';
