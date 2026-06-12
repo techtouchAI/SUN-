@@ -48,6 +48,7 @@ class AppStrings {
   static const String daytimeOnlyMode = 'تشغيل نهاري بدون بطاريات';
   static const String upsMode = 'بطاريات + وطنية بدون ألواح';
   static const String gridAndBatterySettings = 'إعدادات البطاريات والكهرباء الوطنية';
+  static const String interactiveHint = '💡 ملاحظة: اضغط على أي عنصر لعرض التفاصيل والشروحات الهندسية.';
 
   // Settings Screen
   static const String settingsTitle = 'الإعدادات';

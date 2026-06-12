@@ -6,6 +6,7 @@ import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import 'dashboard_screen.dart';
 import '../services/update_service.dart';
+import 'settings_screen.dart';
 
 class LoadInputScreen extends ConsumerStatefulWidget {
   const LoadInputScreen({super.key});
@@ -293,6 +294,15 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.analytics),
               onPressed: () {
