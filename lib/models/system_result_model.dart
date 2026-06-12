@@ -21,6 +21,10 @@ class SystemResultModel {
   final double acBreakerAmps;
   final int wireSizeMm2;
 
+  // Pricing
+  final double estimatedCostUsd;
+  final int totalBreakersCount;
+
   SystemResultModel({
     required this.totalDailyConsumptionWh,
     required this.daytimeConsumptionWh,
@@ -41,6 +45,8 @@ class SystemResultModel {
     this.batteryDcBreakerAmps = 0.0,
     this.acBreakerAmps = 0.0,
     this.wireSizeMm2 = 0,
+    this.estimatedCostUsd = 0.0,
+    this.totalBreakersCount = 0,
   });
 
   factory SystemResultModel.empty() {
@@ -64,6 +70,8 @@ class SystemResultModel {
       batteryDcBreakerAmps: 0.0,
       acBreakerAmps: 0.0,
       wireSizeMm2: 0,
+      estimatedCostUsd: 0.0,
+      totalBreakersCount: 0,
     );
   }
 }

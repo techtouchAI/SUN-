@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import 'chart_screen.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -25,9 +26,18 @@ class DashboardScreen extends ConsumerWidget {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
         ],
       ),
-      body: result.requiredPanels == 0
+      body: result.totalDailyConsumptionWh == 0 && result.requiredInverterCapacityW == 0
           ? const Center(
               child: Text(
                 AppStrings.noLoadDataAvailable,
@@ -144,6 +154,18 @@ class DashboardScreen extends ConsumerWidget {
                       if (result.batteryDcBreakerAmps > 0) '${AppStrings.batteryBreaker}: ${result.batteryDcBreakerAmps.toStringAsFixed(1)} A',
                       if (result.acBreakerAmps > 0) '${AppStrings.acBreaker}: ${result.acBreakerAmps.toStringAsFixed(1)} A',
                       if (result.wireSizeMm2 > 0) '${AppStrings.dcWireSize}: ${result.wireSizeMm2} ${AppStrings.wireMm2}',
+                    ]),
+                  ),
+                  _buildResultCard(
+                    title: AppStrings.estimatedSystemCost,
+                    value: '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
+                    icon: Icons.attach_money,
+                    color: Colors.green.shade700,
+                    onTap: () => _showExplanationModal(context, AppStrings.estimatedSystemCost, [
+                      '${result.estimatedCostUsd.toStringAsFixed(2)} ${AppStrings.costInUsd}',
+                      '${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ${AppStrings.costInWarqa}',
+                      '${(result.estimatedCostUsd * 1500).toStringAsFixed(0)} ${AppStrings.costInIqd}',
+                      '\n${AppStrings.pricingDisclaimer}',
                     ]),
                   ),
                       ],

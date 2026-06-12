@@ -141,7 +141,16 @@ class SolarCalculationRepository {
     return 25; // per prompt up to 100A
   }
 
-  SystemResultModel calculateSystem(List<LoadModel> loads, {double panelCapacity = 540.0, double panelIsc = 0.0, bool isDaytimeOnly = false, GridScheduleModel gridSchedule = const GridScheduleModel()}) {
+  SystemResultModel calculateSystem(List<LoadModel> loads, {
+    double panelCapacity = 540.0,
+    double panelIsc = 0.0,
+    bool isDaytimeOnly = false,
+    GridScheduleModel gridSchedule = const GridScheduleModel(),
+    double solarWattPrice = 0.16,
+    double batteryAmperePrice = 0.85,
+    double breakerPrice = 0.0,
+    double wiringCost = 0.0,
+  }) {
     try {
       if (loads.isEmpty) {
         return SystemResultModel.empty();
@@ -204,6 +213,19 @@ class SolarCalculationRepository {
 
       int wireSizeMm2 = _calculateWireSize(maxAmpsForWire);
 
+      // Pricing Calculations
+      int totalBreakersCount = 0;
+      if (pvDcBreakerAmps > 0) totalBreakersCount++;
+      if (batteryDcBreakerAmps > 0) totalBreakersCount++;
+      if (acBreakerAmps > 0) totalBreakersCount++;
+
+      double inverterCost = (totalInverterCapacity / 1000.0) * 100.0; // $100 per kW
+      double solarPanelsCost = totalPanelsRequired * panelCapacity * solarWattPrice;
+      double batteriesCost = batteryCapacity * batteryAmperePrice;
+      double breakersCost = totalBreakersCount * breakerPrice;
+
+      double totalEstimatedCostUsd = solarPanelsCost + batteriesCost + inverterCost + breakersCost + wiringCost;
+
       return SystemResultModel(
         totalDailyConsumptionWh: totalConsumption,
         daytimeConsumptionWh: daytimeConsumption,
@@ -224,6 +246,8 @@ class SolarCalculationRepository {
         batteryDcBreakerAmps: batteryDcBreakerAmps,
         acBreakerAmps: acBreakerAmps,
         wireSizeMm2: wireSizeMm2,
+        estimatedCostUsd: totalEstimatedCostUsd,
+        totalBreakersCount: totalBreakersCount,
       );
     } catch (e) {
       // Fallback logic to prevent crashes and "no data" errors
