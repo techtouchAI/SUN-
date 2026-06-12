@@ -43,14 +43,23 @@ jobs:
     - name: Extract version
       id: extract_version
       run: |
-        VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //')
+        VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: //' | tr -d '\r')
         echo "VERSION=v$VERSION" >> $GITHUB_ENV
         echo "version=$VERSION" >> $GITHUB_OUTPUT
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
+    - name: Check if Tag Exists
+      id: check_tag
+      run: |
+        if git ls-remote --tags origin | grep -q "refs/tags/${{ env.VERSION }}"; then
+          echo "TAG_EXISTS=true" >> $GITHUB_ENV
+        else
+          echo "TAG_EXISTS=false" >> $GITHUB_ENV
+        fi
+
     # إنشاء Git Tag تلقائي
     - name: Create Git Tag
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.TAG_EXISTS == 'false'
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
@@ -67,7 +76,7 @@ jobs:
 
     # إنشاء GitHub Release أوتوماتيكياً
     - name: Create GitHub Release
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.TAG_EXISTS == 'false'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ env.VERSION }}
