@@ -1,16 +1,13 @@
+import 'package:flutter/foundation.dart';
 import '../models/load_model.dart';
 import '../models/system_result_model.dart';
 import '../models/grid_schedule_model.dart';
 
 class SolarCalculationRepository {
   // Domain Engineering Constants
-  static const double systemVoltage = 48.0; // Assume 48V system
   static const double electricalWattsPerTon = 1200.0; // Rough estimate for AC conversion
   static const double gridVoltage = 220.0; // Used for Ampere conversion
   static const double inverterAcEfficiencyFactor = 0.6; // Inverter ACs run at ~60% load over time
-  static const double energyLossPercentageValue = 18.0; // 18% geometric loss (NREL PVWatts)
-  static const double systemLossFactor = 1.0 / (1.0 - (energyLossPercentageValue / 100.0)); // ~1.22
-  static const double peakSunHours = 4.5; // Average PSH
 
   double _convertToWatts(LoadModel load) {
     switch (load.unit) {
@@ -69,16 +66,16 @@ class SolarCalculationRepository {
     return {'peakLoad': peakWatts, 'safetyMargin': safetyMargin, 'totalCapacity': totalCapacity};
   }
 
-  double calculateBatteryCapacity(double nighttimeConsumptionWh, bool isDaytimeOnly, String batteryType) {
+  double calculateBatteryCapacity(double nighttimeConsumptionWh, bool isDaytimeOnly, String batteryType, double systemVoltage, double daysOfAutonomy) {
     if (isDaytimeOnly || nighttimeConsumptionWh <= 0) return 0.0;
 
     double batteryDoD = batteryType == 'Lithium' ? 0.8 : 0.5;
 
-    // Ah = (Wh / System Voltage) / DoD
-    return (nighttimeConsumptionWh / systemVoltage) / batteryDoD;
+    // Ah = (Wh / System Voltage) / DoD * daysOfAutonomy
+    return ((nighttimeConsumptionWh / systemVoltage) / batteryDoD) * daysOfAutonomy;
   }
 
-  Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, bool isDaytimeOnly, GridScheduleModel gridSchedule) {
+  Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, bool isDaytimeOnly, GridScheduleModel gridSchedule, double systemLossFactor, double peakSunHours) {
     if ((daytimeWh == 0 && nighttimeWh == 0) || gridSchedule.isUpsMode) {
       return {'daytimePanels': 0, 'batteryPanels': 0, 'totalPanels': 0, 'gridContributionPercent': 0.0, 'panelsSavedByGrid': 0};
     }
@@ -151,11 +148,17 @@ class SolarCalculationRepository {
     double batteryAmperePrice = 0.85,
     double breakerPrice = 0.0,
     double wiringCost = 0.0,
+    double systemVoltage = 48.0,
+    double peakSunHours = 4.5,
+    double energyLossPercentage = 18.0,
+    double daysOfAutonomy = 1.0,
   }) {
     try {
       if (loads.isEmpty) {
         return SystemResultModel.empty();
       }
+
+      double systemLossFactor = 1.0 / (1.0 - (energyLossPercentage / 100.0));
 
       final consumptionDetails = calculateConsumptionDetails(loads);
       final totalConsumption = consumptionDetails['total']!;
@@ -167,9 +170,9 @@ class SolarCalculationRepository {
       final safetyMargin = inverterDetails['safetyMargin']!;
       final totalInverterCapacity = inverterDetails['totalCapacity']!;
 
-      final batteryCapacity = calculateBatteryCapacity(nighttimeConsumption, isDaytimeOnly, gridSchedule.batteryType);
+      final batteryCapacity = calculateBatteryCapacity(nighttimeConsumption, isDaytimeOnly, gridSchedule.batteryType, systemVoltage, daysOfAutonomy);
 
-      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, isDaytimeOnly, gridSchedule);
+      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, isDaytimeOnly, gridSchedule, systemLossFactor, peakSunHours);
       final panelsForDaytime = panelsDetails['daytimePanels'] as int;
       final panelsForBatteries = panelsDetails['batteryPanels'] as int;
       final totalPanelsRequired = panelsDetails['totalPanels'] as int;
@@ -243,7 +246,7 @@ class SolarCalculationRepository {
         dailyProductionCurve: productionCurve,
         requiredGridChargingAmps: requiredGridChargingAmps,
         suggestedInverterType: suggestedInverterType,
-        energyLossPercentage: '15% - 18%',
+        energyLossPercentage: '${energyLossPercentage.toStringAsFixed(0)}%',
         recommendedInverterBrands: 'Deye, Growatt, Huawei, Victron Energy',
         recommendedPanelBrands: 'Longi, Jinko Solar, JA Solar, Trina Solar',
         pvDcBreakerAmps: pvDcBreakerAmps,
@@ -253,9 +256,10 @@ class SolarCalculationRepository {
         estimatedCostUsd: totalEstimatedCostUsd,
         totalBreakersCount: totalBreakersCount,
       );
-    } catch (e) {
-      // Fallback logic to prevent crashes and "no data" errors
-      return SystemResultModel.empty();
+    } catch (e, st) {
+      // Re-throw or log to avoid swallowing the error
+      debugPrint('Error calculating system: $e\n$st');
+      rethrow;
     }
   }
 }

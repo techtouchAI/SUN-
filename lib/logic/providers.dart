@@ -53,6 +53,12 @@ final batteryAmperePriceProvider = StateProvider<double>((ref) => 0.85);
 final breakerPriceProvider = StateProvider<double>((ref) => 0.0);
 final wiringCostProvider = StateProvider<double>((ref) => 0.0);
 
+// Providers for engineering parameters
+final systemVoltageProvider = StateProvider<double>((ref) => 48.0);
+final peakSunHoursProvider = StateProvider<double>((ref) => 4.5);
+final energyLossPercentageProvider = StateProvider<double>((ref) => 18.0);
+final daysOfAutonomyProvider = StateProvider<double>((ref) => 1.0);
+
 // Provider for grid schedule
 final gridScheduleProvider = StateProvider<GridScheduleModel>((ref) => const GridScheduleModel());
 
@@ -69,6 +75,11 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
   final breakerPrice = ref.watch(breakerPriceProvider);
   final wiringCost = ref.watch(wiringCostProvider);
 
+  final systemVoltage = ref.watch(systemVoltageProvider);
+  final peakSunHours = ref.watch(peakSunHoursProvider);
+  final energyLossPercentage = ref.watch(energyLossPercentageProvider);
+  final daysOfAutonomy = ref.watch(daysOfAutonomyProvider);
+
   final repository = ref.watch(solarCalculationRepositoryProvider);
 
   return repository.calculateSystem(
@@ -81,5 +92,9 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
     batteryAmperePrice: batteryAmperePrice,
     breakerPrice: breakerPrice,
     wiringCost: wiringCost,
+    systemVoltage: systemVoltage,
+    peakSunHours: peakSunHours,
+    energyLossPercentage: energyLossPercentage,
+    daysOfAutonomy: daysOfAutonomy,
   );
 });
