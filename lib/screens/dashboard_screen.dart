@@ -37,7 +37,13 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () async {
               try {
                 final pdfService = PdfExportService();
-                await pdfService.exportDashboardToPdf(result, loads);
+                await pdfService.exportDashboardToPdf(
+                  result,
+                  loads,
+                  isDaytimeOnly,
+                  ref.read(gridScheduleProvider).isUpsMode,
+                  ref.read(iqdExchangeRateProvider),
+                );
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
