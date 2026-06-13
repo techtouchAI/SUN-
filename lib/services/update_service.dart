@@ -95,8 +95,12 @@ class UpdateService {
   }
 
   bool _isNewerVersion(String currentVersion, String latestVersion) {
-    List<String> currentParts = currentVersion.split('.');
-    List<String> latestParts = latestVersion.split('.');
+    // إزالة رقم البناء (Build Number) إن وجد (مثل +559 أو -559)
+    String currentBase = currentVersion.split('+')[0].split('-')[0];
+    String latestBase = latestVersion.split('+')[0].split('-')[0];
+
+    List<String> currentParts = currentBase.split('.');
+    List<String> latestParts = latestBase.split('.');
 
     for (int i = 0; i < currentParts.length && i < latestParts.length; i++) {
       int currentPart = int.tryParse(currentParts[i]) ?? 0;
