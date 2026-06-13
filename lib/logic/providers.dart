@@ -62,6 +62,14 @@ final daysOfAutonomyProvider = StateProvider<double>((ref) => 1.0);
 // Provider for grid schedule
 final gridScheduleProvider = StateProvider<GridScheduleModel>((ref) => const GridScheduleModel());
 
+
+// Providers for Grid Voltage and IQD
+final gridVoltageProvider = StateProvider<double>((ref) => 220.0);
+final iqdExchangeRateProvider = StateProvider<double>((ref) => 1500.0);
+
+// System Error Provider
+final systemErrorProvider = StateProvider<String?>((ref) => null);
+
 // Derived provider for the calculation results
 final systemResultProvider = Provider<SystemResultModel>((ref) {
   final loads = ref.watch(loadListProvider);
@@ -80,21 +88,31 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
   final energyLossPercentage = ref.watch(energyLossPercentageProvider);
   final daysOfAutonomy = ref.watch(daysOfAutonomyProvider);
 
+  final gridVoltage = ref.watch(gridVoltageProvider);
   final repository = ref.watch(solarCalculationRepositoryProvider);
 
-  return repository.calculateSystem(
-    loads,
-    panelCapacity: panelCapacity,
-    panelIsc: panelIsc,
-    isDaytimeOnly: isDaytimeOnly,
-    gridSchedule: gridSchedule,
-    solarWattPrice: solarWattPrice,
-    batteryAmperePrice: batteryAmperePrice,
-    breakerPrice: breakerPrice,
-    wiringCost: wiringCost,
-    systemVoltage: systemVoltage,
-    peakSunHours: peakSunHours,
-    energyLossPercentage: energyLossPercentage,
-    daysOfAutonomy: daysOfAutonomy,
-  );
+  try {
+    final result = repository.calculateSystem(
+      loads,
+      gridVoltage: gridVoltage,
+      panelCapacity: panelCapacity,
+      panelIsc: panelIsc,
+      isDaytimeOnly: isDaytimeOnly,
+      gridSchedule: gridSchedule,
+      solarWattPrice: solarWattPrice,
+      batteryAmperePrice: batteryAmperePrice,
+      breakerPrice: breakerPrice,
+      wiringCost: wiringCost,
+      systemVoltage: systemVoltage,
+      peakSunHours: peakSunHours,
+      energyLossPercentage: energyLossPercentage,
+      daysOfAutonomy: daysOfAutonomy,
+    );
+
+    Future.microtask(() => ref.read(systemErrorProvider.notifier).state = null);
+    return result;
+  } catch (e) {
+    Future.microtask(() => ref.read(systemErrorProvider.notifier).state = e.toString());
+    return SystemResultModel.empty();
+  }
 });

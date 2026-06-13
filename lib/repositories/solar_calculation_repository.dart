@@ -6,10 +6,10 @@ import '../models/grid_schedule_model.dart';
 class SolarCalculationRepository {
   // Domain Engineering Constants
   static const double electricalWattsPerTon = 1200.0; // Rough estimate for AC conversion
-  static const double gridVoltage = 220.0; // Used for Ampere conversion
+   // Used for Ampere conversion
   static const double inverterAcEfficiencyFactor = 0.6; // Inverter ACs run at ~60% load over time
 
-  double _convertToWatts(LoadModel load) {
+  double _convertToWatts(LoadModel load, double gridVoltage) {
     switch (load.unit) {
       case PowerUnit.watt:
         return load.powerValue;
@@ -20,14 +20,14 @@ class SolarCalculationRepository {
     }
   }
 
-  Map<String, double> calculateConsumptionDetails(List<LoadModel> loads, {double nightUsageFraction = 0.6}) {
+  Map<String, double> calculateConsumptionDetails(List<LoadModel> loads, double gridVoltage, {double nightUsageFraction = 0.6}) {
     if (loads.isEmpty) {
       return {'total': 0.0, 'daytime': 0.0, 'nighttime': 0.0};
     }
 
     double totalWh = 0.0;
     for (var load in loads) {
-      double watts = _convertToWatts(load);
+      double watts = _convertToWatts(load, gridVoltage);
 
       if (load.isInverterDevice) {
         // Inverter ACs reduce consumption over time by ~40% (efficiency multiplier = 0.6)
@@ -43,12 +43,12 @@ class SolarCalculationRepository {
     return {'total': totalWh, 'daytime': daytime, 'nighttime': nighttime};
   }
 
-  Map<String, double> calculateInverterDetails(List<LoadModel> loads) {
+  Map<String, double> calculateInverterDetails(List<LoadModel> loads, double gridVoltage) {
     if (loads.isEmpty) return {'peakLoad': 0.0, 'safetyMargin': 0.0, 'totalCapacity': 0.0};
 
     double peakWatts = 0.0;
     for (var load in loads) {
-      double watts = _convertToWatts(load);
+      double watts = _convertToWatts(load, gridVoltage);
       double multiplier = load.startingCurrentMultiplier;
 
       if (load.isInverterDevice) {
@@ -140,6 +140,7 @@ class SolarCalculationRepository {
   }
 
   SystemResultModel calculateSystem(List<LoadModel> loads, {
+    required double gridVoltage,
     double panelCapacity = 540.0,
     double panelIsc = 0.0,
     bool isDaytimeOnly = false,
@@ -160,12 +161,12 @@ class SolarCalculationRepository {
 
       double systemLossFactor = 1.0 / (1.0 - (energyLossPercentage / 100.0));
 
-      final consumptionDetails = calculateConsumptionDetails(loads);
+      final consumptionDetails = calculateConsumptionDetails(loads, gridVoltage);
       final totalConsumption = consumptionDetails['total']!;
       final daytimeConsumption = consumptionDetails['daytime']!;
       final nighttimeConsumption = consumptionDetails['nighttime']!;
 
-      final inverterDetails = calculateInverterDetails(loads);
+      final inverterDetails = calculateInverterDetails(loads, gridVoltage);
       final peakLoad = inverterDetails['peakLoad']!;
       final safetyMargin = inverterDetails['safetyMargin']!;
       final totalInverterCapacity = inverterDetails['totalCapacity']!;

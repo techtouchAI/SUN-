@@ -11,8 +11,20 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<String?>(systemErrorProvider, (previous, next) {
+      if (next != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
     final result = ref.watch(systemResultProvider);
     final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
+    final loads = ref.watch(loadListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -38,15 +50,16 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: result.totalDailyConsumptionWh == 0 && result.requiredInverterCapacityW == 0
+      body: loads.isEmpty
           ? const Center(
               child: Text(
-                AppStrings.noLoadDataAvailable,
+                "الرجاء إضافة أحمال أولاً",
                 style: TextStyle(fontSize: 18),
               ),
             )
-          : Column(
-              children: [
+          : SingleChildScrollView(
+              child: Column(
+                children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
@@ -103,6 +116,8 @@ class DashboardScreen extends ConsumerWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
                       crossAxisCount: 2,
                       crossAxisSpacing: 16.0,
                       mainAxisSpacing: 16.0,
@@ -157,6 +172,7 @@ class DashboardScreen extends ConsumerWidget {
                         if (result.gridContributionPercent > 0) 'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
                         if (result.panelsSavedByGrid > 0) 'عدد الألواح التي تم توفيرها بسبب وجود الوطنية: ${result.panelsSavedByGrid} لوح',
                         'المجموع الكلي: ${result.requiredPanels} لوح',
+                        '\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.',
                       ]),
                     ),
                   _buildResultCard(
@@ -191,34 +207,11 @@ class DashboardScreen extends ConsumerWidget {
                     onTap: () => _showExplanationModal(context, AppStrings.estimatedSystemCost, [
                       '${result.estimatedCostUsd.toStringAsFixed(2)} ${AppStrings.costInUsd}',
                       '${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ${AppStrings.costInWarqa}',
-                      '${(result.estimatedCostUsd * 1500).toStringAsFixed(0)} ${AppStrings.costInIqd}',
+                      '${(result.estimatedCostUsd * ref.watch(iqdExchangeRateProvider)).toStringAsFixed(0)} ${AppStrings.costInIqd}',
                       '\n${AppStrings.pricingDisclaimer}',
                     ]),
                   ),
                       ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Card(
-                    color: Colors.blue.shade50,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(fontSize: 14, color: Colors.black87),
-                          children: [
-                            TextSpan(
-                              text: "💡 ملاحظة هندسية حول تقليل الألواح:\n",
-                              style: GoogleFonts.amiri(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            const TextSpan(
-                              text: "يمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.",
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
                 ),
@@ -242,6 +235,8 @@ class DashboardScreen extends ConsumerWidget {
                             'assets/photoi.png',
                             fit: BoxFit.contain,
                             height: 200,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.image_not_supported, size: 100, color: Colors.grey),
                           ),
                         ),
                       ),
@@ -249,6 +244,7 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
             ),
     );
   }
@@ -324,22 +320,20 @@ class DashboardScreen extends ConsumerWidget {
               child: Icon(icon, size: 40, color: color),
             ),
             const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             ),
             const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 20, color: color, fontWeight: FontWeight.bold),
-              ),
+            Text(
+              value,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 16, color: color, fontWeight: FontWeight.bold),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),

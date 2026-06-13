@@ -63,6 +63,23 @@ class SettingsScreen extends ConsumerWidget {
                 label: AppStrings.wiringCostLabel,
                 provider: wiringCostProvider,
               ),
+
+              const SizedBox(height: 16),
+              _buildPriceInput(
+                context: context,
+                ref: ref,
+                label: 'سعر الصرف (IQD)',
+                provider: iqdExchangeRateProvider,
+                suffix: ' IQD',
+              ),
+              const SizedBox(height: 16),
+              _buildPriceInput(
+                context: context,
+                ref: ref,
+                label: 'جهد الشبكة (V)',
+                provider: gridVoltageProvider,
+                suffix: ' V',
+              ),
               const Divider(),
               const SizedBox(height: 16),
               const Text(
@@ -106,11 +123,13 @@ class SettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.code),
                 title: const Text('تصميم وبرمجة كنان الصائغ'),
-                trailing: const Icon(Icons.open_in_new),
+                trailing: const Icon(Icons.telegram),
                 onTap: () async {
-                  final url = Uri.parse('https://t.me/techtouch7');
-                  if (await canLaunchUrl(url)) {
+                  try {
+                    final url = Uri.parse('https://t.me/techtouch7');
                     await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint('Could not launch Telegram: $e');
                   }
                 },
               ),
