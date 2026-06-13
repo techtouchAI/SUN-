@@ -39,4 +39,28 @@ class LoadModel {
       isInverterDevice: isInverterDevice ?? this.isInverterDevice,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'unit': unit.name,
+      'powerValue': powerValue,
+      'startingCurrentMultiplier': startingCurrentMultiplier,
+      'dailyUsageHours': dailyUsageHours,
+      'isInverterDevice': isInverterDevice,
+    };
+  }
+
+  factory LoadModel.fromJson(Map<String, dynamic> json) {
+    return LoadModel(
+      id: json['id'],
+      name: json['name'],
+      unit: PowerUnit.values.firstWhere((e) => e.name == json['unit']),
+      powerValue: json['powerValue'].toDouble(),
+      startingCurrentMultiplier: json['startingCurrentMultiplier'].toDouble(),
+      dailyUsageHours: json['dailyUsageHours'].toDouble(),
+      isInverterDevice: json['isInverterDevice'],
+    );
+  }
 }

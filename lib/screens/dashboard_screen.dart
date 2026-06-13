@@ -5,6 +5,7 @@ import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import 'chart_screen.dart';
 import 'settings_screen.dart';
+import '../services/pdf_export_service.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -30,6 +31,25 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text(AppStrings.systemDashboard),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'تصدير PDF',
+            onPressed: () async {
+              try {
+                final pdfService = PdfExportService();
+                await pdfService.exportDashboardToPdf(result, loads);
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('خطأ أثناء تصدير PDF: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.bar_chart),
             onPressed: () {

@@ -4,18 +4,33 @@ import '../models/load_model.dart';
 import '../models/system_result_model.dart';
 import '../models/grid_schedule_model.dart';
 import '../repositories/solar_calculation_repository.dart';
+import '../repositories/load_persistence_repository.dart';
 
 // Provide the repository
 final solarCalculationRepositoryProvider = Provider<SolarCalculationRepository>((ref) {
   return SolarCalculationRepository();
 });
 
+final loadPersistenceRepositoryProvider = Provider<LoadPersistenceRepository>((ref) {
+  return LoadPersistenceRepository();
+});
+
 // StateNotifier to manage the list of loads
 class LoadListNotifier extends StateNotifier<List<LoadModel>> {
-  LoadListNotifier() : super([]);
+  final LoadPersistenceRepository _repository;
+
+  LoadListNotifier(this._repository) : super([]) {
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    final loads = await _repository.loadLoads();
+    state = loads;
+  }
 
   void addLoad(LoadModel load) {
     state = [...state, load];
+    _repository.saveLoads(state);
   }
 
   void updateLoad(LoadModel updatedLoad) {
@@ -23,16 +38,19 @@ class LoadListNotifier extends StateNotifier<List<LoadModel>> {
       for (final load in state)
         if (load.id == updatedLoad.id) updatedLoad else load,
     ];
+    _repository.saveLoads(state);
   }
 
   void removeLoad(String id) {
     state = state.where((load) => load.id != id).toList();
+    _repository.saveLoads(state);
   }
 }
 
 // Provider for the load list state
 final loadListProvider = StateNotifierProvider<LoadListNotifier, List<LoadModel>>((ref) {
-  return LoadListNotifier();
+  final repository = ref.watch(loadPersistenceRepositoryProvider);
+  return LoadListNotifier(repository);
 });
 
 // Provider for dynamic panel capacity
