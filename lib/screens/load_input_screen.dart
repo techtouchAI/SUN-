@@ -303,15 +303,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 );
               },
             ),
-            IconButton(
-              icon: const Icon(Icons.analytics),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const DashboardScreen()),
-                );
-              },
-            )
+
           ],
         ),
         body: SafeArea(
