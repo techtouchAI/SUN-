@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 class UpdateInfo {
   final bool isUpdateAvailable;
@@ -37,10 +40,35 @@ class UpdateService {
 
         String downloadUrl = data['html_url'];
         if (data['assets'] != null && data['assets'].isNotEmpty) {
-          for (var asset in data['assets']) {
-            if (asset['name'].toString().endsWith('.apk')) {
-              downloadUrl = asset['browser_download_url'];
-              break;
+          // Identify device architecture if on Android
+          String targetArchitecture = '';
+          if (Platform.isAndroid) {
+            DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+            AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+            // Examples: arm64-v8a, armeabi-v7a, x86, x86_64
+            targetArchitecture = androidInfo.supportedAbis.isNotEmpty ? androidInfo.supportedAbis.first : '';
+          }
+
+          bool foundArchSpecificApk = false;
+
+          if (targetArchitecture.isNotEmpty) {
+            for (var asset in data['assets']) {
+              String assetName = asset['name'].toString().toLowerCase();
+              if (assetName.endsWith('.apk') && assetName.contains(targetArchitecture.toLowerCase())) {
+                downloadUrl = asset['browser_download_url'];
+                foundArchSpecificApk = true;
+                break;
+              }
+            }
+          }
+
+          // Fallback if no arch specific APK is found
+          if (!foundArchSpecificApk) {
+             for (var asset in data['assets']) {
+              if (asset['name'].toString().endsWith('.apk')) {
+                downloadUrl = asset['browser_download_url'];
+                break;
+              }
             }
           }
         }
@@ -52,9 +80,11 @@ class UpdateService {
             downloadUrl: downloadUrl,
           );
         }
+      } else {
+        throw Exception('فشل جلب التحديثات من الخادم. الحالة: ${response.statusCode}');
       }
     } catch (e) {
-      // Ignored for now, fail silently and do not interrupt normal app flow.
+      throw Exception('فشل الاتصال: $e');
     }
 
     return UpdateInfo(
@@ -83,39 +113,89 @@ class UpdateService {
   }
 
   Future<void> checkForUpdatesAndShowDialog(BuildContext context) async {
-    final updateInfo = await checkUpdateAvailable();
-    if (updateInfo.isUpdateAvailable) {
+    try {
+      final updateInfo = await checkUpdateAvailable();
       if (!context.mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('تحديث جديد متوفر'),
-            content: Text('تم إصدار نسخة جديدة من التطبيق (${updateInfo.latestVersion}). هل ترغب في التحميل الآن؟'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('لاحقاً'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final Uri url = Uri.parse(updateInfo.downloadUrl);
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: const Text('تحميل التحديث'),
-              ),
-            ],
-          );
-        },
+
+      // Notify success for checking connection
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ تم الاتصال بسيرفر GitHub | الإصدار: ${updateInfo.latestVersion.isNotEmpty ? updateInfo.latestVersion : "الحالي"}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        )
       );
+
+      if (updateInfo.isUpdateAvailable) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('تحديث جديد متوفر'),
+              content: Text('تم إصدار نسخة جديدة من التطبيق (${updateInfo.latestVersion}). هل ترغب في التحميل الآن؟'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('لاحقاً'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (Platform.isAndroid) {
+                      // Request necessary permissions for downloading and installing APK on Android
+                      Map<Permission, PermissionStatus> statuses = await [
+                        Permission.requestInstallPackages,
+                        Permission.manageExternalStorage,
+                        Permission.storage,
+                      ].request();
+
+                      // Storage / manage storage
+                      if (statuses[Permission.manageExternalStorage]?.isDenied == true || statuses[Permission.storage]?.isDenied == true) {
+                         // We might still proceed depending on Android version, but let's try our best.
+                      }
+
+                      if (statuses[Permission.requestInstallPackages]?.isDenied == true) {
+                          // Note: REQUEST_INSTALL_PACKAGES cannot be requested at runtime the same way, but permission_handler handles app settings prompt or ignores if granted.
+                      }
+                    }
+
+                    final Uri url = Uri.parse(updateInfo.downloadUrl);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    } else {
+                       if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('❌ فشل فتح رابط التحميل'),
+                              backgroundColor: Colors.red,
+                            )
+                          );
+                       }
+                    }
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: const Text('تحميل التحديث'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        String errorMsg = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ فشل الاتصال: $errorMsg'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          )
+        );
+      }
     }
   }
 }

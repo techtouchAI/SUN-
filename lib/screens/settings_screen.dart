@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 
@@ -62,6 +63,57 @@ class SettingsScreen extends ConsumerWidget {
                 label: AppStrings.wiringCostLabel,
                 provider: wiringCostProvider,
               ),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text(
+                'المتغيرات الهندسية',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _buildPriceInput(
+                context: context,
+                ref: ref,
+                label: 'جهد النظام (V)',
+                provider: systemVoltageProvider,
+                suffix: ' V',
+              ),
+              const SizedBox(height: 16),
+              _buildPriceInput(
+                context: context,
+                ref: ref,
+                label: 'ساعات الذروة (PSH)',
+                provider: peakSunHoursProvider,
+                suffix: ' ساعات',
+              ),
+              const SizedBox(height: 16),
+              _buildPriceInput(
+                context: context,
+                ref: ref,
+                label: 'نسبة الفقد (%)',
+                provider: energyLossPercentageProvider,
+                suffix: ' %',
+              ),
+              const SizedBox(height: 16),
+              _buildPriceInput(
+                context: context,
+                ref: ref,
+                label: 'أيام التغطية/الغيوم',
+                provider: daysOfAutonomyProvider,
+                suffix: ' أيام',
+              ),
+              const Divider(),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.code),
+                title: const Text('تصميم وبرمجة كنان الصائغ'),
+                trailing: const Icon(Icons.open_in_new),
+                onTap: () async {
+                  final url = Uri.parse('https://t.me/techtouch7');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -74,13 +126,14 @@ class SettingsScreen extends ConsumerWidget {
     required WidgetRef ref,
     required String label,
     required StateProvider<double> provider,
+    String suffix = '\$',
   }) {
     return TextFormField(
       initialValue: ref.read(provider).toString(),
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
-        suffixText: '\$',
+        suffixText: suffix,
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       onChanged: (value) {

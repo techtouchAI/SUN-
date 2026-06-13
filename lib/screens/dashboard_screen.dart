@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import 'chart_screen.dart';
@@ -196,6 +197,55 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                       ],
                     ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Card(
+                    color: Colors.blue.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 14, color: Colors.black87),
+                          children: [
+                            TextSpan(
+                              text: "💡 ملاحظة هندسية حول تقليل الألواح:\n",
+                              style: GoogleFonts.amiri(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const TextSpan(
+                              text: "يمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.",
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        "شكل توضيحي للربط",
+                        style: GoogleFonts.amiri(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            'assets/photoi.png',
+                            fit: BoxFit.contain,
+                            height: 200,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
