@@ -3,7 +3,7 @@ name: Flutter Build
 on:
   push:
     branches:
-      - 'golden-version'
+      - 'main'
   workflow_dispatch: # هذا السطر هو الذي يُفعل زر التشغيل اليدوي!
 
 permissions:
