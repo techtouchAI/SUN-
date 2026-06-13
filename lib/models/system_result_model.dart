@@ -15,11 +15,20 @@ class SystemResultModel {
   final double requiredGridChargingAmps;
   final String suggestedInverterType;
 
+  // Energy Loss & Brands
+  final String energyLossPercentage;
+  final String recommendedInverterBrands;
+  final String recommendedPanelBrands;
+
   // Safety Standards
   final double pvDcBreakerAmps;
   final double batteryDcBreakerAmps;
   final double acBreakerAmps;
   final int wireSizeMm2;
+
+  // Pricing
+  final double estimatedCostUsd;
+  final int totalBreakersCount;
 
   SystemResultModel({
     required this.totalDailyConsumptionWh,
@@ -37,10 +46,15 @@ class SystemResultModel {
     required this.dailyProductionCurve,
     this.requiredGridChargingAmps = 0.0,
     this.suggestedInverterType = '',
+    this.energyLossPercentage = '',
+    this.recommendedInverterBrands = '',
+    this.recommendedPanelBrands = '',
     this.pvDcBreakerAmps = 0.0,
     this.batteryDcBreakerAmps = 0.0,
     this.acBreakerAmps = 0.0,
     this.wireSizeMm2 = 0,
+    this.estimatedCostUsd = 0.0,
+    this.totalBreakersCount = 0,
   });
 
   factory SystemResultModel.empty() {
@@ -60,10 +74,15 @@ class SystemResultModel {
       dailyProductionCurve: [0, 0, 0, 0, 0], // Dawn, Morning, Noon, Afternoon, Evening
       requiredGridChargingAmps: 0.0,
       suggestedInverterType: '',
+      energyLossPercentage: '',
+      recommendedInverterBrands: '',
+      recommendedPanelBrands: '',
       pvDcBreakerAmps: 0.0,
       batteryDcBreakerAmps: 0.0,
       acBreakerAmps: 0.0,
       wireSizeMm2: 0,
+      estimatedCostUsd: 0.0,
+      totalBreakersCount: 0,
     );
   }
 }

@@ -5,6 +5,8 @@ import '../models/load_model.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import 'dashboard_screen.dart';
+import '../services/update_service.dart';
+import 'settings_screen.dart';
 
 class LoadInputScreen extends ConsumerStatefulWidget {
   const LoadInputScreen({super.key});
@@ -25,6 +27,15 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   PowerUnit _selectedUnit = PowerUnit.ampere;
   bool _isInverter = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Schedule the update check after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService().checkForUpdatesAndShowDialog(context);
+    });
+  }
 
   void _addDetailedLoad() {
     if (_detailedFormKey.currentState!.validate()) {
@@ -284,196 +295,225 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.analytics),
+              icon: const Icon(Icons.settings),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
                 );
               },
-            )
+            ),
+
           ],
         ),
         body: SafeArea(
-          child: SingleChildScrollView(
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height,
-              child: Column(
-                children: [
-                  _buildGridSettings(),
-                  Expanded(
-                    flex: 4,
-                    child: TabBarView(
-                      children: [
-                        // Tab 1: Detailed Input
-                        SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Card(
-                              elevation: 4,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Form(
-                                  key: _detailedFormKey,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      TextFormField(
-                                        controller: _nameController,
-                                        decoration: const InputDecoration(labelText: AppStrings.deviceName),
-                                        validator: (value) => value!.isEmpty ? AppStrings.pleaseEnterName : null,
-                                      ),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            flex: 2,
-                                            child: TextFormField(
-                                              controller: _powerValueController,
-                                              decoration: const InputDecoration(labelText: AppStrings.powerCapacity),
-                                              keyboardType: TextInputType.number,
-                                              validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 16),
-                                          Expanded(
-                                            flex: 1,
-                                            child: DropdownButtonFormField<PowerUnit>(
-                                              initialValue: _selectedUnit,
-                                              isExpanded: true,
-                                              items: PowerUnit.values.map((unit) {
-                                                String localizedName = '';
-                                                switch (unit) {
-                                                  case PowerUnit.ampere: localizedName = AppStrings.unitAmpere; break;
-                                                  case PowerUnit.watt: localizedName = AppStrings.unitWatt; break;
-                                                  case PowerUnit.ton: localizedName = AppStrings.unitTon; break;
-                                                }
-                                                return DropdownMenuItem(
-                                                  value: unit,
-                                                  child: FittedBox(
-                                                    fit: BoxFit.scaleDown,
-                                                    child: Text(localizedName),
-                                                  ),
-                                                );
-                                              }).toList(),
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _selectedUnit = value!;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      TextFormField(
-                                        controller: _dailyHoursController,
-                                        decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
-                                        keyboardType: TextInputType.number,
-                                        validator: (value) => value!.isEmpty ? AppStrings.enterHours : null,
-                                      ),
-                                      SwitchListTile(
-                                        title: const Text(AppStrings.isInverterAC),
-                                        value: _isInverter,
-                                        onChanged: _selectedUnit == PowerUnit.ton
-                                          ? (value) => setState(() => _isInverter = value)
-                                          : null,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      ElevatedButton(
-                                        onPressed: _addDetailedLoad,
-                                        child: const Text(AppStrings.addLoadButton),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Tab 2: Quick Input
-                        SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Card(
-                              elevation: 4,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Form(
-                                  key: _quickFormKey,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      TextFormField(
-                                        controller: _quickPowerController,
-                                        decoration: const InputDecoration(labelText: '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})'),
-                                        keyboardType: TextInputType.number,
-                                        validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
-                                      ),
-                                      TextFormField(
-                                        controller: _quickHoursController,
-                                        decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
-                                        keyboardType: TextInputType.number,
-                                        validator: (value) => value!.isEmpty ? AppStrings.enterHours : null,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      ElevatedButton(
-                                        onPressed: _addQuickLoad,
-                                        child: const Text(AppStrings.addLoadButton),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: SwitchListTile(
-                      title: const Text(AppStrings.daytimeOnlyMode),
-                      value: isDaytimeOnly,
-                      onChanged: (value) {
-                        ref.read(isDaytimeOnlyProvider.notifier).state = value;
-                      },
-                    ),
-                  ),
-                  const Divider(),
-                  Expanded(
-                    flex: 3,
-                    child: loads.isEmpty
-                      ? const Center(child: Text(AppStrings.noLoadsAddedYet))
-                      : ListView.builder(
-                          itemCount: loads.length,
-                          itemBuilder: (context, index) {
-                            final load = loads[index];
-                            return ListTile(
-                              title: Text(load.name),
-                              subtitle: Text('${load.powerValue} ${load.unit.name.toUpperCase()} - ${load.dailyUsageHours} ${AppStrings.hrsDay}'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit, color: Colors.blue),
-                                    onPressed: () => _showEditDialog(load),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () {
-                                      ref.read(loadListProvider.notifier).removeLoad(load.id);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                  ),
-                ],
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: _buildGridSettings(),
               ),
-            ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 350,
+                  child: TabBarView(
+                    children: [
+                      // Tab 1: Detailed Input
+                      SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Card(
+                            elevation: 4,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Form(
+                                key: _detailedFormKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    TextFormField(
+                                      controller: _nameController,
+                                      decoration: const InputDecoration(labelText: AppStrings.deviceName),
+                                      validator: (value) => value!.isEmpty ? AppStrings.pleaseEnterName : null,
+                                    ),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child: TextFormField(
+                                            controller: _powerValueController,
+                                            decoration: const InputDecoration(labelText: AppStrings.powerCapacity),
+                                            keyboardType: TextInputType.number,
+                                            validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          flex: 1,
+                                          child: DropdownButtonFormField<PowerUnit>(
+                                            initialValue: _selectedUnit,
+                                            isExpanded: true,
+                                            items: PowerUnit.values.map((unit) {
+                                              String localizedName = '';
+                                              switch (unit) {
+                                                case PowerUnit.ampere: localizedName = AppStrings.unitAmpere; break;
+                                                case PowerUnit.watt: localizedName = AppStrings.unitWatt; break;
+                                                case PowerUnit.ton: localizedName = AppStrings.unitTon; break;
+                                              }
+                                              return DropdownMenuItem(
+                                                value: unit,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(localizedName),
+                                                ),
+                                              );
+                                            }).toList(),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _selectedUnit = value!;
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    TextFormField(
+                                      controller: _dailyHoursController,
+                                      decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) => value!.isEmpty ? AppStrings.enterHours : null,
+                                    ),
+                                    SwitchListTile(
+                                      title: const Text(AppStrings.isInverterAC),
+                                      value: _isInverter,
+                                      onChanged: _selectedUnit == PowerUnit.ton
+                                        ? (value) => setState(() => _isInverter = value)
+                                        : null,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: _addDetailedLoad,
+                                      child: const Text(AppStrings.addLoadButton),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Tab 2: Quick Input
+                      SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Card(
+                            elevation: 4,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Form(
+                                key: _quickFormKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    TextFormField(
+                                      controller: _quickPowerController,
+                                      decoration: const InputDecoration(labelText: '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})'),
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
+                                    ),
+                                    TextFormField(
+                                      controller: _quickHoursController,
+                                      decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) => value!.isEmpty ? AppStrings.enterHours : null,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton(
+                                      onPressed: _addQuickLoad,
+                                      child: const Text(AppStrings.addLoadButton),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: SwitchListTile(
+                    title: const Text(AppStrings.daytimeOnlyMode),
+                    value: isDaytimeOnly,
+                    onChanged: (value) {
+                      ref.read(isDaytimeOnlyProvider.notifier).state = value;
+                    },
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(
+                child: Divider(),
+              ),
+              if (loads.isEmpty)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Center(child: Text(AppStrings.noLoadsAddedYet)),
+                  ),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final load = loads[index];
+                      return ListTile(
+                        title: Text(load.name),
+                        subtitle: Text('${load.powerValue} ${load.unit.name.toUpperCase()} - ${load.dailyUsageHours} ${AppStrings.hrsDay}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showEditDialog(load),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {
+                                ref.read(loadListProvider.notifier).removeLoad(load.id);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    childCount: loads.length,
+                  ),
+                ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('عرض النتائج'),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
