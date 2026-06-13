@@ -46,7 +46,7 @@ jobs:
         VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: //' | tr -d '\r')
         echo "VERSION=v$VERSION" >> $GITHUB_ENV
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/golden-version' && github.event_name == 'push'
 
     - name: Check if Tag Exists
       id: check_tag
@@ -59,7 +59,7 @@ jobs:
 
     # إنشاء Git Tag تلقائي
     - name: Create Git Tag
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.TAG_EXISTS == 'false'
+      if: github.ref == 'refs/heads/golden-version' && github.event_name == 'push' && env.TAG_EXISTS == 'false'
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
@@ -76,7 +76,7 @@ jobs:
 
     # إنشاء GitHub Release أوتوماتيكياً
     - name: Create GitHub Release
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push' && env.TAG_EXISTS == 'false'
+      if: github.ref == 'refs/heads/golden-version' && github.event_name == 'push' && env.TAG_EXISTS == 'false'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ env.VERSION }}
