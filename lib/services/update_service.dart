@@ -119,10 +119,10 @@ class UpdateService {
 
       // Notify success for checking connection
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ تم الاتصال بسيرفر GitHub | الإصدار: ${updateInfo.latestVersion.isNotEmpty ? updateInfo.latestVersion : "الحالي"}'),
+        const SnackBar(
+          content: Text('✅'),
           backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
+          duration: Duration(seconds: 3),
         )
       );
 
@@ -168,7 +168,7 @@ class UpdateService {
                        if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('❌ فشل فتح رابط التحميل'),
+                              content: Text('❌'),
                               backgroundColor: Colors.red,
                             )
                           );
@@ -187,12 +187,11 @@ class UpdateService {
       }
     } catch (e) {
       if (context.mounted) {
-        String errorMsg = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ فشل الاتصال: $errorMsg'),
+          const SnackBar(
+            content: Text('❌'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
+            duration: Duration(seconds: 4),
           )
         );
       }

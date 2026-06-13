@@ -46,6 +46,9 @@ dependencies:
   http: ^1.6.0
   device_info_plus: ^13.1.0
   permission_handler: ^12.0.3
+  shared_preferences: ^2.5.5
+  pdf: ^3.12.0
+  printing: ^5.14.3
 
 dev_dependencies:
   flutter_test:
@@ -100,6 +103,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: Amiri
+      fonts:
+        - asset: assets/fonts/Amiri-Regular.ttf
 
 flutter_launcher_icons:
   android: "launcher_icon"
