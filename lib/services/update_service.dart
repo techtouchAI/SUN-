@@ -166,17 +166,17 @@ class UpdateService {
                     }
 
                     final Uri url = Uri.parse(updateInfo.downloadUrl);
-                    if (await canLaunchUrl(url)) {
+                    try {
                       await launchUrl(url, mode: LaunchMode.externalApplication);
-                    } else {
-                       if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('❌'),
-                              backgroundColor: Colors.red,
-                            )
-                          );
-                       }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('⚠️ فشل في فتح المتصفح'),
+                            backgroundColor: Colors.orange,
+                          )
+                        );
+                      }
                     }
                     if (context.mounted) {
                       Navigator.of(context).pop();
