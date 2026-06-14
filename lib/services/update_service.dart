@@ -1,11 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 
 class UpdateInfo {
   final bool isUpdateAvailable;
@@ -134,14 +136,14 @@ class UpdateService {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (BuildContext context) {
+          builder: (BuildContext dialogContext) {
             return AlertDialog(
               title: const Text('تحديث جديد متوفر'),
               content: Text('تم إصدار نسخة جديدة من التطبيق (${updateInfo.latestVersion}). هل ترغب في التحميل الآن؟'),
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(dialogContext).pop();
                   },
                   child: const Text('لاحقاً'),
                 ),
@@ -165,22 +167,9 @@ class UpdateService {
                       }
                     }
 
-                    final Uri url = Uri.parse(updateInfo.downloadUrl);
-                    try {
-                      await launchUrl(url, mode: LaunchMode.externalApplication);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('⚠️ فشل في فتح المتصفح'),
-                            backgroundColor: Colors.orange,
-                          )
-                        );
-                      }
-                    }
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
+                    if (!dialogContext.mounted) return;
+                    Navigator.of(dialogContext).pop(); // Close initial dialog
+                    _downloadAndInstallUpdate(context, updateInfo.downloadUrl);
                   },
                   child: const Text('تحميل التحديث'),
                 ),
@@ -199,6 +188,91 @@ class UpdateService {
           )
         );
       }
+    }
+  }
+
+  Future<void> _downloadAndInstallUpdate(BuildContext context, String url) async {
+    final ValueNotifier<double> progressNotifier = ValueNotifier<double>(0.0);
+    final dio = Dio();
+    String savePath = '';
+
+    try {
+      final dir = await getTemporaryDirectory();
+      savePath = '${dir.path}/update.apk';
+
+      if (!context.mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext progressContext) {
+          return AlertDialog(
+            title: const Text('جاري تحميل التحديث...'),
+            content: ValueListenableBuilder<double>(
+              valueListenable: progressNotifier,
+              builder: (context, progress, child) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(value: progress > 0 ? progress : null),
+                    const SizedBox(height: 16),
+                    Text('${(progress * 100).toStringAsFixed(1)}%'),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+
+      await dio.download(
+        url,
+        savePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            progressNotifier.value = received / total;
+          }
+        },
+      );
+
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close progress dialog
+        _installApk(context, savePath);
+      }
+
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close progress dialog on error
+        _showErrorSnackbar(context, '⚠️ فشل التحميل: ${e.toString()}');
+      }
+    } finally {
+      progressNotifier.dispose();
+    }
+  }
+
+  Future<void> _installApk(BuildContext context, String filePath) async {
+    try {
+      final result = await OpenFilex.open(filePath);
+      if (result.type != ResultType.done) {
+        if (context.mounted) {
+          _showErrorSnackbar(context, '⚠️ فشل في فتح ملف التثبيت: ${result.message}');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        _showErrorSnackbar(context, '⚠️ حدث خطأ غير متوقع: $e');
+      }
+    }
+  }
+
+  void _showErrorSnackbar(BuildContext context, String message) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.orange,
+        )
+      );
     }
   }
 }
