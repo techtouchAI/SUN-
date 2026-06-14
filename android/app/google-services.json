@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "425141773469",
+    "project_id": "solar-calculator-272a5",
+    "storage_bucket": "solar-calculator-272a5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:425141773469:android:a84053ec0c24912ee72074",
+        "android_client_info": {
+          "package_name": "com.example.solar_calculator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-_CFtgedGl1BDeyFpER7m3RZkS_CTjUk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
