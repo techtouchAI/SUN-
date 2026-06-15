@@ -97,7 +97,7 @@ class SolarCalculationRepository {
     double gridContributionPercent = 0.0;
     int panelsSavedByGrid = 0;
 
-    if (systemMode != SystemMode.offGrid && gridSchedule.gridOnHours > 0) {
+    if (systemMode != SystemMode.offGrid && systemMode != SystemMode.directOnGrid && gridSchedule.gridOnHours > 0) {
       // Proportional Distribution Model
       // Daytime is assumed 10 hours, Nighttime 14 hours
       double daytimeGridHours = gridSchedule.gridOnHours * (10.0 / 24.0);
