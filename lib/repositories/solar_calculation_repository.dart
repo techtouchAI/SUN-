@@ -100,7 +100,7 @@ class SolarCalculationRepository {
       // Assuming nighttime is 14 hours. Grid ON hours during night reduces need for solar charging.
       // A simple proportion: if grid is ON for 7 hours, it covers 50% of the charging needs.
       double effectiveGridNightHours = (gridSchedule.gridOnHours / 24.0) * 14.0;
-      gridContributionPercent = (effectiveGridNightHours / 14.0).clamp(0.0, 1.0);
+      gridContributionPercent = (effectiveGridNightHours / 14.0).clamp(0.0, 1.0) * (gridSchedule.gridChargeDependencyPercent / 100.0);
 
       panelsForBatteries = (originalPanelsForBatteries * (1 - gridContributionPercent)).ceil();
       panelsSavedByGrid = originalPanelsForBatteries - panelsForBatteries;
@@ -141,6 +141,7 @@ class SolarCalculationRepository {
 
   SystemResultModel calculateSystem(List<LoadModel> loads, {
     required double gridVoltage,
+    String inverterLocation = 'indoor',
     double panelCapacity = 540.0,
     double panelIsc = 0.0,
     bool isDaytimeOnly = false,
@@ -183,11 +184,21 @@ class SolarCalculationRepository {
       final productionCurve = calculateDailyProductionCurve(totalPanelsRequired, panelCapacity);
 
       double requiredGridChargingAmps = 0.0;
-      if (gridSchedule.isUpsMode && gridSchedule.gridOnHours > 0) {
-        // Battery needs to be charged within the available grid hours
+      String gelBatteryWarning = '';
+      if (gridSchedule.gridOnHours > 0) {
+        // Calculate grid portion based on dependency percent
         double dailyWhToRecharge = nighttimeConsumption * systemLossFactor;
-        double gridWattsNeeded = dailyWhToRecharge / gridSchedule.gridOnHours;
+        double gridWattsNeeded = (dailyWhToRecharge * (gridSchedule.gridChargeDependencyPercent / 100.0)) / gridSchedule.gridOnHours;
         requiredGridChargingAmps = gridWattsNeeded / systemVoltage;
+
+        // Gel Battery C-Rate Limit (20% of Ah)
+        if (gridSchedule.batteryType == 'Lead-Acid/Gel') {
+          double maxAmps = batteryCapacity * 0.20;
+          if (requiredGridChargingAmps > maxAmps) {
+            requiredGridChargingAmps = maxAmps;
+            gelBatteryWarning = 'تحذير: تيار الشحن المطلوب من الوطنية عالي جداً مما قد يتلف بطاريات الجل. تم تقييد الشحن لـ ${maxAmps.toStringAsFixed(1)}A';
+          }
+        }
       }
 
       String suggestedInverterType = '';
@@ -217,6 +228,9 @@ class SolarCalculationRepository {
       ].reduce((a, b) => a > b ? a : b);
 
       int wireSizeMm2 = _calculateWireSize(maxAmpsForWire);
+
+      String suggestedChargePriority = gridSchedule.gridChargeDependencyPercent > 50 ? 'SNU / Utility First' : 'CSO / Solar First';
+      String suggestedIpRating = inverterLocation == 'outdoor' ? 'IP65' : 'IP20';
 
       // Pricing Calculations
       int totalBreakersCount = 0;
@@ -256,6 +270,9 @@ class SolarCalculationRepository {
         wireSizeMm2: wireSizeMm2,
         estimatedCostUsd: totalEstimatedCostUsd,
         totalBreakersCount: totalBreakersCount,
+        suggestedChargePriority: suggestedChargePriority,
+        gelBatteryWarning: gelBatteryWarning,
+        suggestedIpRating: suggestedIpRating,
       );
     } catch (e, st) {
       // Re-throw or log to avoid swallowing the error

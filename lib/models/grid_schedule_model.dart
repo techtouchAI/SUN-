@@ -4,6 +4,7 @@ class GridScheduleModel {
   final bool isOffGrid;
   final String batteryType;
   final bool isUpsMode;
+  final double gridChargeDependencyPercent;
 
   const GridScheduleModel({
     this.gridOnHours = 0.0,
@@ -11,6 +12,7 @@ class GridScheduleModel {
     this.isOffGrid = true,
     this.batteryType = 'Lead-Acid/Gel',
     this.isUpsMode = false,
+    this.gridChargeDependencyPercent = 100.0,
   });
 
   GridScheduleModel copyWith({
@@ -19,6 +21,7 @@ class GridScheduleModel {
     bool? isOffGrid,
     String? batteryType,
     bool? isUpsMode,
+    double? gridChargeDependencyPercent,
   }) {
     return GridScheduleModel(
       gridOnHours: gridOnHours ?? this.gridOnHours,
@@ -26,6 +29,7 @@ class GridScheduleModel {
       isOffGrid: isOffGrid ?? this.isOffGrid,
       batteryType: batteryType ?? this.batteryType,
       isUpsMode: isUpsMode ?? this.isUpsMode,
+      gridChargeDependencyPercent: gridChargeDependencyPercent ?? this.gridChargeDependencyPercent,
     );
   }
 }

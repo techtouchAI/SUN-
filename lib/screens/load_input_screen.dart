@@ -270,6 +270,20 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              if (gridSchedule.gridOnHours > 0 && !gridSchedule.isOffGrid) ...[
+                Text('نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%'),
+                Slider(
+                  value: gridSchedule.gridChargeDependencyPercent,
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
+                  label: '${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
+                  onChanged: (value) {
+                    ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(gridChargeDependencyPercent: value);
+                  },
+                ),
+              ],
             ],
           ],
         ),

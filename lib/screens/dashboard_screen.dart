@@ -169,6 +169,7 @@ class DashboardScreen extends ConsumerWidget {
                       AppStrings.recommendedInverterBrands,
                       'حجم الإنفرتر تم اختياره بناءً على أقصى حمل لحظي يمكن أن يعمل في نفس الوقت، مع إضافة هامش أمان لحماية الجهاز.',
                       'يوضح هذا أيضاً تأثير الأجهزة الإنفرتر في تقليل الحمل المبدئي (Surge).',
+                      if (result.suggestedIpRating.isNotEmpty) 'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
                       '${AppStrings.peakLoad}: ${result.peakLoadW.toStringAsFixed(0)} W',
                       '${AppStrings.safetyMargin}: ${result.safetyMarginW.toStringAsFixed(0)} W',
                     ]),
@@ -183,6 +184,8 @@ class DashboardScreen extends ConsumerWidget {
                         AppStrings.batteryExplanationBody,
                         'السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
                         if (result.requiredGridChargingAmps > 0) 'أمبير الشحن المطلوب من الوطنية: ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
+                        if (result.suggestedChargePriority.isNotEmpty) 'أولوية الشحن المقترحة: ${result.suggestedChargePriority}',
+                        if (result.gelBatteryWarning.isNotEmpty) result.gelBatteryWarning,
                       ]),
                     ),
                   if (ref.watch(gridScheduleProvider).isUpsMode == false)
