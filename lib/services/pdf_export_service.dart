@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import '../models/system_result_model.dart';
 import '../models/load_model.dart';
 import '../models/system_mode.dart';
+import '../logic/app_strings.dart';
 
 class PdfExportService {
   Future<void> exportDashboardToPdf(
@@ -83,7 +84,8 @@ class PdfExportService {
               pw.Text('بنك البطاريات', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
               pw.Divider(),
               pw.Text('السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah', style: const pw.TextStyle(fontSize: 16)),
-              pw.Text('تم حساب هذه السعة بناءً على الاستهلاك الليلي، مع أخذ نسبة تفريغ آمنة (DoD 50%) للحفاظ على عمر البطاريات لتغطية فترات غياب الشمس.', style: const pw.TextStyle(fontSize: 14)),
+              pw.Text(AppStrings.batteryExplanationBody, style: const pw.TextStyle(fontSize: 14)),
+              pw.Text(result.breakdown.batteryExplanationAr, style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
               if (result.requiredGridChargingAmps > 0)
                 pw.Text('⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
               if (result.requiredGridChargingAcAmps > 0)

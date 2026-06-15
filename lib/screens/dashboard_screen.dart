@@ -234,10 +234,14 @@ class DashboardScreen extends ConsumerWidget {
                                       SystemMode.directOnGrid) ...[
                                     '\n${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
                                     result.breakdown.batteryPanelsExplanationAr,
+                                    if (result.breakdown.mpptRecommendationAr.isNotEmpty)
+                                      '\n${result.breakdown.mpptRecommendationAr}',
                                   ],
                                   '\nالمجموع الكلي: ${result.requiredPanels} لوح',
                                   if (systemMode != SystemMode.directOnGrid)
                                     '\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.',
+                                  if (result.breakdown.floatPreservationRecommendationAr.isNotEmpty)
+                                    '\n${result.breakdown.floatPreservationRecommendationAr}',
                                 ],
                               ),
                             ),

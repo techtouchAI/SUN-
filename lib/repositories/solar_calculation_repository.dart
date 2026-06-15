@@ -7,6 +7,38 @@ import '../models/calculation_breakdown_model.dart';
 
 class SolarCalculationRepository {
   // Domain Engineering Constants
+  static const Map<int, double> panelIscDictionary = {
+    330: 9.5,
+    400: 10.5,
+    450: 11.5,
+    540: 13.8,
+    600: 18.5,
+  };
+
+  static double getInterpolatedIsc(double wattage) {
+    if (wattage <= 0) return 0.0;
+
+    final keys = panelIscDictionary.keys.toList()..sort();
+
+    if (wattage <= keys.first) return panelIscDictionary[keys.first]!;
+    if (wattage >= keys.last) return panelIscDictionary[keys.last]!;
+
+    for (int i = 0; i < keys.length - 1; i++) {
+      int lowerWatt = keys[i];
+      int upperWatt = keys[i + 1];
+
+      if (wattage >= lowerWatt && wattage <= upperWatt) {
+        double lowerIsc = panelIscDictionary[lowerWatt]!;
+        double upperIsc = panelIscDictionary[upperWatt]!;
+
+        // Linear interpolation
+        double ratio = (wattage - lowerWatt) / (upperWatt - lowerWatt);
+        return lowerIsc + (ratio * (upperIsc - lowerIsc));
+      }
+    }
+    return 0.0;
+  }
+
   static const double electricalWattsPerTon =
       1200.0; // Rough estimate for AC conversion
   // Used for Ampere conversion
@@ -145,6 +177,7 @@ class SolarCalculationRepository {
         'daytimePanelsExplanationEn': '',
         'batteryPanelsExplanationAr': '',
         'batteryPanelsExplanationEn': '',
+        'floatPreservationRecommendationAr': '',
       };
     }
 
@@ -172,6 +205,13 @@ class SolarCalculationRepository {
     String daytimePanelsExplanationAr = '';
     String daytimePanelsExplanationEn = '';
 
+    int panelsForEnergyPath =
+        (energyPathWattage / effectivePanelCapacity).ceil();
+    int panelsForPowerPath =
+        (powerPathWattage / effectivePanelCapacity).ceil();
+
+    String floatPreservationRecommendationAr = '';
+
     if (systemMode == SystemMode.directOnGrid) {
       // Strict Power Path (No batteries to buffer)
       requiredDaytimePanelWattage = powerPathWattage;
@@ -188,6 +228,11 @@ class SolarCalculationRepository {
           'نظام (الهجين / المستقل) يعتمد على مسار الطاقة حيث تعمل البطارية كممتص للصدمات (Buffer). الطاقة المطلوبة نهاراً = ${requiredDaytimeProductionWh.toStringAsFixed(0)}Wh. بالقسمة على ساعات الذروة الشمسية ($peakSunHours)، القدرة المطلوبة = ${requiredDaytimePanelWattage.toStringAsFixed(0)}W.';
       daytimePanelsExplanationEn =
           'Hybrid/Off-Grid mode relies on the Energy Path (Batteries act as buffer). Daytime energy required = ${requiredDaytimeProductionWh.toStringAsFixed(0)}Wh. Divided by Peak Sun Hours ($peakSunHours), required power = ${requiredDaytimePanelWattage.toStringAsFixed(0)}W.';
+
+      if (panelsForPowerPath > panelsForEnergyPath) {
+        int diff = panelsForPowerPath - panelsForEnergyPath;
+        floatPreservationRecommendationAr = '💡 نصيحة هندسية للاستقرار: للحفاظ على عمر البطاريات وضمان دخولها فترة الليل مشحونة 100% دون استنزاف نهاري، يُفضل إضافة $diff لوح شمسي إضافي لتغطية الفواقد الطبيعية.';
+      }
     }
 
     int panelsForDaytime =
@@ -239,6 +284,7 @@ class SolarCalculationRepository {
       'daytimePanelsExplanationEn': daytimePanelsExplanationEn,
       'batteryPanelsExplanationAr': batteryPanelsExplanationAr,
       'batteryPanelsExplanationEn': batteryPanelsExplanationEn,
+      'floatPreservationRecommendationAr': floatPreservationRecommendationAr,
     };
   }
 
@@ -415,6 +461,13 @@ class SolarCalculationRepository {
       }
 
       // Safety Standards Calculations
+      double mpptAmps = 0.0;
+      String mpptRecommendationAr = '';
+      if (panelsForBatteries > 0 && panelIsc > 0) {
+        mpptAmps = panelsForBatteries * panelIsc * 1.25;
+        mpptRecommendationAr = 'حجم منظم الشحن (MPPT) المقترح: ${mpptAmps.toStringAsFixed(1)} أمبير';
+      }
+
       double pvDcBreakerAmps = panelIsc > 0 ? (panelIsc * 1.56) : 0;
       double maxContinuousBatteryCurrent =
           totalInverterCapacity / systemVoltage;
@@ -468,10 +521,12 @@ class SolarCalculationRepository {
       String batteryExplanationAr = '';
       String batteryExplanationEn = '';
       if (systemMode != SystemMode.directOnGrid && batteryCapacity > 0) {
+        double batteryDoD = gridSchedule.batteryType == 'Lithium' ? 0.8 : 0.5;
+        String dodString = (batteryDoD * 100).toStringAsFixed(0);
         batteryExplanationAr =
-            'استهلاك الليل المباشر = ${nighttimeConsumption.toStringAsFixed(0)}Wh. قسمة على كفاءة الانفرتر (0.90) = ${actualNighttimeDcWh.toStringAsFixed(0)}Wh. بمعامل تفريغ (DoD) ونظام فولطية (${systemVoltage}V) السعة المطلوبة هي ${batteryCapacity.toStringAsFixed(0)}Ah.';
+            'استهلاك الليل المباشر = ${nighttimeConsumption.toStringAsFixed(0)}Wh. قسمة على كفاءة الانفرتر (0.90) = ${actualNighttimeDcWh.toStringAsFixed(0)}Wh. بمعامل تفريغ ($dodString% DoD) ونظام فولطية (${systemVoltage}V) السعة المطلوبة هي ${batteryCapacity.toStringAsFixed(0)}Ah.';
         batteryExplanationEn =
-            'Nighttime direct consumption = ${nighttimeConsumption.toStringAsFixed(0)}Wh. Divided by inverter efficiency (0.90) = ${actualNighttimeDcWh.toStringAsFixed(0)}Wh. Considering DoD and system voltage (${systemVoltage}V), required capacity is ${batteryCapacity.toStringAsFixed(0)}Ah.';
+            'Nighttime direct consumption = ${nighttimeConsumption.toStringAsFixed(0)}Wh. Divided by inverter efficiency (0.90) = ${actualNighttimeDcWh.toStringAsFixed(0)}Wh. Considering DoD ($dodString%) and system voltage (${systemVoltage}V), required capacity is ${batteryCapacity.toStringAsFixed(0)}Ah.';
       }
 
       CalculationBreakdownModel breakdown = CalculationBreakdownModel(
@@ -483,6 +538,8 @@ class SolarCalculationRepository {
         inverterExplanationEn: inverterExplanationEn,
         batteryExplanationAr: batteryExplanationAr,
         batteryExplanationEn: batteryExplanationEn,
+        floatPreservationRecommendationAr: panelsDetails['floatPreservationRecommendationAr'] ?? '',
+        mpptRecommendationAr: mpptRecommendationAr,
       );
 
       return SystemResultModel(
