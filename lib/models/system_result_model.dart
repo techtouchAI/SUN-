@@ -1,3 +1,5 @@
+import 'calculation_breakdown_model.dart';
+
 class SystemResultModel {
   final double totalDailyConsumptionWh; // Total Wh consumed per day
   final double daytimeConsumptionWh;
@@ -5,13 +7,16 @@ class SystemResultModel {
   final double peakLoadW;
   final double safetyMarginW;
   final double requiredInverterCapacityW; // Peak load with safety margin
-  final double requiredBatteryCapacityAh; // Required Ah based on night usage, voltage, and DoD
-  final int requiredPanels; // Number of panels needed based on total consumption and PSH
+  final double
+  requiredBatteryCapacityAh; // Required Ah based on night usage, voltage, and DoD
+  final int
+  requiredPanels; // Number of panels needed based on total consumption and PSH
   final int panelsForDaytime;
   final int panelsForBatteries;
   final double gridContributionPercent;
   final int panelsSavedByGrid;
-  final List<double> dailyProductionCurve; // Curve showing power production at different times of day (e.g., Dawn, Morning, Noon, Afternoon, Evening)
+  final List<double>
+  dailyProductionCurve; // Curve showing power production at different times of day (e.g., Dawn, Morning, Noon, Afternoon, Evening)
   final double requiredGridChargingAmps; // DC Current
   final double requiredGridChargingAcAmps; // AC Current Draw
   final double timeToFullHours; // Time to full in hours
@@ -34,6 +39,8 @@ class SystemResultModel {
   final String suggestedChargePriority;
   final String gelBatteryWarning;
   final String suggestedIpRating;
+
+  final CalculationBreakdownModel breakdown;
 
   SystemResultModel({
     required this.totalDailyConsumptionWh,
@@ -65,6 +72,16 @@ class SystemResultModel {
     this.suggestedChargePriority = '',
     this.gelBatteryWarning = '',
     this.suggestedIpRating = '',
+    this.breakdown = const CalculationBreakdownModel(
+      daytimePanelsExplanationAr: '',
+      daytimePanelsExplanationEn: '',
+      batteryPanelsExplanationAr: '',
+      batteryPanelsExplanationEn: '',
+      inverterExplanationAr: '',
+      inverterExplanationEn: '',
+      batteryExplanationAr: '',
+      batteryExplanationEn: '',
+    ),
   });
 
   factory SystemResultModel.empty() {
@@ -81,7 +98,13 @@ class SystemResultModel {
       panelsForBatteries: 0,
       gridContributionPercent: 0,
       panelsSavedByGrid: 0,
-      dailyProductionCurve: [0, 0, 0, 0, 0], // Dawn, Morning, Noon, Afternoon, Evening
+      dailyProductionCurve: [
+        0,
+        0,
+        0,
+        0,
+        0,
+      ], // Dawn, Morning, Noon, Afternoon, Evening
       requiredGridChargingAmps: 0.0,
       requiredGridChargingAcAmps: 0.0,
       timeToFullHours: 0.0,
@@ -98,6 +121,7 @@ class SystemResultModel {
       suggestedChargePriority: '',
       gelBatteryWarning: '',
       suggestedIpRating: '',
+      breakdown: CalculationBreakdownModel.empty(),
     );
   }
 }
