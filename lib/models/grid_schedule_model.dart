@@ -21,7 +21,8 @@ class GridScheduleModel {
       gridOnHours: gridOnHours ?? this.gridOnHours,
       gridOffHours: gridOffHours ?? this.gridOffHours,
       batteryType: batteryType ?? this.batteryType,
-      gridChargeDependencyPercent: gridChargeDependencyPercent ?? this.gridChargeDependencyPercent,
+      gridChargeDependencyPercent:
+          gridChargeDependencyPercent ?? this.gridChargeDependencyPercent,
     );
   }
 }

@@ -34,7 +34,8 @@ class LoadModel {
       name: name ?? this.name,
       unit: unit ?? this.unit,
       powerValue: powerValue ?? this.powerValue,
-      startingCurrentMultiplier: startingCurrentMultiplier ?? this.startingCurrentMultiplier,
+      startingCurrentMultiplier:
+          startingCurrentMultiplier ?? this.startingCurrentMultiplier,
       dailyUsageHours: dailyUsageHours ?? this.dailyUsageHours,
       isInverterDevice: isInverterDevice ?? this.isInverterDevice,
     );
