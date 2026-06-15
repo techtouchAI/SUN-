@@ -57,6 +57,7 @@ class PdfExportService {
             pw.Text('يوضح هذا أيضاً تأثير الأجهزة الإنفرتر في تقليل الحمل المبدئي (Surge).', style: const pw.TextStyle(fontSize: 14)),
             pw.Text('الحمل الأقصى اللحظي: ${result.peakLoadW.toStringAsFixed(0)} W', style: const pw.TextStyle(fontSize: 14)),
             pw.Text('هامش الأمان: ${result.safetyMarginW.toStringAsFixed(0)} W', style: const pw.TextStyle(fontSize: 14)),
+            if (result.suggestedIpRating.isNotEmpty) pw.Text('تقييم الحماية المقترح (IP): ${result.suggestedIpRating}', style: const pw.TextStyle(fontSize: 14)),
             pw.SizedBox(height: 20),
 
             // 3. Solar Panels
@@ -84,6 +85,10 @@ class PdfExportService {
               pw.Text('تم حساب هذه السعة بناءً على الاستهلاك الليلي، مع أخذ نسبة تفريغ آمنة (DoD 50%) للحفاظ على عمر البطاريات لتغطية فترات غياب الشمس.', style: const pw.TextStyle(fontSize: 14)),
               if (result.requiredGridChargingAmps > 0)
                 pw.Text('أمبير الشحن المطلوب من الوطنية: ${result.requiredGridChargingAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
+              if (result.suggestedChargePriority.isNotEmpty)
+                pw.Text('أولوية الشحن المقترحة: ${result.suggestedChargePriority}', style: const pw.TextStyle(fontSize: 14)),
+              if (result.gelBatteryWarning.isNotEmpty)
+                pw.Text(result.gelBatteryWarning, style: const pw.TextStyle(fontSize: 14, color: PdfColors.red)),
               pw.SizedBox(height: 20),
             ],
 

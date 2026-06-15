@@ -120,6 +120,47 @@ class SettingsScreen extends ConsumerWidget {
               ),
               const Divider(),
               const SizedBox(height: 16),
+              const Text(
+                'إعدادات متقدمة',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              if (!ref.watch(gridScheduleProvider).isUpsMode) ...[
+                _buildPriceInput(
+                  context: context,
+                  ref: ref,
+                  label: 'قدرة اللوح المخصصة (Watt)',
+                  provider: panelCapacityProvider,
+                  suffix: ' W',
+                ),
+                const SizedBox(height: 16),
+                _buildPriceInput(
+                  context: context,
+                  ref: ref,
+                  label: 'تيار القصر للوح (Isc)',
+                  provider: panelIscProvider,
+                  suffix: ' A',
+                ),
+                const SizedBox(height: 16),
+              ],
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'مكان تركيب الإينفيرتر',
+                  border: OutlineInputBorder(),
+                ),
+                value: ref.watch(inverterLocationProvider),
+                items: const [
+                  DropdownMenuItem(value: 'indoor', child: Text('داخلي (Indoor)')),
+                  DropdownMenuItem(value: 'outdoor', child: Text('خارجي (Outdoor)')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(inverterLocationProvider.notifier).state = value;
+                  }
+                },
+              ),
+              const Divider(),
+              const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.code),
                 title: const Text('تصميم وبرمجة كنان الصائغ'),

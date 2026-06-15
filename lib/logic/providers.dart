@@ -59,6 +59,9 @@ final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
 // Provider for dynamic panel Isc
 final panelIscProvider = StateProvider<double>((ref) => 0.0);
 
+// Provider for inverter location
+final inverterLocationProvider = StateProvider<String>((ref) => 'indoor');
+
 // Provider for daytime only mode
 final isDaytimeOnlyProvider = StateProvider<bool>((ref) => false);
 
@@ -107,12 +110,14 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
   final daysOfAutonomy = ref.watch(daysOfAutonomyProvider);
 
   final gridVoltage = ref.watch(gridVoltageProvider);
+  final inverterLocation = ref.watch(inverterLocationProvider);
   final repository = ref.watch(solarCalculationRepositoryProvider);
 
   try {
     final result = repository.calculateSystem(
       loads,
       gridVoltage: gridVoltage,
+      inverterLocation: inverterLocation,
       panelCapacity: panelCapacity,
       panelIsc: panelIsc,
       isDaytimeOnly: isDaytimeOnly,

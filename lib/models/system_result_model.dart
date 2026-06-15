@@ -29,6 +29,9 @@ class SystemResultModel {
   // Pricing
   final double estimatedCostUsd;
   final int totalBreakersCount;
+  final String suggestedChargePriority;
+  final String gelBatteryWarning;
+  final String suggestedIpRating;
 
   SystemResultModel({
     required this.totalDailyConsumptionWh,
@@ -55,6 +58,9 @@ class SystemResultModel {
     this.wireSizeMm2 = 0,
     this.estimatedCostUsd = 0.0,
     this.totalBreakersCount = 0,
+    this.suggestedChargePriority = '',
+    this.gelBatteryWarning = '',
+    this.suggestedIpRating = '',
   });
 
   factory SystemResultModel.empty() {
@@ -83,6 +89,9 @@ class SystemResultModel {
       wireSizeMm2: 0,
       estimatedCostUsd: 0.0,
       totalBreakersCount: 0,
+      suggestedChargePriority: '',
+      gelBatteryWarning: '',
+      suggestedIpRating: '',
     );
   }
 }
