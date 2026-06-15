@@ -148,7 +148,7 @@ class SettingsScreen extends ConsumerWidget {
                   labelText: 'مكان تركيب الإينفيرتر',
                   border: OutlineInputBorder(),
                 ),
-                value: ref.watch(inverterLocationProvider),
+                initialValue: ref.watch(inverterLocationProvider),
                 items: const [
                   DropdownMenuItem(value: 'indoor', child: Text('داخلي (Indoor)')),
                   DropdownMenuItem(value: 'outdoor', child: Text('خارجي (Outdoor)')),
