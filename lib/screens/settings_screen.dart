@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import '../models/system_mode.dart';
+import '../repositories/solar_calculation_repository.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -133,6 +134,12 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'قدرة اللوح المخصصة (Watt)',
                   provider: panelCapacityProvider,
                   suffix: ' W',
+                  onChangedCallback: (parsedValue) {
+                    final interpolatedIsc = SolarCalculationRepository.getInterpolatedIsc(parsedValue);
+                    Future.microtask(() {
+                      ref.read(panelIscProvider.notifier).state = double.parse(interpolatedIsc.toStringAsFixed(2));
+                    });
+                  },
                 ),
                 const SizedBox(height: 16),
                 _buildPriceInput(
@@ -141,6 +148,7 @@ class SettingsScreen extends ConsumerWidget {
                   label: 'تيار القصر للوح (Isc)',
                   provider: panelIscProvider,
                   suffix: ' A',
+                  keyString: ref.watch(panelIscProvider).toString(),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -188,9 +196,12 @@ class SettingsScreen extends ConsumerWidget {
     required String label,
     required StateProvider<double> provider,
     String suffix = '\$',
+    void Function(double)? onChangedCallback,
+    String? keyString,
   }) {
     return TextFormField(
-      initialValue: ref.read(provider).toString(),
+      key: keyString != null ? Key(keyString) : null,
+      initialValue: keyString ?? ref.read(provider).toString(),
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
@@ -201,6 +212,9 @@ class SettingsScreen extends ConsumerWidget {
         final parsedValue = double.tryParse(value);
         if (parsedValue != null && parsedValue >= 0) {
           ref.read(provider.notifier).state = parsedValue;
+          if (onChangedCallback != null) {
+            onChangedCallback(parsedValue);
+          }
         }
       },
     );

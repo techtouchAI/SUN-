@@ -78,7 +78,7 @@ final wiringCostProvider = StateProvider<double>((ref) => 0.0);
 // Providers for engineering parameters
 final systemVoltageProvider = StateProvider<double>((ref) => 48.0);
 final peakSunHoursProvider = StateProvider<double>((ref) => 4.5);
-final energyLossPercentageProvider = StateProvider<double>((ref) => 18.0);
+final energyLossPercentageProvider = StateProvider<double>((ref) => 30.0);
 final daysOfAutonomyProvider = StateProvider<double>((ref) => 1.0);
 
 // Provider for grid schedule

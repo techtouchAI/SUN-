@@ -7,6 +7,8 @@ class CalculationBreakdownModel {
   final String inverterExplanationEn;
   final String batteryExplanationAr;
   final String batteryExplanationEn;
+  final String floatPreservationRecommendationAr;
+  final String mpptRecommendationAr;
 
   const CalculationBreakdownModel({
     required this.daytimePanelsExplanationAr,
@@ -17,6 +19,8 @@ class CalculationBreakdownModel {
     required this.inverterExplanationEn,
     required this.batteryExplanationAr,
     required this.batteryExplanationEn,
+    this.floatPreservationRecommendationAr = '',
+    this.mpptRecommendationAr = '',
   });
 
   factory CalculationBreakdownModel.empty() {

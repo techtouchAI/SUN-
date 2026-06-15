@@ -69,7 +69,7 @@ class AppStrings {
 
   // Explanations
   static const String batteryExplanationTitle = 'تفاصيل البطاريات';
-  static const String batteryExplanationBody = 'تم حساب هذه السعة بناءً على الاستهلاك الليلي، مع أخذ نسبة تفريغ آمنة (DoD 50%) للحفاظ على عمر البطاريات لتغطية فترات غياب الشمس.';
+  static const String batteryExplanationBody = 'تم حساب هذه السعة بناءً على الاستهلاك الليلي، مع أخذ نسبة تفريغ آمنة للحفاظ على عمر البطاريات لتغطية فترات غياب الشمس.';
   static const String panelsExplanationTitle = 'تفاصيل الألواح الشمسية';
   static const String consumptionExplanationTitle = 'تفاصيل الاستهلاك';
   static const String inverterExplanationTitle = 'تفاصيل الإنفرتر';

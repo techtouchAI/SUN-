@@ -190,22 +190,26 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(4.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              AppStrings.gridAndBatterySettings,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4.0),
+              child: Text(
+                AppStrings.gridAndBatterySettings,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
             ),
-            const SizedBox(height: 8),
             if (systemMode != SystemMode.directOnGrid)
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: AppStrings.batteryType,
                   border: OutlineInputBorder(),
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 initialValue: gridSchedule.batteryType,
                 isExpanded: true,
@@ -220,7 +224,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 },
               ),
             SwitchListTile(
-              contentPadding: EdgeInsets.zero,
+              dense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
               title: const Text(AppStrings.isOffGridSystem),
               value: systemMode == SystemMode.offGrid,
               onChanged: systemMode == SystemMode.directOnGrid || systemMode == SystemMode.ups ? null : (value) {
@@ -229,7 +234,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
             ),
             if (systemMode != SystemMode.offGrid) ...[
               SwitchListTile(
-                contentPadding: EdgeInsets.zero,
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
                 title: const Text(AppStrings.upsMode),
                 value: systemMode == SystemMode.ups,
                 onChanged: systemMode == SystemMode.directOnGrid ? null : (value) {
@@ -465,6 +471,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   elevation: 2,
                   margin: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: SwitchListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
                     title: const Text(AppStrings.daytimeOnlyMode),
                     value: systemMode == SystemMode.directOnGrid,
                     onChanged: systemMode == SystemMode.ups || systemMode == SystemMode.offGrid ? null : (value) {
