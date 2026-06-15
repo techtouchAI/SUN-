@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
+import '../models/system_mode.dart';
 import 'chart_screen.dart';
 import 'settings_screen.dart';
 import '../services/pdf_export_service.dart';
@@ -24,7 +25,7 @@ class DashboardScreen extends ConsumerWidget {
       }
     });
     final result = ref.watch(systemResultProvider);
-    final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
+    final systemMode = ref.watch(systemModeProvider);
     final loads = ref.watch(loadListProvider);
 
     return Scaffold(
@@ -40,8 +41,7 @@ class DashboardScreen extends ConsumerWidget {
                 await pdfService.exportDashboardToPdf(
                   result,
                   loads,
-                  isDaytimeOnly,
-                  ref.read(gridScheduleProvider).isUpsMode,
+                  systemMode,
                   ref.read(iqdExchangeRateProvider),
                 );
               } catch (e) {
@@ -156,7 +156,7 @@ class DashboardScreen extends ConsumerWidget {
                     onTap: () => _showExplanationModal(context, AppStrings.consumptionExplanationTitle, [
                       '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} W',
                       '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} W',
-                      if (!isDaytimeOnly) '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} W',
+                      if (systemMode != SystemMode.directOnGrid) '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} W',
                     ]),
                   ),
                   _buildResultCard(
@@ -174,7 +174,7 @@ class DashboardScreen extends ConsumerWidget {
                       '${AppStrings.safetyMargin}: ${result.safetyMarginW.toStringAsFixed(0)} W',
                     ]),
                   ),
-                  if (!isDaytimeOnly)
+                  if (systemMode != SystemMode.directOnGrid)
                     _buildResultCard(
                       title: AppStrings.batteryBank,
                       value: '${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
@@ -183,12 +183,14 @@ class DashboardScreen extends ConsumerWidget {
                       onTap: () => _showExplanationModal(context, AppStrings.batteryExplanationTitle, [
                         AppStrings.batteryExplanationBody,
                         'السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
-                        if (result.requiredGridChargingAmps > 0) 'أمبير الشحن المطلوب من الوطنية: ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
+                        if (result.requiredGridChargingAmps > 0) '⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
+                        if (result.requiredGridChargingAcAmps > 0) '🔌 السحب الفعلي من الشبكة (AC): ${result.requiredGridChargingAcAmps.toStringAsFixed(1)} A',
+                        if (result.timeToFullHours > 0) '⏳ الوقت المقدر لشحن البطاريات بالكامل: ${result.timeToFullHours.toStringAsFixed(1)} ساعات',
                         if (result.suggestedChargePriority.isNotEmpty) 'أولوية الشحن المقترحة: ${result.suggestedChargePriority}',
                         if (result.gelBatteryWarning.isNotEmpty) result.gelBatteryWarning,
                       ]),
                     ),
-                  if (ref.watch(gridScheduleProvider).isUpsMode == false)
+                  if (systemMode != SystemMode.ups)
                     _buildResultCard(
                       title: AppStrings.solarPanels,
                       value: '${result.requiredPanels} ${AppStrings.panelsUnit}',
@@ -197,7 +199,7 @@ class DashboardScreen extends ConsumerWidget {
                       onTap: () => _showExplanationModal(context, AppStrings.panelsExplanationTitle, [
                         AppStrings.recommendedPanelBrands,
                         '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
-                        if (!isDaytimeOnly) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
+                        if (systemMode != SystemMode.directOnGrid) '${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
                         if (result.gridContributionPercent > 0) 'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
                         if (result.panelsSavedByGrid > 0) 'عدد الألواح التي تم توفيرها بسبب وجود الوطنية: ${result.panelsSavedByGrid} لوح',
                         'المجموع الكلي: ${result.requiredPanels} لوح',

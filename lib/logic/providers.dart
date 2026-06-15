@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/load_model.dart';
 import '../models/system_result_model.dart';
 import '../models/grid_schedule_model.dart';
+import '../models/system_mode.dart';
 import '../repositories/solar_calculation_repository.dart';
 import '../repositories/load_persistence_repository.dart';
 
@@ -62,8 +63,8 @@ final panelIscProvider = StateProvider<double>((ref) => 0.0);
 // Provider for inverter location
 final inverterLocationProvider = StateProvider<String>((ref) => 'indoor');
 
-// Provider for daytime only mode
-final isDaytimeOnlyProvider = StateProvider<bool>((ref) => false);
+// Provider for system mode
+final systemModeProvider = StateProvider<SystemMode>((ref) => SystemMode.hybrid);
 
 // ThemeMode Provider
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
@@ -96,7 +97,7 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
   final loads = ref.watch(loadListProvider);
   final panelCapacity = ref.watch(panelCapacityProvider);
   final panelIsc = ref.watch(panelIscProvider);
-  final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
+  final systemMode = ref.watch(systemModeProvider);
   final gridSchedule = ref.watch(gridScheduleProvider);
 
   final solarWattPrice = ref.watch(solarWattPriceProvider);
@@ -120,7 +121,7 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
       inverterLocation: inverterLocation,
       panelCapacity: panelCapacity,
       panelIsc: panelIsc,
-      isDaytimeOnly: isDaytimeOnly,
+      systemMode: systemMode,
       gridSchedule: gridSchedule,
       solarWattPrice: solarWattPrice,
       batteryAmperePrice: batteryAmperePrice,

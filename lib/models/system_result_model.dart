@@ -12,7 +12,9 @@ class SystemResultModel {
   final double gridContributionPercent;
   final int panelsSavedByGrid;
   final List<double> dailyProductionCurve; // Curve showing power production at different times of day (e.g., Dawn, Morning, Noon, Afternoon, Evening)
-  final double requiredGridChargingAmps;
+  final double requiredGridChargingAmps; // DC Current
+  final double requiredGridChargingAcAmps; // AC Current Draw
+  final double timeToFullHours; // Time to full in hours
   final String suggestedInverterType;
 
   // Energy Loss & Brands
@@ -48,6 +50,8 @@ class SystemResultModel {
     required this.panelsSavedByGrid,
     required this.dailyProductionCurve,
     this.requiredGridChargingAmps = 0.0,
+    this.requiredGridChargingAcAmps = 0.0,
+    this.timeToFullHours = 0.0,
     this.suggestedInverterType = '',
     this.energyLossPercentage = '',
     this.recommendedInverterBrands = '',
@@ -79,6 +83,8 @@ class SystemResultModel {
       panelsSavedByGrid: 0,
       dailyProductionCurve: [0, 0, 0, 0, 0], // Dawn, Morning, Noon, Afternoon, Evening
       requiredGridChargingAmps: 0.0,
+      requiredGridChargingAcAmps: 0.0,
+      timeToFullHours: 0.0,
       suggestedInverterType: '',
       energyLossPercentage: '',
       recommendedInverterBrands: '',
