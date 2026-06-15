@@ -7,8 +7,9 @@ import '../models/system_mode.dart';
 class SolarCalculationRepository {
   // Domain Engineering Constants
   static const double electricalWattsPerTon = 1200.0; // Rough estimate for AC conversion
-   // Used for Ampere conversion
+  // Used for Ampere conversion
   static const double inverterAcEfficiencyFactor = 0.6; // Inverter ACs run at ~60% load over time
+  static const double inverterEfficiency = 0.90; // 10% loss when converting DC from battery/panels to AC
 
   double _convertToWatts(LoadModel load, double gridVoltage) {
     switch (load.unit) {
@@ -76,21 +77,31 @@ class SolarCalculationRepository {
     return ((nighttimeConsumptionWh / systemVoltage) / batteryDoD) * daysOfAutonomy;
   }
 
-  Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, SystemMode systemMode, GridScheduleModel gridSchedule, double systemLossFactor, double peakSunHours) {
+  Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, SystemMode systemMode, GridScheduleModel gridSchedule, double systemLossFactor, double peakSunHours, double energyLossPercentage, double chargeEfficiency) {
     if ((daytimeWh == 0 && nighttimeWh == 0) || systemMode == SystemMode.ups) {
       return {'daytimePanels': 0, 'batteryPanels': 0, 'totalPanels': 0, 'gridContributionPercent': 0.0, 'panelsSavedByGrid': 0};
     }
 
-    // Total Wh to produce = Consumption * System Losses
-    double requiredDaytimeProductionWh = daytimeWh * systemLossFactor;
-    double requiredNighttimeProductionWh = systemMode == SystemMode.directOnGrid ? 0 : nighttimeWh * systemLossFactor;
+    // Effective Panel Capacity due to System Losses/Heat
+    double effectivePanelCapacity = panelCapacity * (1.0 - (energyLossPercentage / 100.0));
+
+    // For night time consumption, we must account for charge efficiency
+    double energyToRechargeWh = nighttimeWh > 0 ? nighttimeWh / chargeEfficiency : 0.0;
+
+    // Total Wh to produce
+    double requiredDaytimeProductionWh = daytimeWh;
+    double requiredNighttimeProductionWh = systemMode == SystemMode.directOnGrid ? 0 : energyToRechargeWh;
 
     // Required total panel wattage = Required Production / Peak Sun Hours
     double requiredDaytimePanelWattage = requiredDaytimeProductionWh / peakSunHours;
     double requiredNighttimePanelWattage = requiredNighttimeProductionWh / peakSunHours;
 
-    int panelsForDaytime = (requiredDaytimePanelWattage / panelCapacity).ceil();
-    int originalPanelsForBatteries = (requiredNighttimePanelWattage / panelCapacity).ceil();
+    if (systemMode == SystemMode.directOnGrid) {
+      requiredDaytimePanelWattage = requiredDaytimePanelWattage * 1.20; // 20% oversize margin for stability
+    }
+
+    int panelsForDaytime = (requiredDaytimePanelWattage / effectivePanelCapacity).ceil();
+    int originalPanelsForBatteries = (requiredNighttimePanelWattage / effectivePanelCapacity).ceil();
 
     // Grid Integration Logic
     int panelsForBatteries = originalPanelsForBatteries;
@@ -107,7 +118,7 @@ class SolarCalculationRepository {
 
       // Deduct daytime grid contribution from daytime load to reduce "ألواح التشغيل"
       requiredDaytimePanelWattage = requiredDaytimePanelWattage * (1 - daytimeGridContribution);
-      panelsForDaytime = (requiredDaytimePanelWattage / panelCapacity).ceil();
+      panelsForDaytime = (requiredDaytimePanelWattage / effectivePanelCapacity).ceil();
 
       panelsForBatteries = (originalPanelsForBatteries * (1 - nighttimeGridContribution)).ceil();
       panelsSavedByGrid = originalPanelsForBatteries - panelsForBatteries;
@@ -174,14 +185,20 @@ class SolarCalculationRepository {
       final daytimeConsumption = consumptionDetails['daytime']!;
       final nighttimeConsumption = consumptionDetails['nighttime']!;
 
+      // Apply Inverter Efficiency to get Actual DC Wh needed from panels/battery
+      final actualDaytimeDcWh = daytimeConsumption / inverterEfficiency;
+      final actualNighttimeDcWh = nighttimeConsumption / inverterEfficiency;
+
+      double chargeEfficiency = gridSchedule.batteryType == 'Lithium' ? 0.95 : 0.85;
+
       final inverterDetails = calculateInverterDetails(loads, gridVoltage);
       final peakLoad = inverterDetails['peakLoad']!;
       final safetyMargin = inverterDetails['safetyMargin']!;
       final totalInverterCapacity = inverterDetails['totalCapacity']!;
 
-      final batteryCapacity = calculateBatteryCapacity(nighttimeConsumption, systemMode, gridSchedule.batteryType, systemVoltage, daysOfAutonomy);
+      final batteryCapacity = calculateBatteryCapacity(actualNighttimeDcWh, systemMode, gridSchedule.batteryType, systemVoltage, daysOfAutonomy);
 
-      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, systemMode, gridSchedule, systemLossFactor, peakSunHours);
+      final panelsDetails = calculatePanelsDetails(actualDaytimeDcWh, actualNighttimeDcWh, panelCapacity, systemMode, gridSchedule, systemLossFactor, peakSunHours, energyLossPercentage, chargeEfficiency);
       final panelsForDaytime = panelsDetails['daytimePanels'] as int;
       final panelsForBatteries = panelsDetails['batteryPanels'] as int;
       final totalPanelsRequired = panelsDetails['totalPanels'] as int;
@@ -194,9 +211,14 @@ class SolarCalculationRepository {
       double requiredGridChargingAcAmps = 0.0; // AC Amps draw
       double timeToFullHours = 0.0;
       String gelBatteryWarning = '';
+
+      double effectivePanelCapacity = panelCapacity * (1.0 - (energyLossPercentage / 100.0));
+      double maxAmps = gridSchedule.batteryType == 'Lead-Acid/Gel' ? batteryCapacity * 0.20 : double.infinity;
+
       if (gridSchedule.gridOnHours > 0 && systemMode != SystemMode.offGrid && systemMode != SystemMode.directOnGrid) {
         // Calculate grid portion based on dependency percent and proportional night hours
-        double dailyWhToRecharge = nighttimeConsumption * systemLossFactor;
+        double energyToRechargeWh = actualNighttimeDcWh > 0 ? actualNighttimeDcWh / chargeEfficiency : 0.0;
+        double dailyWhToRecharge = energyToRechargeWh;
         double nighttimeGridHours = gridSchedule.gridOnHours * (14.0 / 24.0);
 
         double gridWattsNeeded = 0.0;
@@ -206,22 +228,26 @@ class SolarCalculationRepository {
         }
 
         requiredGridChargingAmps = gridWattsNeeded / systemVoltage;
+      }
 
-        // Gel Battery C-Rate Limit (20% of Ah)
-        if (gridSchedule.batteryType == 'Lead-Acid/Gel') {
-          double maxAmps = batteryCapacity * 0.20;
+      // Solar Battery Charging Amps
+      double maxSolarChargingAmps = (panelsForBatteries * effectivePanelCapacity) / systemVoltage;
+
+      // Ensure total charging amps from panels/grid don't exceed maxAmps (0.2C) for Gel batteries
+      if (gridSchedule.batteryType == 'Lead-Acid/Gel') {
+        if (requiredGridChargingAmps > maxAmps || maxSolarChargingAmps > maxAmps) {
           if (requiredGridChargingAmps > maxAmps) {
-            requiredGridChargingAmps = maxAmps;
-            gelBatteryWarning = 'تحذير: تيار الشحن المطلوب من الوطنية عالي جداً مما قد يتلف بطاريات الجل. تم تقييد الشحن لـ ${maxAmps.toStringAsFixed(1)}A';
+             requiredGridChargingAmps = maxAmps;
           }
+          gelBatteryWarning = 'تحذير: تيار الشحن الإجمالي (من الألواح أو الوطنية) عالي جداً وقد يتلف بطاريات الجل. تم تقييد حسابات تيار الشحن لـ ${maxAmps.toStringAsFixed(1)}A (0.2C)';
         }
+      }
 
-        if (requiredGridChargingAmps > 0) {
-          double dcPower = requiredGridChargingAmps * systemVoltage;
-          double requiredAcPower = dcPower / 0.95; // 95% inverter efficiency
-          requiredGridChargingAcAmps = requiredAcPower / gridVoltage;
-          timeToFullHours = batteryCapacity / requiredGridChargingAmps;
-        }
+      if (requiredGridChargingAmps > 0 && systemMode != SystemMode.offGrid && systemMode != SystemMode.directOnGrid) {
+        double dcPower = requiredGridChargingAmps * systemVoltage;
+        double requiredAcPower = dcPower / 0.95; // 95% inverter efficiency
+        requiredGridChargingAcAmps = requiredAcPower / gridVoltage;
+        timeToFullHours = batteryCapacity / requiredGridChargingAmps;
       }
 
       String suggestedInverterType = '';
