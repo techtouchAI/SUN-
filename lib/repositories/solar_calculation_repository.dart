@@ -97,14 +97,20 @@ class SolarCalculationRepository {
     int panelsSavedByGrid = 0;
 
     if (!gridSchedule.isOffGrid && gridSchedule.gridOnHours > 0) {
-      // Assuming nighttime is 14 hours. Grid ON hours during night reduces need for solar charging.
-      // A simple proportion: if grid is ON for 7 hours, it covers 50% of the charging needs.
-      double effectiveGridNightHours = (gridSchedule.gridOnHours / 24.0) * 14.0;
-      gridContributionPercent = (effectiveGridNightHours / 14.0).clamp(0.0, 1.0) * (gridSchedule.gridChargeDependencyPercent / 100.0);
+      // Proportional Distribution Model
+      // Daytime is assumed 10 hours, Nighttime 14 hours
+      double daytimeGridHours = gridSchedule.gridOnHours * (10.0 / 24.0);
 
-      panelsForBatteries = (originalPanelsForBatteries * (1 - gridContributionPercent)).ceil();
+      double daytimeGridContribution = (daytimeGridHours / 10.0).clamp(0.0, 1.0);
+      double nighttimeGridContribution = (gridSchedule.gridChargeDependencyPercent / 100.0).clamp(0.0, 1.0);
+
+      // Deduct daytime grid contribution from daytime load to reduce "ألواح التشغيل"
+      requiredDaytimePanelWattage = requiredDaytimePanelWattage * (1 - daytimeGridContribution);
+      panelsForDaytime = (requiredDaytimePanelWattage / panelCapacity).ceil();
+
+      panelsForBatteries = (originalPanelsForBatteries * (1 - nighttimeGridContribution)).ceil();
       panelsSavedByGrid = originalPanelsForBatteries - panelsForBatteries;
-      gridContributionPercent = gridContributionPercent * 100; // to percentage
+      gridContributionPercent = nighttimeGridContribution * 100; // to percentage
     }
 
     return {
@@ -186,9 +192,15 @@ class SolarCalculationRepository {
       double requiredGridChargingAmps = 0.0;
       String gelBatteryWarning = '';
       if (gridSchedule.gridOnHours > 0) {
-        // Calculate grid portion based on dependency percent
+        // Calculate grid portion based on dependency percent and proportional night hours
         double dailyWhToRecharge = nighttimeConsumption * systemLossFactor;
-        double gridWattsNeeded = (dailyWhToRecharge * (gridSchedule.gridChargeDependencyPercent / 100.0)) / gridSchedule.gridOnHours;
+        double nighttimeGridHours = gridSchedule.gridOnHours * (14.0 / 24.0);
+
+        double gridWattsNeeded = 0.0;
+        if (nighttimeGridHours > 0) {
+          gridWattsNeeded = (dailyWhToRecharge * (gridSchedule.gridChargeDependencyPercent / 100.0)) / nighttimeGridHours;
+        }
+
         requiredGridChargingAmps = gridWattsNeeded / systemVoltage;
 
         // Gel Battery C-Rate Limit (20% of Ah)
