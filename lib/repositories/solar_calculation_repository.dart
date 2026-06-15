@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/load_model.dart';
 import '../models/system_result_model.dart';
 import '../models/grid_schedule_model.dart';
+import '../models/system_mode.dart';
 
 class SolarCalculationRepository {
   // Domain Engineering Constants
@@ -66,8 +67,8 @@ class SolarCalculationRepository {
     return {'peakLoad': peakWatts, 'safetyMargin': safetyMargin, 'totalCapacity': totalCapacity};
   }
 
-  double calculateBatteryCapacity(double nighttimeConsumptionWh, bool isDaytimeOnly, String batteryType, double systemVoltage, double daysOfAutonomy) {
-    if (isDaytimeOnly || nighttimeConsumptionWh <= 0) return 0.0;
+  double calculateBatteryCapacity(double nighttimeConsumptionWh, SystemMode systemMode, String batteryType, double systemVoltage, double daysOfAutonomy) {
+    if (systemMode == SystemMode.directOnGrid || nighttimeConsumptionWh <= 0) return 0.0;
 
     double batteryDoD = batteryType == 'Lithium' ? 0.8 : 0.5;
 
@@ -75,14 +76,14 @@ class SolarCalculationRepository {
     return ((nighttimeConsumptionWh / systemVoltage) / batteryDoD) * daysOfAutonomy;
   }
 
-  Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, bool isDaytimeOnly, GridScheduleModel gridSchedule, double systemLossFactor, double peakSunHours) {
-    if ((daytimeWh == 0 && nighttimeWh == 0) || gridSchedule.isUpsMode) {
+  Map<String, dynamic> calculatePanelsDetails(double daytimeWh, double nighttimeWh, double panelCapacity, SystemMode systemMode, GridScheduleModel gridSchedule, double systemLossFactor, double peakSunHours) {
+    if ((daytimeWh == 0 && nighttimeWh == 0) || systemMode == SystemMode.ups) {
       return {'daytimePanels': 0, 'batteryPanels': 0, 'totalPanels': 0, 'gridContributionPercent': 0.0, 'panelsSavedByGrid': 0};
     }
 
     // Total Wh to produce = Consumption * System Losses
     double requiredDaytimeProductionWh = daytimeWh * systemLossFactor;
-    double requiredNighttimeProductionWh = isDaytimeOnly ? 0 : nighttimeWh * systemLossFactor;
+    double requiredNighttimeProductionWh = systemMode == SystemMode.directOnGrid ? 0 : nighttimeWh * systemLossFactor;
 
     // Required total panel wattage = Required Production / Peak Sun Hours
     double requiredDaytimePanelWattage = requiredDaytimeProductionWh / peakSunHours;
@@ -96,7 +97,7 @@ class SolarCalculationRepository {
     double gridContributionPercent = 0.0;
     int panelsSavedByGrid = 0;
 
-    if (!gridSchedule.isOffGrid && gridSchedule.gridOnHours > 0) {
+    if (systemMode != SystemMode.offGrid && gridSchedule.gridOnHours > 0) {
       // Proportional Distribution Model
       // Daytime is assumed 10 hours, Nighttime 14 hours
       double daytimeGridHours = gridSchedule.gridOnHours * (10.0 / 24.0);
@@ -150,7 +151,7 @@ class SolarCalculationRepository {
     String inverterLocation = 'indoor',
     double panelCapacity = 540.0,
     double panelIsc = 0.0,
-    bool isDaytimeOnly = false,
+    SystemMode systemMode = SystemMode.hybrid,
     GridScheduleModel gridSchedule = const GridScheduleModel(),
     double solarWattPrice = 0.16,
     double batteryAmperePrice = 0.85,
@@ -178,9 +179,9 @@ class SolarCalculationRepository {
       final safetyMargin = inverterDetails['safetyMargin']!;
       final totalInverterCapacity = inverterDetails['totalCapacity']!;
 
-      final batteryCapacity = calculateBatteryCapacity(nighttimeConsumption, isDaytimeOnly, gridSchedule.batteryType, systemVoltage, daysOfAutonomy);
+      final batteryCapacity = calculateBatteryCapacity(nighttimeConsumption, systemMode, gridSchedule.batteryType, systemVoltage, daysOfAutonomy);
 
-      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, isDaytimeOnly, gridSchedule, systemLossFactor, peakSunHours);
+      final panelsDetails = calculatePanelsDetails(daytimeConsumption, nighttimeConsumption, panelCapacity, systemMode, gridSchedule, systemLossFactor, peakSunHours);
       final panelsForDaytime = panelsDetails['daytimePanels'] as int;
       final panelsForBatteries = panelsDetails['batteryPanels'] as int;
       final totalPanelsRequired = panelsDetails['totalPanels'] as int;
@@ -189,16 +190,19 @@ class SolarCalculationRepository {
 
       final productionCurve = calculateDailyProductionCurve(totalPanelsRequired, panelCapacity);
 
-      double requiredGridChargingAmps = 0.0;
+      double requiredGridChargingAmps = 0.0; // DC Amps
+      double requiredGridChargingAcAmps = 0.0; // AC Amps draw
+      double timeToFullHours = 0.0;
       String gelBatteryWarning = '';
-      if (gridSchedule.gridOnHours > 0) {
+      if (gridSchedule.gridOnHours > 0 && systemMode != SystemMode.offGrid && systemMode != SystemMode.directOnGrid) {
         // Calculate grid portion based on dependency percent and proportional night hours
         double dailyWhToRecharge = nighttimeConsumption * systemLossFactor;
         double nighttimeGridHours = gridSchedule.gridOnHours * (14.0 / 24.0);
 
         double gridWattsNeeded = 0.0;
         if (nighttimeGridHours > 0) {
-          gridWattsNeeded = (dailyWhToRecharge * (gridSchedule.gridChargeDependencyPercent / 100.0)) / nighttimeGridHours;
+          double dependency = systemMode == SystemMode.ups ? 100.0 : gridSchedule.gridChargeDependencyPercent;
+          gridWattsNeeded = (dailyWhToRecharge * (dependency / 100.0)) / nighttimeGridHours;
         }
 
         requiredGridChargingAmps = gridWattsNeeded / systemVoltage;
@@ -211,14 +215,21 @@ class SolarCalculationRepository {
             gelBatteryWarning = 'تحذير: تيار الشحن المطلوب من الوطنية عالي جداً مما قد يتلف بطاريات الجل. تم تقييد الشحن لـ ${maxAmps.toStringAsFixed(1)}A';
           }
         }
+
+        if (requiredGridChargingAmps > 0) {
+          double dcPower = requiredGridChargingAmps * systemVoltage;
+          double requiredAcPower = dcPower / 0.95; // 95% inverter efficiency
+          requiredGridChargingAcAmps = requiredAcPower / gridVoltage;
+          timeToFullHours = batteryCapacity / requiredGridChargingAmps;
+        }
       }
 
       String suggestedInverterType = '';
-      if (gridSchedule.isUpsMode) {
+      if (systemMode == SystemMode.ups) {
         suggestedInverterType = 'إنفرتر شاحن / UPS';
-      } else if (isDaytimeOnly) {
+      } else if (systemMode == SystemMode.directOnGrid) {
         suggestedInverterType = 'إنفرتر أون-جريد (On-Grid Inverter)';
-      } else if (!gridSchedule.isOffGrid && gridSchedule.gridOnHours > 0) {
+      } else if (systemMode == SystemMode.hybrid) {
         suggestedInverterType = 'إنفرتر هايبرد (Hybrid Inverter)';
       } else {
         suggestedInverterType = 'إنفرتر أوف-جريد (Off-Grid Inverter)';
@@ -272,6 +283,8 @@ class SolarCalculationRepository {
         panelsSavedByGrid: panelsSavedByGrid,
         dailyProductionCurve: productionCurve,
         requiredGridChargingAmps: requiredGridChargingAmps,
+        requiredGridChargingAcAmps: requiredGridChargingAcAmps,
+        timeToFullHours: timeToFullHours,
         suggestedInverterType: suggestedInverterType,
         energyLossPercentage: '${energyLossPercentage.toStringAsFixed(0)}%',
         recommendedInverterBrands: 'Deye, Growatt, Huawei, Victron Energy',

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
+import '../models/system_mode.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -125,7 +126,7 @@ class SettingsScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              if (!ref.watch(gridScheduleProvider).isUpsMode) ...[
+              if (ref.watch(systemModeProvider) != SystemMode.ups) ...[
                 _buildPriceInput(
                   context: context,
                   ref: ref,

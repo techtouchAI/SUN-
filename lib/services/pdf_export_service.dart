@@ -4,13 +4,13 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/system_result_model.dart';
 import '../models/load_model.dart';
+import '../models/system_mode.dart';
 
 class PdfExportService {
   Future<void> exportDashboardToPdf(
       SystemResultModel result,
       List<LoadModel> loads,
-      bool isDaytimeOnly,
-      bool isUpsMode,
+      SystemMode systemMode,
       double iqdExchangeRate) async {
     final pdf = pw.Document();
 
@@ -43,7 +43,7 @@ class PdfExportService {
             pw.Divider(),
             pw.Text('الاستهلاك الإجمالي: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} W', style: const pw.TextStyle(fontSize: 16)),
             pw.Text('الاستهلاك النهاري: ${result.daytimeConsumptionWh.toStringAsFixed(0)} W', style: const pw.TextStyle(fontSize: 16)),
-            if (!isDaytimeOnly)
+            if (systemMode != SystemMode.directOnGrid)
               pw.Text('الاستهلاك الليلي: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} W', style: const pw.TextStyle(fontSize: 16)),
             pw.SizedBox(height: 20),
 
@@ -61,13 +61,13 @@ class PdfExportService {
             pw.SizedBox(height: 20),
 
             // 3. Solar Panels
-            if (!isUpsMode) ...[
+            if (systemMode != SystemMode.ups) ...[
               pw.Text('الألواح الشمسية', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
               pw.Divider(),
               pw.Text('عدد الألواح: ${result.requiredPanels} ألواح', style: const pw.TextStyle(fontSize: 16)),
               pw.Text('المصنعين من فئة (Tier 1) المعتمدة للألواح: Longi, Jinko Solar, JA Solar, Trina Solar', style: const pw.TextStyle(fontSize: 14)),
               pw.Text('ألواح للتشغيل المباشر: ${result.panelsForDaytime} لوح', style: const pw.TextStyle(fontSize: 14)),
-              if (!isDaytimeOnly)
+              if (systemMode != SystemMode.directOnGrid)
                 pw.Text('ألواح لشحن البطاريات: ${result.panelsForBatteries} لوح', style: const pw.TextStyle(fontSize: 14)),
               if (result.gridContributionPercent > 0)
                 pw.Text('بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.', style: const pw.TextStyle(fontSize: 14)),
@@ -78,13 +78,17 @@ class PdfExportService {
             ],
 
             // 4. Battery Bank
-            if (!isDaytimeOnly) ...[
+            if (systemMode != SystemMode.directOnGrid) ...[
               pw.Text('بنك البطاريات', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
               pw.Divider(),
               pw.Text('السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah', style: const pw.TextStyle(fontSize: 16)),
               pw.Text('تم حساب هذه السعة بناءً على الاستهلاك الليلي، مع أخذ نسبة تفريغ آمنة (DoD 50%) للحفاظ على عمر البطاريات لتغطية فترات غياب الشمس.', style: const pw.TextStyle(fontSize: 14)),
               if (result.requiredGridChargingAmps > 0)
-                pw.Text('أمبير الشحن المطلوب من الوطنية: ${result.requiredGridChargingAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
+                pw.Text('⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
+              if (result.requiredGridChargingAcAmps > 0)
+                pw.Text('🔌 السحب الفعلي من الشبكة (AC): ${result.requiredGridChargingAcAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
+              if (result.timeToFullHours > 0)
+                pw.Text('⏳ الوقت المقدر لشحن البطاريات بالكامل: ${result.timeToFullHours.toStringAsFixed(1)} ساعات', style: const pw.TextStyle(fontSize: 14)),
               if (result.suggestedChargePriority.isNotEmpty)
                 pw.Text('أولوية الشحن المقترحة: ${result.suggestedChargePriority}', style: const pw.TextStyle(fontSize: 14)),
               if (result.gelBatteryWarning.isNotEmpty)

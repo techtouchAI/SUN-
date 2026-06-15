@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/load_model.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
+import '../models/system_mode.dart';
 import 'dashboard_screen.dart';
 import '../services/update_service.dart';
 import 'settings_screen.dart';
@@ -185,6 +186,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   Widget _buildGridSettings() {
     final gridSchedule = ref.watch(gridScheduleProvider);
+    final systemMode = ref.watch(systemModeProvider);
 
     return Card(
       elevation: 2,
@@ -199,44 +201,39 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: AppStrings.batteryType,
-                border: OutlineInputBorder(),
+            if (systemMode != SystemMode.directOnGrid)
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: AppStrings.batteryType,
+                  border: OutlineInputBorder(),
+                ),
+                initialValue: gridSchedule.batteryType,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: 'Lead-Acid/Gel', child: Text(AppStrings.batteryGel)),
+                  DropdownMenuItem(value: 'Lithium', child: Text(AppStrings.batteryLithium)),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(batteryType: value);
+                  }
+                },
               ),
-              initialValue: gridSchedule.batteryType,
-              isExpanded: true,
-              items: const [
-                DropdownMenuItem(value: 'Lead-Acid/Gel', child: Text(AppStrings.batteryGel)),
-                DropdownMenuItem(value: 'Lithium', child: Text(AppStrings.batteryLithium)),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(batteryType: value);
-                }
-              },
-            ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(AppStrings.isOffGridSystem),
-              value: gridSchedule.isOffGrid,
-              onChanged: (value) {
-                ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(
-                  isOffGrid: value,
-                  isUpsMode: value ? false : gridSchedule.isUpsMode,
-                );
+              value: systemMode == SystemMode.offGrid,
+              onChanged: systemMode == SystemMode.directOnGrid || systemMode == SystemMode.ups ? null : (value) {
+                ref.read(systemModeProvider.notifier).state = value ? SystemMode.offGrid : SystemMode.hybrid;
               },
             ),
-            if (!gridSchedule.isOffGrid) ...[
+            if (systemMode != SystemMode.offGrid) ...[
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text(AppStrings.upsMode),
-                value: gridSchedule.isUpsMode,
-                onChanged: (value) {
-                  ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(isUpsMode: value);
-                  if (value) {
-                    ref.read(isDaytimeOnlyProvider.notifier).state = false;
-                  }
+                value: systemMode == SystemMode.ups,
+                onChanged: systemMode == SystemMode.directOnGrid ? null : (value) {
+                  ref.read(systemModeProvider.notifier).state = value ? SystemMode.ups : SystemMode.hybrid;
                 },
               ),
               Row(
@@ -271,18 +268,25 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (gridSchedule.gridOnHours > 0 && !gridSchedule.isOffGrid) ...[
-                Text('نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%'),
+              if (gridSchedule.gridOnHours > 0 && systemMode != SystemMode.directOnGrid) ...[
+                Text(systemMode == SystemMode.ups
+                  ? 'نسبة الاعتماد على الوطنية لشحن البطاريات: 100%'
+                  : 'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%'),
                 Slider(
-                  value: gridSchedule.gridChargeDependencyPercent,
+                  value: systemMode == SystemMode.ups ? 100.0 : gridSchedule.gridChargeDependencyPercent,
                   min: 0,
                   max: 100,
                   divisions: 20,
-                  label: '${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
-                  onChanged: (value) {
+                  label: systemMode == SystemMode.ups ? '100' : gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0),
+                  onChanged: systemMode == SystemMode.ups ? null : (value) {
                     ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(gridChargeDependencyPercent: value);
                   },
                 ),
+                if (systemMode == SystemMode.ups)
+                  const Text(
+                    "🔒 تم تثبيت الشحن من الوطنية بنسبة 100% نظراً لعدم توفر ألواح شمسية كبديل.",
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
               ],
             ],
           ],
@@ -294,7 +298,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
   @override
   Widget build(BuildContext context) {
     final loads = ref.watch(loadListProvider);
-    final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
+    final systemMode = ref.watch(systemModeProvider);
 
     return DefaultTabController(
       length: 2,
@@ -462,9 +466,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: SwitchListTile(
                     title: const Text(AppStrings.daytimeOnlyMode),
-                    value: isDaytimeOnly,
-                    onChanged: (value) {
-                      ref.read(isDaytimeOnlyProvider.notifier).state = value;
+                    value: systemMode == SystemMode.directOnGrid,
+                    onChanged: systemMode == SystemMode.ups || systemMode == SystemMode.offGrid ? null : (value) {
+                      ref.read(systemModeProvider.notifier).state = value ? SystemMode.directOnGrid : SystemMode.hybrid;
                     },
                   ),
                 ),
