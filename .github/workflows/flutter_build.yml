@@ -52,7 +52,10 @@ jobs:
         EOF2
 
     - name: Build APK
-      run: flutter build apk --release --split-per-abi
+      run: flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols --split-per-abi
+
+    - name: Build AppBundle
+      run: flutter build appbundle --release --obfuscate --split-debug-info=build/app/outputs/symbols
 
     # استخراج رقم الإصدار من pubspec.yaml
     - name: Extract version
