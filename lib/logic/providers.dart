@@ -59,8 +59,8 @@ final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
 
 // Provider for dynamic panel Isc
 final panelIscProvider = StateProvider<double>((ref) {
-  final initialCapacity = ref.read(panelCapacityProvider);
-  return double.parse(SolarCalculationRepository.getInterpolatedIsc(initialCapacity).toStringAsFixed(2));
+  final capacity = ref.watch(panelCapacityProvider);
+  return double.parse(SolarCalculationRepository.getInterpolatedIsc(capacity).toStringAsFixed(2));
 });
 
 // Provider for inverter location
