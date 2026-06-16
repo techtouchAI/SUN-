@@ -79,6 +79,8 @@ class PdfExportService {
                 pw.Text('\n${result.breakdown.mpptRecommendationAr}', style: const pw.TextStyle(fontSize: 14)),
               if (systemMode != SystemMode.directOnGrid)
                 pw.Text('\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.', style: const pw.TextStyle(fontSize: 14)),
+              if (result.breakdown.floatPreservationRecommendationAr.isNotEmpty)
+                pw.Text('\n${result.breakdown.floatPreservationRecommendationAr}', style: const pw.TextStyle(fontSize: 14)),
               pw.SizedBox(height: 20),
             ],
 
@@ -89,8 +91,6 @@ class PdfExportService {
               pw.Text('السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V', style: const pw.TextStyle(fontSize: 16)),
               pw.Text(AppStrings.batteryExplanationBody, style: const pw.TextStyle(fontSize: 14)),
               pw.Text(result.breakdown.batteryExplanationAr, style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
-              if (result.breakdown.floatPreservationRecommendationAr.isNotEmpty)
-                pw.Text('\n${result.breakdown.floatPreservationRecommendationAr}', style: const pw.TextStyle(fontSize: 14)),
               if (result.requiredGridChargingAmps > 0)
                 pw.Text('⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
               if (result.requiredGridChargingAcAmps > 0)
