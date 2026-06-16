@@ -58,7 +58,10 @@ final loadListProvider = StateNotifierProvider<LoadListNotifier, List<LoadModel>
 final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
 
 // Provider for dynamic panel Isc
-final panelIscProvider = StateProvider<double>((ref) => 0.0);
+final panelIscProvider = StateProvider<double>((ref) {
+  final initialCapacity = ref.read(panelCapacityProvider);
+  return double.parse(SolarCalculationRepository.getInterpolatedIsc(initialCapacity).toStringAsFixed(2));
+});
 
 // Provider for inverter location
 final inverterLocationProvider = StateProvider<String>((ref) => 'indoor');

@@ -146,6 +146,7 @@ class DashboardScreen extends ConsumerWidget {
                         crossAxisCount: 2,
                         crossAxisSpacing: 16.0,
                         mainAxisSpacing: 16.0,
+                        childAspectRatio: 0.8,
                         children: [
                           _buildResultCard(
                             title: AppStrings.totalConsumption,
@@ -376,24 +377,47 @@ class DashboardScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: details
                           .map(
-                            (detail) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8.0),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    '• ',
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      detail,
-                                      style: const TextStyle(fontSize: 16),
+                            (detail) {
+                              final parts = detail.split(':');
+                              final hasTitle = parts.length > 1 && parts[0].length < 60;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '• ',
+                                      style: TextStyle(fontSize: 18),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                                    Expanded(
+                                      child: hasTitle
+                                          ? RichText(
+                                              text: TextSpan(
+                                                style: const TextStyle(
+                                                    fontSize: 16,
+                                                    color: Colors.black),
+                                                children: [
+                                                  TextSpan(
+                                                    text: '${parts[0]}:\n',
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ),
+                                                  TextSpan(
+                                                    text: parts.sublist(1).join(':').trim(),
+                                                  ),
+                                                ],
+                                              ),
+                                            )
+                                          : Text(
+                                              detail,
+                                              style: const TextStyle(fontSize: 16),
+                                            ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           )
                           .toList(),
                     ),
@@ -441,7 +465,6 @@ class DashboardScreen extends ConsumerWidget {
                 title,
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
@@ -451,8 +474,7 @@ class DashboardScreen extends ConsumerWidget {
               Text(
                 value,
                 textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 3,
                 style: TextStyle(
                   fontSize: 16,
                   color: color,
