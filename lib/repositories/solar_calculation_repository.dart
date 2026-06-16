@@ -470,7 +470,7 @@ class SolarCalculationRepository {
 
       double pvDcBreakerAmps = panelIsc > 0 ? (panelIsc * 1.56) : 0;
       double maxContinuousBatteryCurrent =
-          totalInverterCapacity / systemVoltage;
+          (totalInverterCapacity / inverterEfficiency) / systemVoltage;
       double batteryDcBreakerAmps = maxContinuousBatteryCurrent * 1.25;
       double maxAcOutputCurrent = totalInverterCapacity / gridVoltage;
       double acBreakerAmps = maxAcOutputCurrent * 1.25;
@@ -550,6 +550,7 @@ class SolarCalculationRepository {
         safetyMarginW: safetyMargin,
         requiredInverterCapacityW: totalInverterCapacity,
         requiredBatteryCapacityAh: batteryCapacity,
+        systemVoltage: systemVoltage,
         requiredPanels: totalPanelsRequired,
         panelsForDaytime: panelsForDaytime,
         panelsForBatteries: panelsForBatteries,
