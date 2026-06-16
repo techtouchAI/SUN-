@@ -1,4 +1,4 @@
-package com.example.solar_calculator
+package com.solarexpert.calculator
 
 import io.flutter.embedding.android.FlutterActivity
 
