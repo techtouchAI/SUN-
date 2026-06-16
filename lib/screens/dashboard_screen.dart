@@ -146,7 +146,7 @@ class DashboardScreen extends ConsumerWidget {
                         crossAxisCount: 2,
                         crossAxisSpacing: 16.0,
                         mainAxisSpacing: 16.0,
-                        childAspectRatio: 0.8,
+                        childAspectRatio: 0.65,
                         children: [
                           _buildResultCard(
                             title: AppStrings.totalConsumption,
@@ -163,6 +163,7 @@ class DashboardScreen extends ConsumerWidget {
                                 if (systemMode != SystemMode.directOnGrid)
                                   '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
                               ],
+                              headerValue: '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
                             ),
                           ),
                           _buildResultCard(
@@ -181,6 +182,7 @@ class DashboardScreen extends ConsumerWidget {
                                 if (result.suggestedIpRating.isNotEmpty)
                                   'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
                               ],
+                              headerValue: '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
                             ),
                           ),
                           if (systemMode != SystemMode.directOnGrid)
@@ -207,6 +209,8 @@ class DashboardScreen extends ConsumerWidget {
                                   if (result.gelBatteryWarning.isNotEmpty)
                                     result.gelBatteryWarning,
                                 ],
+                                headerValue: '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh)',
+                                headerSubtitle: 'بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
                               ),
                             ),
                           if (systemMode != SystemMode.ups)
@@ -236,6 +240,8 @@ class DashboardScreen extends ConsumerWidget {
                                   if (result.breakdown.floatPreservationRecommendationAr.isNotEmpty)
                                     '\n${result.breakdown.floatPreservationRecommendationAr}',
                                 ],
+                                headerValue: '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                                headerSubtitle: 'تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W',
                               ),
                             ),
                           _buildResultCard(
@@ -252,6 +258,7 @@ class DashboardScreen extends ConsumerWidget {
                                 AppStrings.energyLossWiring,
                                 AppStrings.energyLossSoiling,
                               ],
+                              headerValue: result.energyLossPercentage,
                             ),
                           ),
                           _buildResultCard(
@@ -272,6 +279,7 @@ class DashboardScreen extends ConsumerWidget {
                                 if (result.wireSizeMm2 > 0)
                                   '${AppStrings.dcWireSize}: ${result.wireSizeMm2} ${AppStrings.wireMm2}',
                               ],
+                              headerValue: 'NEC Standards',
                             ),
                           ),
                           _buildResultCard(
@@ -289,6 +297,7 @@ class DashboardScreen extends ConsumerWidget {
                                 '${(result.estimatedCostUsd * ref.watch(iqdExchangeRateProvider)).toStringAsFixed(0)} ${AppStrings.costInIqd}',
                                 '\n${AppStrings.pricingDisclaimer}',
                               ],
+                              headerValue: '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
                             ),
                           ),
                         ],
@@ -339,8 +348,10 @@ class DashboardScreen extends ConsumerWidget {
   void _showExplanationModal(
     BuildContext context,
     String title,
-    List<String> details,
-  ) {
+    List<String> details, {
+    required String headerValue,
+    String? headerSubtitle,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -366,11 +377,31 @@ class DashboardScreen extends ConsumerWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                Text(
+                  headerValue,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+                if (headerSubtitle != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    headerSubtitle,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+                const Divider(height: 24, thickness: 1.5),
+                const SizedBox(height: 8),
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
@@ -452,7 +483,9 @@ class DashboardScreen extends ConsumerWidget {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          if (onTap != null) onTap();
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -471,22 +504,29 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                value,
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: color,
-                  fontWeight: FontWeight.bold,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  textAlign: TextAlign.center,
+                  maxLines: 4,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ),
               ],
             ],
