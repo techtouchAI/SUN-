@@ -9,6 +9,7 @@ class SystemResultModel {
   final double requiredInverterCapacityW; // Peak load with safety margin
   final double
   requiredBatteryCapacityAh; // Required Ah based on night usage, voltage, and DoD
+  final double systemVoltage;
   final int
   requiredPanels; // Number of panels needed based on total consumption and PSH
   final int panelsForDaytime;
@@ -50,6 +51,7 @@ class SystemResultModel {
     required this.safetyMarginW,
     required this.requiredInverterCapacityW,
     required this.requiredBatteryCapacityAh,
+    this.systemVoltage = 48.0,
     required this.requiredPanels,
     required this.panelsForDaytime,
     required this.panelsForBatteries,
@@ -93,6 +95,7 @@ class SystemResultModel {
       safetyMarginW: 0,
       requiredInverterCapacityW: 0,
       requiredBatteryCapacityAh: 0,
+      systemVoltage: 0,
       requiredPanels: 0,
       panelsForDaytime: 0,
       panelsForBatteries: 0,

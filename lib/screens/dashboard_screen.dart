@@ -7,6 +7,7 @@ import '../models/system_mode.dart';
 import 'chart_screen.dart';
 import 'settings_screen.dart';
 import '../services/pdf_export_service.dart';
+import '../widgets/reactive_text_field.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -43,6 +44,7 @@ class DashboardScreen extends ConsumerWidget {
                   loads,
                   systemMode,
                   ref.read(iqdExchangeRateProvider),
+                  ref.read(panelCapacityProvider),
                 );
               } catch (e) {
                 if (context.mounted) {
@@ -91,15 +93,9 @@ class DashboardScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         Expanded(
-                          child: TextFormField(
-                            initialValue: ref
-                                .read(panelCapacityProvider)
-                                .toString(),
-                            decoration: const InputDecoration(
-                              labelText: AppStrings.panelCapacityWatts,
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
+                          child: ReactiveTextField(
+                            initialValue: ref.watch(panelCapacityProvider),
+                            labelText: AppStrings.panelCapacityWatts,
                             onChanged: (value) {
                               final parsedValue = double.tryParse(value);
                               if (parsedValue != null && parsedValue > 0) {
@@ -111,13 +107,9 @@ class DashboardScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: TextFormField(
-                            initialValue: ref.read(panelIscProvider).toString(),
-                            decoration: const InputDecoration(
-                              labelText: AppStrings.panelIsc,
-                              border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
+                          child: ReactiveTextField(
+                            initialValue: ref.watch(panelIscProvider),
+                            labelText: AppStrings.panelIsc,
                             onChanged: (value) {
                               final parsedValue = double.tryParse(value);
                               if (parsedValue != null && parsedValue >= 0) {
@@ -165,10 +157,10 @@ class DashboardScreen extends ConsumerWidget {
                               context,
                               AppStrings.consumptionExplanationTitle,
                               [
-                                '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} W',
-                                '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} W',
+                                '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} Wh',
+                                '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} Wh',
                                 if (systemMode != SystemMode.directOnGrid)
-                                  '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} W',
+                                  '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
                               ],
                             ),
                           ),
@@ -194,7 +186,7 @@ class DashboardScreen extends ConsumerWidget {
                             _buildResultCard(
                               title: AppStrings.batteryBank,
                               value:
-                                  '${result.requiredBatteryCapacityAh.toStringAsFixed(0)} Ah',
+                                  '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
                               icon: Icons.battery_charging_full,
                               color: Colors.green,
                               onTap: () => _showExplanationModal(
@@ -220,7 +212,7 @@ class DashboardScreen extends ConsumerWidget {
                             _buildResultCard(
                               title: AppStrings.solarPanels,
                               value:
-                                  '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                                  '${result.requiredPanels} ${AppStrings.panelsUnit} (تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W)',
                               icon: Icons.solar_power,
                               color: Colors.amber,
                               onTap: () => _showExplanationModal(
