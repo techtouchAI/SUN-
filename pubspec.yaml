@@ -49,7 +49,7 @@ dependencies:
   pdf: ^3.12.0
   printing: ^5.14.3
   dio: ^5.9.2
-  path_provider: ^2.1.5
+  path_provider: ^2.1.6
   open_filex: ^4.7.0
   crypto: ^3.0.6
 
