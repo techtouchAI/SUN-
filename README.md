@@ -1,17 +1,110 @@
-# solar_calculator
+# SUN- — حاسبة تقدير منظومات الطاقة الشمسية
 
-A new Flutter project.
+SUN- تطبيق Flutter باللغة العربية لتقدير مكونات منظومة شمسية أولية من قائمة أحمال وملف تشغيل زمني وإعدادات الشبكة والبطارية. المخرجات موجهة للتقدير والمقارنة واتخاذ القرار الأولي، وليست مخططاً كهربائياً تنفيذياً أو شهادة امتثال لمعيار NEC.
 
-## Getting Started
+## المنصات المدعومة
 
-This project is a starting point for a Flutter application.
+توجد تهيئة للمشروع على Android وWeb وiOS وmacOS وWindows وLinux ضمن حدود الإضافات المتاحة. تم التحقق فعلياً في هذه المهمة من `flutter build web --release` و`flutter build apk --debug` و`flutter build linux --release`. أما iOS وmacOS فيحتاجان Xcode وجهاز Apple، وWindows يحتاج Windows toolchain؛ لذلك لا يُدّعى نجاح بنائهما هنا حتى يُختبرا في بيئتهما الأصلية. مسار تثبيت APK داخل التطبيق يعمل على Android فقط. لا يستخدم Web أو desktop أي API لتثبيت APK أو `dart:io` من المسار المشترك.
 
-A few resources to get you started if this is your first Flutter project:
+## الميزات
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+يوفر التطبيق إدخالاً مفصلاً للأحمال مع القدرة والوحدة والكمية ومعامل تيار البدء وساعات النهار والليل، وإدخالاً سريعاً لحمل نهاري مجمع، وإعدادات النظام والشبكة والبطارية بما فيها ساعة بدء نافذة الشبكة، وحساباً أولياً للطاقة والقدرة والبطارية وPV والإنفرتر، ورسم سلسلة زمنية للقدرة، وحفظاً versioned للأحمال والإعدادات، وتصدير PDF من DTO النهائي، وتحققاً من تحديث Android عبر APK موقّع بالـSHA-256 المنشور في GitHub Release.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## تعريف المدخلات والوحدات
+
+| المدخل | الوحدة | القيد |
+| --- | --- | --- |
+| قدرة الحمل | W أو A أو ton | أكبر من صفر. الأمبير يحول إلى W بجهد الشبكة ومعامل قدرة مفترض 1.0. |
+| الكمية | عدد | عدد صحيح بين 1 و100000. |
+| ساعات النهار/الليل | ساعة/يوم | بين 0 و24، ومجموعهما لا يتجاوز 24. الفترة الافتراضية للنهار 06:00–18:00. |
+| معامل تيار البدء | بلا وحدة | بين 1 و10. |
+| قدرة اللوح | W | أكبر من صفر. |
+| PSH | ساعة شمس ذروة/يوم | أكبر من صفر وأقصاها 24. |
+| جهد النظام والشبكة | V | أكبر من صفر. |
+| الفقد | % | من 0 إلى أقل من 100. |
+| الاستقلالية | يوم | أكبر من صفر وأقصاها 30. |
+| جدول الشبكة | ساعة | `gridStartHour` بين 0 وأقل من 24، ومجموع التشغيل والانقطاع يساوي 24، ولا تتجاوز نافذة التشغيل نهاية اليوم؛ لا يدعم النموذج نافذة تعبر منتصف الليل. |
+
+## نموذج الحمل والحساب
+
+لا يستخدم محرك الحساب توزيعاً ثابتاً 40% نهاراً و60% ليلاً. لكل حمل ساعات نهارية وليلية صريحة، ويُبنى ملف من 24 خانة لتقدير الطاقة والقدرة المتزامنة. يدعم نموذج المجال وملفات JSON فترات تشغيل مخصصة، لكن واجهة الإدخال الحالية تعرض day/night فقط؛ لذلك لا يُفترض أن المستخدم يستطيع إنشاء فترة مخصصة من الشاشة الحالية.
+
+تستخدم المعادلات الأساسية الآتية، مع إبقاء كل قيمة في وحدتها الواضحة:
+
+```text
+load_power_W = quantity × input_power_in_W
+load_energy_Wh = load_power_W × operating_hours
+peak_load_W = maximum simultaneous active load including startup multiplier
+inverter_capacity_W = peak_load_W × (1 + 25% safety margin)
+```
+
+تحول طاقة البطارية إلى سعة اسمية مع فصل الطاقة المفيدة عن الطاقة الاسمية:
+
+```text
+battery_output_energy_Wh = night_energy_Wh × autonomy_days / inverter_efficiency
+nominal_battery_energy_Wh = battery_output_energy_Wh / (DoD × battery_efficiency)
+battery_capacity_Ah = nominal_battery_energy_Wh / system_voltage_V
+required_battery_charge_Wh = (night_energy_Wh / inverter_efficiency) / (DoD × battery_efficiency × charge_efficiency)
+```
+
+السطر الأخير خاص بطاقة الشحن التي يجب أن يوفرها PV أو الشبكة، وهو منفصل عن سعة البطارية الاسمية؛ لا تُجمع الكفاءات مرتين. يحسب PV الطاقة المطلوبة قبل تقريب عدد الألواح:
+
+```text
+panel_daily_energy_Wh = panel_power_W × PSH × (1 − PV_loss_fraction)
+remaining_battery_pv_Wh = required_battery_charge_Wh × (1 − grid_charge_fraction)
+panel_count = ceil(required_energy_Wh / panel_daily_energy_Wh)
+```
+
+تطبق الشبكة على الطاقة المطلوبة، وليس على عدد الألواح بعد التقريب، ضمن نافذة `gridStartHour` و`gridOnHours`. في Hybrid يمكن أن تقلل مساهمة الشبكة ألواح شحن البطارية. في Off-grid تهمل مساهمة الشبكة. في Direct on-grid لا تظهر بطارية ولا ألواح شحن بطارية. في UPS لا تظهر ألواح PV في النموذج الحالي.
+
+## الخسائر والافتراضات
+
+الخسارة المدخلة هي معامل PV عام يطبق مرة واحدة على الطاقة اليومية للوح. كفاءة العاكس وكفاءة البطارية وكفاءة الشحن معاملات منفصلة داخل المحرك. لا ينبغي إدخال خسارة إنفرتر ضمن النسبة العامة مرة أخرى.
+
+يفترض تحويل الأمبير إلى واط معامل قدرة 1.0 لأن معامل القدرة ليس مدخلاً مستقلاً. ويستخدم PSH متوسطاً يومياً، لا قياس irradiance حقيقياً. ويستخدم السعر مدخلات تقديرية وليست BOM من مورد. تسجل هذه الافتراضات داخل النتيجة وPDF.
+
+## التصميم الكهربائي
+
+المخرجات الكهربائية الحالية تسمى **تقديراً كهربائياً أولياً غير تنفيذي**. لا يعرض التطبيق مقاس قاطع أو سلك نهائياً عندما تنقص بيانات Voc وVmp وIsc وImp وتكوين السلاسل وطول الكابل ودرجة الحرارة وطريقة التمديد وهبوط الجهد ومتطلبات الحماية. لا يدعي التطبيق الامتثال لـNEC.
+
+## حفظ البيانات
+
+الأحمال والإعدادات تحفظ بصيغة versioned. تحفظ إعدادات المشروع والحساب والتسعير وجدول الشبكة، وتُنفذ عمليات حفظ الأحمال بالتسلسل. توجد نسخة احتياطية من آخر payload صالح، ويؤدي فساد البيانات إلى مسار استرداد أو خطأ واضح بدلاً من استبدال البيانات بقائمة فارغة بصمت.
+
+## PDF والرسم
+
+يستهلك PDF كائناً واحداً من نوع `FinalCalculationDto` يضم المدخلات والأحمال والإعدادات والنتيجة والافتراضات والتحذيرات. ويعرض الرسم قدرة PV والحمل والشبكة على سلسلة زمنية 24 ساعة بوحدة W، مع عرض الطاقة اليومية بوحدة Wh منفصلة. لا يمثل الرسم قياسات تشغيل حقيقية ما لم تُضاف بيانات irradiance فعلية.
+
+## التحديث داخل التطبيق
+
+يعمل فحص OTA على Android فقط. يقارن رقم الإصدار ورقم البناء، ويختار APK المطابق لمعمارية الجهاز، ويرفض الأصول غير المنتهية بـAPK أو التي لا تملك digest من نوع SHA-256 أو التي ليست من نطاق GitHub الموثوق. بعد التنزيل يحسب SHA-256 للملف ويمنع التثبيت عند الاختلاف، ثم يحذف الملف المؤقت بعد انتهاء العملية.
+
+ينبغي نشر كل APK في GitHub Release مع digest واضح. لا يعتمد التطبيق على صفحة الإصدار كبديل لملف APK، ولا يحاول تثبيت HTML أو AAB.
+
+## البناء المحلي
+
+يتطلب المشروع Flutter stable متوافقاً مع Dart SDK المعلن في `pubspec.yaml`. بعد تثبيت Flutter نفذ:
+
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --release
+flutter build web
+```
+
+يتطلب Android release توقيعاً عبر `android/key.properties` ومفتاحاً خارج Git. يعمل Debug بمفتاح debug المرفق للتطوير فقط. لا تضع أسرار التوقيع أو كلمات المرور في المستودع أو سجلات CI.
+
+لبناء iOS وmacOS يجب تجهيز Xcode وCocoaPods وBundle IDs الصحيحة على جهاز Apple. لبناء Windows وLinux يجب تثبيت متطلبات CMake والـdesktop toolchains الخاصة بكل منصة.
+
+## الاختبارات
+
+توجد اختبارات وحدة لمحرك الحساب والتحقق ومقارنة الإصدار، واختبارات حدود للصفر والسالب و24 وPSH والفقد، واختبارات Persistence للترميز والفساد والحفظ المتزامن، واختبارات Widget للإقلاع وعرض Dashboard دون أخطاء تخطيط. يجب توسيع الاختبارات التكاملية على أجهزة فعلية قبل نشر إصدار إنتاجي، خصوصاً PDF وتثبيت APK وApple/desktop builds.
+
+## CI/CD
+
+يعمل تحقق Pull Request على format وanalyze وtest وبناء Web وAndroid debug بصلاحيات قراءة فقط. ويفصل Release workflow المحمي عن تحقق PR، ويقلل `GITHUB_TOKEN` إلى أقل صلاحية، ويثبت Actions على SHA، وينشئ `SHA256SUMS.txt` مع artifacts. لم تُضف SBOM أو attestations موقعة بعد، فلا ينبغي اعتبار checksum بديلاً عنها.
+
+## إخلاء مسؤولية هندسي
+
+هذه الأداة لا تستبدل مهندساً كهربائياً مرخصاً أو بيانات المصنع أو كود البناء المحلي. يجب مراجعة كل نتيجة ميدانياً وفق نوع البطارية والعاكس واللوح وتكوين السلاسل ودرجات الحرارة وطول الكابلات والحماية والتهوية وشروط الشبكة.

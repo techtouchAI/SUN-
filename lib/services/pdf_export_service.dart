@@ -1,150 +1,219 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../models/system_result_model.dart';
+
+import '../models/final_calculation_dto.dart';
 import '../models/load_model.dart';
 import '../models/system_mode.dart';
-import '../logic/app_strings.dart';
+import '../models/system_result_model.dart';
 
 class PdfExportService {
-  Future<void> exportDashboardToPdf(
-      SystemResultModel result,
-      List<LoadModel> loads,
-      SystemMode systemMode,
-      double iqdExchangeRate,
-      double panelCapacity) async {
+  static Future<void> exportCalculationReport(FinalCalculationDto dto) async {
     final pdf = pw.Document();
-
-    final amiriFontData = await rootBundle.load('assets/fonts/Amiri-Regular.ttf');
+    final amiriFontData = await rootBundle.load(
+      'assets/fonts/Amiri-Regular.ttf',
+    );
     final amiriFont = pw.Font.ttf(amiriFontData);
-
-    final imgData = await rootBundle.load('assets/photoi.png');
-    final imageBytes = imgData.buffer.asUint8List();
-    final connectionImage = pw.MemoryImage(imageBytes);
+    pw.MemoryImage? connectionImage;
+    try {
+      final imageData = await rootBundle.load('assets/photoi.png');
+      connectionImage = pw.MemoryImage(imageData.buffer.asUint8List());
+    } on FlutterError {
+      connectionImage = null;
+    }
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        theme: pw.ThemeData.withFont(
-          base: amiriFont,
-          bold: amiriFont,
-        ),
+        theme: pw.ThemeData.withFont(base: amiriFont, bold: amiriFont),
         textDirection: pw.TextDirection.rtl,
-        build: (pw.Context context) {
-          return [
-            pw.Center(
-              child: pw.Text(
-                'تقرير حاسبة الطاقة الشمسية',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
-              ),
+        build: (context) => [
+          pw.Center(
+            child: pw.Text(
+              'تقرير حاسبة الطاقة الشمسية',
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
             ),
-            pw.SizedBox(height: 20),
-            // 1. Total Consumption
-            pw.Text('تفاصيل الاستهلاك', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.Divider(),
-            pw.Text('الاستهلاك الإجمالي: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} Wh', style: const pw.TextStyle(fontSize: 16)),
-            pw.Text('الاستهلاك النهاري: ${result.daytimeConsumptionWh.toStringAsFixed(0)} Wh', style: const pw.TextStyle(fontSize: 16)),
-            if (systemMode != SystemMode.directOnGrid)
-              pw.Text('الاستهلاك الليلي: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh', style: const pw.TextStyle(fontSize: 16)),
-            pw.SizedBox(height: 20),
-
-            // 2. Required Inverter
-            pw.Text('الإنفرتر المطلوب', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.Divider(),
-            pw.Text('الإنفرتر: ${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW', style: const pw.TextStyle(fontSize: 16)),
-            pw.Text('النوع المقترح: ${result.suggestedInverterType}', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('الماركات العالمية الموصى بها للعواكس: Deye, Growatt, Huawei, Victron Energy', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('حجم الإنفرتر تم اختياره بناءً على أقصى حمل لحظي يمكن أن يعمل في نفس الوقت، مع إضافة هامش أمان لحماية الجهاز.', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('يوضح هذا أيضاً تأثير الأجهزة الإنفرتر في تقليل الحمل المبدئي (Surge).', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('الحمل الأقصى اللحظي: ${result.peakLoadW.toStringAsFixed(0)} W', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('هامش الأمان: ${result.safetyMarginW.toStringAsFixed(0)} W', style: const pw.TextStyle(fontSize: 14)),
-            if (result.suggestedIpRating.isNotEmpty) pw.Text('تقييم الحماية المقترح (IP): ${result.suggestedIpRating}', style: const pw.TextStyle(fontSize: 14)),
-            pw.SizedBox(height: 20),
-
-            // 3. Solar Panels
-            if (systemMode != SystemMode.ups) ...[
-              pw.Text('الألواح الشمسية', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-              pw.Divider(),
-              pw.Text('عدد الألواح: ${result.requiredPanels} ألواح (تمت الحسابات بناءً على ألواح بقدرة ${panelCapacity.toStringAsFixed(0)}W)', style: const pw.TextStyle(fontSize: 16)),
-              pw.Text('المصنعين من فئة (Tier 1) المعتمدة للألواح: Longi, Jinko Solar, JA Solar, Trina Solar', style: const pw.TextStyle(fontSize: 14)),
-              pw.Text('ألواح للتشغيل المباشر: ${result.panelsForDaytime} لوح', style: const pw.TextStyle(fontSize: 14)),
-              if (systemMode != SystemMode.directOnGrid)
-                pw.Text('ألواح لشحن البطاريات: ${result.panelsForBatteries} لوح', style: const pw.TextStyle(fontSize: 14)),
-              if (result.gridContributionPercent > 0)
-                pw.Text('بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.', style: const pw.TextStyle(fontSize: 14)),
-              if (result.panelsSavedByGrid > 0)
-                pw.Text('عدد الألواح التي تم توفيرها بسبب وجود الوطنية: ${result.panelsSavedByGrid} لوح', style: const pw.TextStyle(fontSize: 14)),
-              if (result.breakdown.mpptRecommendationAr.isNotEmpty)
-                pw.Text('\n${result.breakdown.mpptRecommendationAr}', style: const pw.TextStyle(fontSize: 14)),
-              if (systemMode != SystemMode.directOnGrid)
-                pw.Text('\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.', style: const pw.TextStyle(fontSize: 14)),
-              if (result.breakdown.floatPreservationRecommendationAr.isNotEmpty)
-                pw.Text('\n${result.breakdown.floatPreservationRecommendationAr}', style: const pw.TextStyle(fontSize: 14)),
-              pw.SizedBox(height: 20),
-            ],
-
-            // 4. Battery Bank
-            if (systemMode != SystemMode.directOnGrid) ...[
-              pw.Text('بنك البطاريات', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-              pw.Divider(),
-              pw.Text('السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V', style: const pw.TextStyle(fontSize: 16)),
-              pw.Text(AppStrings.batteryExplanationBody, style: const pw.TextStyle(fontSize: 14)),
-              pw.Text(result.breakdown.batteryExplanationAr, style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
-              if (result.requiredGridChargingAmps > 0)
-                pw.Text('⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
-              if (result.requiredGridChargingAcAmps > 0)
-                pw.Text('🔌 السحب الفعلي من الشبكة (AC): ${result.requiredGridChargingAcAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 14)),
-              if (result.timeToFullHours > 0)
-                pw.Text('⏳ الوقت المقدر لشحن البطاريات بالكامل: ${result.timeToFullHours.toStringAsFixed(1)} ساعات', style: const pw.TextStyle(fontSize: 14)),
-              if (result.suggestedChargePriority.isNotEmpty)
-                pw.Text('أولوية الشحن المقترحة: ${result.suggestedChargePriority}', style: const pw.TextStyle(fontSize: 14)),
-              if (result.gelBatteryWarning.isNotEmpty)
-                pw.Text(result.gelBatteryWarning, style: const pw.TextStyle(fontSize: 14, color: PdfColors.red)),
-              pw.SizedBox(height: 20),
-            ],
-
-            // 5. NEC Standards
-            pw.Text('معايير السلامة العالمية (NEC)', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.Divider(),
-            if (result.pvDcBreakerAmps > 0) pw.Text('جوزات الألواح (DC Breakers): ${result.pvDcBreakerAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 16)),
-            if (result.batteryDcBreakerAmps > 0) pw.Text('جوزات البطاريات (DC Breakers): ${result.batteryDcBreakerAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 16)),
-            if (result.acBreakerAmps > 0) pw.Text('جوزات التيار المتردد (AC Breakers): ${result.acBreakerAmps.toStringAsFixed(1)} A', style: const pw.TextStyle(fontSize: 16)),
-            if (result.wireSizeMm2 > 0) pw.Text('أحجام الأسلاك (DC Wire Sizing): ${result.wireSizeMm2} mm²', style: const pw.TextStyle(fontSize: 16)),
-            pw.SizedBox(height: 20),
-
-            // 6. Expected Energy Loss
-            pw.Text('نسبة ضياع الطاقة المتوقعة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.Divider(),
-            pw.Text('عامل الحرارة (Temperature Coefficient): انخفاض كفاءة الخلايا الشمسية عند ارتفاع درجات حرارة الألواح فوق 25 درجة مئوية (وهو عامل حاسم في الصيف).', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('كفاءة التحويل (Inverter Efficiency): الفقد الطبيعي أثناء تحويل التيار المستمر (DC) من الألواح إلى تيار متردد (AC) للمنزل (بنسبة تفقد حوالي 3% إلى 5%).', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('مقاومة الأسلاك (Wiring/DC Losses): الضياع الناتجة عن المقاومة الكهربائية في الكابلات المسؤولة عن نقل الطاقة من الألواح إلى العاكس ومن العاكس إلى البطاريات.', style: const pw.TextStyle(fontSize: 14)),
-            pw.Text('الغبار والأوساخ (Soiling Losses): انخفاض امتصاص الضوء بسبب تراكم الأتربة على سطح الألواح.', style: const pw.TextStyle(fontSize: 14)),
-            pw.SizedBox(height: 20),
-
-            // 7. Estimated Cost
-            pw.Text('التكلفة التقديرية للمنظومة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.Divider(),
-            pw.Text('${result.estimatedCostUsd.toStringAsFixed(2)} دولار', style: const pw.TextStyle(fontSize: 16)),
-            pw.Text('${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ورقة', style: const pw.TextStyle(fontSize: 16)),
-            pw.Text('${(result.estimatedCostUsd * iqdExchangeRate).toStringAsFixed(0)} دينار عراقي', style: const pw.TextStyle(fontSize: 16)),
-            pw.Text('\nملاحظة: هذا السعر تقريبي مبني على إعداداتك. لم يتم حساب أسعار الجوزات وأسلاك الربط إلا إذا قمت بإضافتها يدوياً من شاشة الإعدادات، لكونها متغيرة حسب النوع والطول.', style: const pw.TextStyle(fontSize: 14)),
-
-            // Append Image
-            pw.SizedBox(height: 20),
-            pw.Text('شكل توضيحي للربط', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.Divider(),
-            pw.Center(
-              child: pw.Image(connectionImage, height: 200),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Text('اسم المشروع: ${dto.projectName}'),
+          pw.Text('التاريخ: ${dto.generatedAt.toIso8601String()}'),
+          pw.Text('إصدار التطبيق: ${dto.appVersion}'),
+          pw.Text('إصدار نموذج الحساب: ${dto.calculationVersion}'),
+          pw.SizedBox(height: 18),
+          _heading('المدخلات'),
+          _inputTable(dto),
+          pw.SizedBox(height: 18),
+          _heading('الأحمال وملف التشغيل'),
+          _loadsTable(dto.loads),
+          pw.SizedBox(height: 18),
+          _heading('النتائج'),
+          _resultsTable(dto.result),
+          pw.SizedBox(height: 18),
+          _heading('الافتراضات والتحذيرات'),
+          ...dto.result.breakdown.assumptionsAr.map(
+            (item) => pw.Text('• $item'),
+          ),
+          ...dto.result.breakdown.warningsAr.map(
+            (item) => pw.Text(
+              '• $item',
+              style: const pw.TextStyle(color: PdfColors.orange),
             ),
-          ];
-        },
+          ),
+          pw.SizedBox(height: 18),
+          _heading('المعيار الكهربائي'),
+          pw.Text(dto.result.electricalEstimateLabel),
+          pw.Text(
+            'لا تمثل هذه المخرجات تصميماً تنفيذياً أو اعتماداً لمعيار NEC عند نقص بيانات اللوح والسلاسل والكابلات.',
+          ),
+          if (connectionImage != null) ...[
+            pw.SizedBox(height: 18),
+            _heading('شكل توضيحي للربط'),
+            pw.Center(child: pw.Image(connectionImage, height: 180)),
+          ],
+        ],
       ),
     );
 
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-      name: 'Solar_Report.pdf',
+      onLayout: (format) async => pdf.save(),
+      name: 'SUN-solar-report.pdf',
     );
   }
+
+  static pw.Widget _heading(String text) => pw.Padding(
+    padding: const pw.EdgeInsets.only(bottom: 6),
+    child: pw.Text(
+      text,
+      style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+    ),
+  );
+
+  static pw.Widget _inputTable(FinalCalculationDto dto) {
+    final settings = dto.settings;
+    return pw.TableHelper.fromTextArray(
+      headers: const ['الحقل', 'القيمة'],
+      data: [
+        ['النظام', _modeLabel(settings.systemMode)],
+        ['قدرة اللوح', '${settings.panelCapacity} W'],
+        ['تيار Isc', '${settings.panelIsc} A'],
+        ['PSH', '${settings.peakSunHours} h'],
+        ['جهد النظام', '${settings.systemVoltage} V'],
+        ['جهد الشبكة', '${settings.gridVoltage} V'],
+        [
+          'الفقد الكلي المستخدم في النموذج',
+          '${settings.energyLossPercentage}%',
+        ],
+        ['الاستقلالية', '${settings.daysOfAutonomy} يوم'],
+        [
+          'جدول الشبكة',
+          '${settings.gridSchedule.gridOnHours}h تشغيل / ${settings.gridSchedule.gridOffHours}h انقطاع',
+        ],
+        [
+          'بداية توفر الشبكة',
+          '${settings.gridSchedule.gridStartHour.toStringAsFixed(2)}h',
+        ],
+        [
+          'اعتماد الشحن على الشبكة',
+          '${settings.gridSchedule.gridChargeDependencyPercent}%',
+        ],
+      ],
+      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      cellStyle: const pw.TextStyle(fontSize: 10),
+      border: pw.TableBorder.all(color: PdfColors.grey400),
+    );
+  }
+
+  static pw.Widget _loadsTable(List<LoadModel> loads) {
+    return pw.TableHelper.fromTextArray(
+      headers: const [
+        'الاسم',
+        'القدرة',
+        'الكمية',
+        'نهار h',
+        'ليل h',
+        'الفترات المخصصة',
+        'المعامل',
+      ],
+      data: loads
+          .map(
+            (load) => [
+              load.name,
+              '${load.powerValue} ${load.unit.name}',
+              '${load.quantity}',
+              load.daytimeHours.toStringAsFixed(2),
+              load.nighttimeHours.toStringAsFixed(2),
+              load.operatingPeriods.isEmpty
+                  ? 'نهار/ليل'
+                  : load.operatingPeriods
+                        .map(
+                          (period) =>
+                              '${period.startHour.toStringAsFixed(1)}–${period.endHour.toStringAsFixed(1)}',
+                        )
+                        .join('، '),
+              load.startingCurrentMultiplier.toStringAsFixed(2),
+            ],
+          )
+          .toList(),
+      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      cellStyle: const pw.TextStyle(fontSize: 10),
+      border: pw.TableBorder.all(color: PdfColors.grey400),
+    );
+  }
+
+  static pw.Widget _resultsTable(SystemResultModel result) {
+    return pw.TableHelper.fromTextArray(
+      headers: const ['النتيجة', 'القيمة'],
+      data: [
+        [
+          'الاستهلاك اليومي',
+          '${result.totalDailyConsumptionWh.toStringAsFixed(0)} Wh',
+        ],
+        [
+          'الطاقة النهارية',
+          '${result.daytimeConsumptionWh.toStringAsFixed(0)} Wh',
+        ],
+        [
+          'الطاقة الليلية',
+          '${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
+        ],
+        ['ذروة الحمل', '${result.peakLoadW.toStringAsFixed(0)} W'],
+        [
+          'سعة الإنفرتر',
+          '${result.requiredInverterCapacityW.toStringAsFixed(0)} W',
+        ],
+        ['عدد الألواح', '${result.requiredPanels}'],
+        ['ألواح النهار', '${result.panelsForDaytime}'],
+        ['ألواح البطارية', '${result.panelsForBatteries}'],
+        [
+          'سعة البطارية الاسمية',
+          '${result.requiredBatteryCapacityAh.toStringAsFixed(1)} Ah',
+        ],
+        [
+          'طاقة البطارية القابلة للاستخدام',
+          '${result.usableBatteryEnergyWh.toStringAsFixed(0)} Wh',
+        ],
+        [
+          'اعتماد الشبكة',
+          '${result.gridContributionPercent.toStringAsFixed(0)}%',
+        ],
+        ['أولوية الشحن', result.suggestedChargePriority],
+        [
+          'التكلفة التقديرية',
+          '${result.estimatedCostUsd.toStringAsFixed(2)} USD',
+        ],
+      ],
+      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+      cellStyle: const pw.TextStyle(fontSize: 10),
+      border: pw.TableBorder.all(color: PdfColors.grey400),
+    );
+  }
+
+  static String _modeLabel(SystemMode mode) => switch (mode) {
+    SystemMode.hybrid => 'هايبرد',
+    SystemMode.offGrid => 'مستقل',
+    SystemMode.ups => 'UPS',
+    SystemMode.directOnGrid => 'تشغيل نهاري مباشر',
+  };
 }

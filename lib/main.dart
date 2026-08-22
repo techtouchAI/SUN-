@@ -1,22 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'logic/app_strings.dart';
 import 'logic/providers.dart';
 import 'screens/load_input_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-
-  runApp(
-    // Wrap the app with ProviderScope for Riverpod
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
@@ -25,14 +18,11 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: AppStrings.appTitle,
       locale: const Locale('ar', 'AE'),
-      supportedLocales: const [
-        Locale('ar', 'AE'),
-      ],
+      supportedLocales: const [Locale('ar', 'AE')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -40,7 +30,10 @@ class MyApp extends ConsumerWidget {
       ],
       themeMode: themeMode,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber, brightness: Brightness.light),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.amber,
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
         textTheme: GoogleFonts.amiriTextTheme(
           ThemeData(brightness: Brightness.light).textTheme,

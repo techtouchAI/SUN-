@@ -9,6 +9,9 @@ class CalculationBreakdownModel {
   final String batteryExplanationEn;
   final String floatPreservationRecommendationAr;
   final String mpptRecommendationAr;
+  final List<String> assumptionsAr;
+  final List<String> warningsAr;
+  final bool electricalEstimateOnly;
 
   const CalculationBreakdownModel({
     required this.daytimePanelsExplanationAr,
@@ -21,6 +24,9 @@ class CalculationBreakdownModel {
     required this.batteryExplanationEn,
     this.floatPreservationRecommendationAr = '',
     this.mpptRecommendationAr = '',
+    this.assumptionsAr = const [],
+    this.warningsAr = const [],
+    this.electricalEstimateOnly = true,
   });
 
   factory CalculationBreakdownModel.empty() {

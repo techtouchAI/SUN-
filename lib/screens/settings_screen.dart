@@ -1,222 +1,225 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../logic/providers.dart';
+
+import '../core/validation/input_parser.dart';
 import '../logic/app_strings.dart';
-import '../models/system_mode.dart';
+import '../logic/providers.dart';
 import '../repositories/solar_calculation_repository.dart';
+import '../models/system_settings_model.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+    final settings = ref.watch(systemSettingsProvider);
+    final settingsError = ref.watch(systemSettingsErrorProvider);
+    final notifier = ref.read(systemSettingsProvider.notifier);
+
+    void update(SystemSettingsModel next) {
+      try {
+        notifier.update(next);
+      } catch (error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.settingsTitle),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SwitchListTile(
-                title: const Text(AppStrings.darkModeToggle),
-                value: themeMode == ThemeMode.dark,
-                onChanged: (value) {
-                  ref.read(themeModeProvider.notifier).state =
-                      value ? ThemeMode.dark : ThemeMode.light;
-                },
+      appBar: AppBar(title: const Text(AppStrings.settingsTitle)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (settingsError != null)
+            Card(
+              color: Colors.red.shade50,
+              child: ListTile(
+                leading: const Icon(Icons.error_outline, color: Colors.red),
+                title: const Text('تعذر تحميل أو حفظ الإعدادات'),
+                subtitle: Text(settingsError),
               ),
-              const Divider(),
-              const SizedBox(height: 16),
-              const Text(
-                AppStrings.pricingSettingsTitle,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: AppStrings.solarWattPriceLabel,
-                provider: solarWattPriceProvider,
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: AppStrings.batteryAmperePriceLabel,
-                provider: batteryAmperePriceProvider,
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: AppStrings.breakerPriceLabel,
-                provider: breakerPriceProvider,
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: AppStrings.wiringCostLabel,
-                provider: wiringCostProvider,
-              ),
-
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: 'سعر الصرف (IQD)',
-                provider: iqdExchangeRateProvider,
-                suffix: ' IQD',
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: 'جهد الشبكة (V)',
-                provider: gridVoltageProvider,
-                suffix: ' V',
-              ),
-              const Divider(),
-              const SizedBox(height: 16),
-              const Text(
-                'المتغيرات الهندسية',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: 'جهد النظام (V)',
-                provider: systemVoltageProvider,
-                suffix: ' V',
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: 'ساعات الذروة (PSH)',
-                provider: peakSunHoursProvider,
-                suffix: ' ساعات',
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: 'نسبة الفقد (%)',
-                provider: energyLossPercentageProvider,
-                suffix: ' %',
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
-                label: 'أيام التغطية/الغيوم',
-                provider: daysOfAutonomyProvider,
-                suffix: ' أيام',
-              ),
-              const Divider(),
-              const SizedBox(height: 16),
-              const Text(
-                'إعدادات متقدمة',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              if (ref.watch(systemModeProvider) != SystemMode.ups) ...[
-                _buildPriceInput(
-                  context: context,
-                  ref: ref,
-                  label: 'قدرة اللوح المخصصة (Watt)',
-                  provider: panelCapacityProvider,
-                  suffix: ' W',
-                  onChangedCallback: (parsedValue) {
-                    final interpolatedIsc = SolarCalculationRepository.getInterpolatedIsc(parsedValue);
-                    Future.microtask(() {
-                      ref.read(panelIscProvider.notifier).state = double.parse(interpolatedIsc.toStringAsFixed(2));
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildPriceInput(
-                  context: context,
-                  ref: ref,
-                  label: 'تيار القصر للوح (Isc)',
-                  provider: panelIscProvider,
-                  suffix: ' A',
-                  keyString: ref.watch(panelIscProvider).toString(),
-                ),
-                const SizedBox(height: 16),
-              ],
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'مكان تركيب الإينفيرتر',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: ref.watch(inverterLocationProvider),
-                items: const [
-                  DropdownMenuItem(value: 'indoor', child: Text('داخلي (Indoor)')),
-                  DropdownMenuItem(value: 'outdoor', child: Text('خارجي (Outdoor)')),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    ref.read(inverterLocationProvider.notifier).state = value;
-                  }
-                },
-              ),
-              const Divider(),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.code),
-                title: const Text('تصميم وبرمجة كنان الصائغ'),
-                trailing: const Icon(Icons.telegram),
-                onTap: () async {
-                  try {
-                    final url = Uri.parse('https://t.me/techtouch7');
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  } catch (e) {
-                    debugPrint('Could not launch Telegram: $e');
-                  }
-                },
-              ),
-            ],
+            ),
+          SwitchListTile(
+            title: const Text(AppStrings.darkModeToggle),
+            value: ref.watch(themeModeProvider) == ThemeMode.dark,
+            onChanged: (value) => ref.read(themeModeProvider.notifier).state =
+                value ? ThemeMode.dark : ThemeMode.light,
           ),
-        ),
+          const Divider(),
+          _sectionTitle('بيانات المشروع'),
+          _textInput(
+            context,
+            label: 'اسم المشروع',
+            value: settings.projectName,
+            onChanged: (value) => update(settings.copyWith(projectName: value)),
+            keyboard: TextInputType.text,
+          ),
+          _sectionTitle(AppStrings.pricingSettingsTitle),
+          _numberInput(
+            settings,
+            'سعر الواط الشمسي (دولار)',
+            settings.solarWattPrice,
+            (value) => update(settings.copyWith(solarWattPrice: value)),
+          ),
+          _numberInput(
+            settings,
+            'سعر أمبير البطارية (دولار)',
+            settings.batteryAmperePrice,
+            (value) => update(settings.copyWith(batteryAmperePrice: value)),
+          ),
+          _numberInput(
+            settings,
+            'سعر القاطع (دولار)',
+            settings.breakerPrice,
+            (value) => update(settings.copyWith(breakerPrice: value)),
+          ),
+          _numberInput(
+            settings,
+            'تكلفة الأسلاك الإجمالية (دولار)',
+            settings.wiringCost,
+            (value) => update(settings.copyWith(wiringCost: value)),
+          ),
+          _numberInput(
+            settings,
+            'سعر الصرف (IQD)',
+            settings.iqdExchangeRate,
+            (value) => update(settings.copyWith(iqdExchangeRate: value)),
+            suffix: ' IQD',
+          ),
+          _sectionTitle('المتغيرات الهندسية'),
+          _numberInput(
+            settings,
+            'جهد الشبكة (V)',
+            settings.gridVoltage,
+            (value) => update(settings.copyWith(gridVoltage: value)),
+            suffix: ' V',
+          ),
+          _numberInput(
+            settings,
+            'جهد النظام (V)',
+            settings.systemVoltage,
+            (value) => update(settings.copyWith(systemVoltage: value)),
+            suffix: ' V',
+          ),
+          _numberInput(
+            settings,
+            'ساعات الذروة (PSH)',
+            settings.peakSunHours,
+            (value) => update(settings.copyWith(peakSunHours: value)),
+            suffix: ' ساعات',
+          ),
+          _numberInput(
+            settings,
+            'نسبة الفقد (%)',
+            settings.energyLossPercentage,
+            (value) => update(settings.copyWith(energyLossPercentage: value)),
+            suffix: ' %',
+          ),
+          _numberInput(
+            settings,
+            'أيام الاستقلالية',
+            settings.daysOfAutonomy,
+            (value) => update(settings.copyWith(daysOfAutonomy: value)),
+            suffix: ' أيام',
+          ),
+          _sectionTitle('إعدادات الألواح'),
+          _numberInput(
+            settings,
+            'قدرة اللوح (W)',
+            settings.panelCapacity,
+            (value) => update(
+              settings.copyWith(
+                panelCapacity: value,
+                panelIsc: SolarCalculationRepository.getInterpolatedIsc(value),
+              ),
+            ),
+            suffix: ' W',
+          ),
+          _numberInput(
+            settings,
+            'تيار القصر Isc (A)',
+            settings.panelIsc,
+            (value) => update(settings.copyWith(panelIsc: value)),
+            suffix: ' A',
+          ),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.code),
+            title: const Text('تصميم وبرمجة كنان الصائغ'),
+            trailing: const Icon(Icons.telegram),
+            onTap: () async {
+              final url = Uri.parse('https://t.me/techtouch7');
+              if (!await launchUrl(url, mode: LaunchMode.externalApplication) &&
+                  context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('تعذر فتح الرابط.')),
+                );
+              }
+            },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPriceInput({
-    required BuildContext context,
-    required WidgetRef ref,
+  Widget _sectionTitle(String title) => Padding(
+    padding: const EdgeInsets.only(top: 20, bottom: 12),
+    child: Text(
+      title,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    ),
+  );
+
+  Widget _textInput(
+    BuildContext context, {
     required String label,
-    required StateProvider<double> provider,
-    String suffix = '\$',
-    void Function(double)? onChangedCallback,
-    String? keyString,
+    required String value,
+    required ValueChanged<String> onChanged,
+    required TextInputType keyboard,
   }) {
-    return TextFormField(
-      key: keyString != null ? Key(keyString) : null,
-      initialValue: keyString ?? ref.read(provider).toString(),
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        suffixText: suffix,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        key: ValueKey('$label-$value'),
+        initialValue: value,
+        keyboardType: keyboard,
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        onChanged: onChanged,
       ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      onChanged: (value) {
-        final parsedValue = double.tryParse(value);
-        if (parsedValue != null && parsedValue >= 0) {
-          ref.read(provider.notifier).state = parsedValue;
-          if (onChangedCallback != null) {
-            onChangedCallback(parsedValue);
-          }
-        }
-      },
+    );
+  }
+
+  Widget _numberInput(
+    SystemSettingsModel settings,
+    String label,
+    double value,
+    ValueChanged<double> onChanged, {
+    String suffix = '',
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        key: ValueKey('$label-$value'),
+        initialValue: value.toString(),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(
+          labelText: label,
+          suffixText: suffix,
+          border: const OutlineInputBorder(),
+        ),
+        onChanged: (raw) {
+          final parsed = InputParser.doubleOrNull(raw);
+          if (parsed != null && parsed.isFinite) onChanged(parsed);
+        },
+      ),
     );
   }
 }
