@@ -37,10 +37,8 @@ class UpdateInfo {
       assetSize = 0;
 }
 
-typedef LatestReleaseFetcher = Future<http.Response> Function(
-  String currentVersion,
-  String? etag,
-);
+typedef LatestReleaseFetcher =
+    Future<http.Response> Function(String currentVersion, String? etag);
 
 class UpdateService {
   static const String repoOwner = 'techtouchAI';
@@ -70,7 +68,9 @@ class UpdateService {
     return checkUpdateAvailableForVersion(packageInfo.version);
   }
 
-  Future<UpdateInfo> checkUpdateAvailableForVersion(String currentVersionRaw) async {
+  Future<UpdateInfo> checkUpdateAvailableForVersion(
+    String currentVersionRaw,
+  ) async {
     final currentVersion = SemanticBuildVersion.parse(currentVersionRaw);
     final release = await _loadLatestRelease(currentVersionRaw);
     final latestVersion = SemanticBuildVersion.parse(release.tagName);
@@ -88,8 +88,8 @@ class UpdateService {
   }
 
   Future<CachedRelease> _loadLatestRelease(String currentVersion) async {
-    final preferences = await (_preferencesLoader?.call() ??
-        SharedPreferences.getInstance());
+    final preferences =
+        await (_preferencesLoader?.call() ?? SharedPreferences.getInstance());
     final cache = ReleaseCache(preferences);
     final now = (_clock?.call() ?? DateTime.now()).toUtc();
     final cached = cache.read();
@@ -519,9 +519,7 @@ class ReleaseCache {
     final raw = preferences.getString(_releaseKey);
     if (raw == null) return null;
     try {
-      return CachedRelease.fromJson(
-        Map<String, dynamic>.from(jsonDecode(raw)),
-      );
+      return CachedRelease.fromJson(Map<String, dynamic>.from(jsonDecode(raw)));
     } catch (_) {
       preferences.remove(_releaseKey);
       return null;

@@ -125,18 +125,22 @@ void main() {
 
   test('parses a full GitHub release payload into a cacheable release', () {
     final checkedAt = DateTime.utc(2026, 8, 24);
-    final release = CachedRelease.fromGitHub({
-      'tag_name': 'v1.0.20+570',
-      'assets': [
-        asset(name: 'SHA256SUMS.txt'),
-        asset(
-          name: UpdateService.universalApkName,
-          size: 60536924,
-          url:
-              'https://github.com/techtouchAI/SUN-/releases/download/v1.0.20%2B570/sun-universal-release.apk',
-        ),
-      ],
-    }, etag: 'W/"release-etag"', checkedAt: checkedAt);
+    final release = CachedRelease.fromGitHub(
+      {
+        'tag_name': 'v1.0.20+570',
+        'assets': [
+          asset(name: 'SHA256SUMS.txt'),
+          asset(
+            name: UpdateService.universalApkName,
+            size: 60536924,
+            url:
+                'https://github.com/techtouchAI/SUN-/releases/download/v1.0.20%2B570/sun-universal-release.apk',
+          ),
+        ],
+      },
+      etag: 'W/"release-etag"',
+      checkedAt: checkedAt,
+    );
 
     expect(release.tagName, 'v1.0.20+570');
     expect(release.asset.name, UpdateService.universalApkName);
@@ -145,24 +149,31 @@ void main() {
     expect(release.toJson()['checkedAt'], checkedAt.toIso8601String());
   });
 
-  test('round-trips a cached release and clears a saved retry window', () async {
-    SharedPreferences.setMockInitialValues({});
-    final preferences = await SharedPreferences.getInstance();
-    final cache = ReleaseCache(preferences);
-    final release = CachedRelease.fromGitHub({
-      'tag_name': 'v1.0.20+570',
-      'assets': [asset(name: UpdateService.universalApkName)],
-    }, etag: 'etag', checkedAt: DateTime.utc(2026, 8, 24));
+  test(
+    'round-trips a cached release and clears a saved retry window',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final cache = ReleaseCache(preferences);
+      final release = CachedRelease.fromGitHub(
+        {
+          'tag_name': 'v1.0.20+570',
+          'assets': [asset(name: UpdateService.universalApkName)],
+        },
+        etag: 'etag',
+        checkedAt: DateTime.utc(2026, 8, 24),
+      );
 
-    await cache.saveRetryAt(DateTime.utc(2026, 8, 24, 1));
-    expect(cache.retryAt(), DateTime.utc(2026, 8, 24, 1));
-    await cache.save(release);
+      await cache.saveRetryAt(DateTime.utc(2026, 8, 24, 1));
+      expect(cache.retryAt(), DateTime.utc(2026, 8, 24, 1));
+      await cache.save(release);
 
-    final read = cache.read();
-    expect(read?.tagName, release.tagName);
-    expect(read?.asset.sha256, validHash);
-    expect(cache.retryAt(), isNull);
-  });
+      final read = cache.read();
+      expect(read?.tagName, release.tagName);
+      expect(read?.asset.sha256, validHash);
+      expect(cache.retryAt(), isNull);
+    },
+  );
 
   test('classifies 403 and 429 responses as rate-limit backoff windows', () {
     final now = DateTime.utc(2026, 8, 24);
@@ -183,76 +194,86 @@ void main() {
     );
   });
 
-  test('returns an expired cached release and saves retry time after 403',
-      () async {
-    final now = DateTime.utc(2026, 8, 24, 12);
-    SharedPreferences.setMockInitialValues({});
-    final preferences = await SharedPreferences.getInstance();
-    final cache = ReleaseCache(preferences);
-    await cache.save(
-      CachedRelease.fromGitHub({
-        'tag_name': 'v1.0.20+570',
-        'assets': [asset(name: UpdateService.universalApkName)],
-      }, etag: 'etag', checkedAt: now.subtract(const Duration(hours: 7))),
-    );
-    final service = UpdateService(
-      preferencesLoader: () async => preferences,
-      clock: () => now,
-      latestReleaseFetcher: (_, _) async =>
-          http.Response('', 403, headers: {'retry-after': '120'}),
-    );
-
-    final update = await service.checkUpdateAvailableForVersion('1.0.19+569');
-    expect(update.isUpdateAvailable, isTrue);
-    expect(update.latestVersion, '1.0.20+570');
-    expect(cache.retryAt(), now.add(const Duration(seconds: 120)));
-  });
-
-  test('defers a 429 check without cached data until the stated retry time',
-      () async {
-    final now = DateTime.utc(2026, 8, 24, 12);
-    SharedPreferences.setMockInitialValues({});
-    final preferences = await SharedPreferences.getInstance();
-    final service = UpdateService(
-      preferencesLoader: () async => preferences,
-      clock: () => now,
-      latestReleaseFetcher: (_, _) async =>
-          http.Response('', 429, headers: {'retry-after': '60'}),
-    );
-
-    await expectLater(
-      service.checkUpdateAvailableForVersion('1.0.19+569'),
-      throwsA(
-        isA<UpdateCheckDeferred>().having(
-          (value) => value.retryAt,
-          'retryAt',
-          now.add(const Duration(seconds: 60)),
+  test(
+    'returns an expired cached release and saves retry time after 403',
+    () async {
+      final now = DateTime.utc(2026, 8, 24, 12);
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final cache = ReleaseCache(preferences);
+      await cache.save(
+        CachedRelease.fromGitHub(
+          {
+            'tag_name': 'v1.0.20+570',
+            'assets': [asset(name: UpdateService.universalApkName)],
+          },
+          etag: 'etag',
+          checkedAt: now.subtract(const Duration(hours: 7)),
         ),
-      ),
-    );
-  });
+      );
+      final service = UpdateService(
+        preferencesLoader: () async => preferences,
+        clock: () => now,
+        latestReleaseFetcher: (_, _) async =>
+            http.Response('', 403, headers: {'retry-after': '120'}),
+      );
 
-  test('verifies and promotes an APK atomically while retaining the final file',
-      () async {
-    final directory = await Directory.systemTemp.createTemp('sun-ota-test-');
-    addTearDown(() => directory.delete(recursive: true));
-    final bytes = [1, 2, 3, 4, 5];
-    final partial = File('${directory.path}/update.apk.part');
-    final destination = File('${directory.path}/update.apk');
-    await partial.writeAsBytes(bytes);
+      final update = await service.checkUpdateAvailableForVersion('1.0.19+569');
+      expect(update.isUpdateAvailable, isTrue);
+      expect(update.latestVersion, '1.0.20+570');
+      expect(cache.retryAt(), now.add(const Duration(seconds: 120)));
+    },
+  );
 
-    final result = await UpdateService.verifyAndPromoteApk(
-      partialFile: partial,
-      destinationFile: destination,
-      expectedSize: bytes.length,
-      expectedSha256: sha256.convert(bytes).toString(),
-    );
+  test(
+    'defers a 429 check without cached data until the stated retry time',
+    () async {
+      final now = DateTime.utc(2026, 8, 24, 12);
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final service = UpdateService(
+        preferencesLoader: () async => preferences,
+        clock: () => now,
+        latestReleaseFetcher: (_, _) async =>
+            http.Response('', 429, headers: {'retry-after': '60'}),
+      );
 
-    expect(result.path, destination.path);
-    expect(await partial.exists(), isFalse);
-    expect(await destination.exists(), isTrue);
-    expect(await destination.readAsBytes(), bytes);
-  });
+      await expectLater(
+        service.checkUpdateAvailableForVersion('1.0.19+569'),
+        throwsA(
+          isA<UpdateCheckDeferred>().having(
+            (value) => value.retryAt,
+            'retryAt',
+            now.add(const Duration(seconds: 60)),
+          ),
+        ),
+      );
+    },
+  );
+
+  test(
+    'verifies and promotes an APK atomically while retaining the final file',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('sun-ota-test-');
+      addTearDown(() => directory.delete(recursive: true));
+      final bytes = [1, 2, 3, 4, 5];
+      final partial = File('${directory.path}/update.apk.part');
+      final destination = File('${directory.path}/update.apk');
+      await partial.writeAsBytes(bytes);
+
+      final result = await UpdateService.verifyAndPromoteApk(
+        partialFile: partial,
+        destinationFile: destination,
+        expectedSize: bytes.length,
+        expectedSha256: sha256.convert(bytes).toString(),
+      );
+
+      expect(result.path, destination.path);
+      expect(await partial.exists(), isFalse);
+      expect(await destination.exists(), isTrue);
+      expect(await destination.readAsBytes(), bytes);
+    },
+  );
 
   test('rejects APK promotion when the size or checksum is wrong', () async {
     final directory = await Directory.systemTemp.createTemp('sun-ota-test-');
@@ -286,18 +307,20 @@ void main() {
     expect(await destination.exists(), isFalse);
   });
 
-  test('cleans up a failed partial APK without deleting a verified APK',
-      () async {
-    final directory = await Directory.systemTemp.createTemp('sun-ota-test-');
-    addTearDown(() => directory.delete(recursive: true));
-    final partial = File('${directory.path}/update.apk.part');
-    final verified = File('${directory.path}/update.apk');
-    await partial.writeAsBytes([1, 2, 3]);
-    await verified.writeAsBytes([4, 5, 6]);
+  test(
+    'cleans up a failed partial APK without deleting a verified APK',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('sun-ota-test-');
+      addTearDown(() => directory.delete(recursive: true));
+      final partial = File('${directory.path}/update.apk.part');
+      final verified = File('${directory.path}/update.apk');
+      await partial.writeAsBytes([1, 2, 3]);
+      await verified.writeAsBytes([4, 5, 6]);
 
-    await UpdateService.deletePartialFile(partial);
+      await UpdateService.deletePartialFile(partial);
 
-    expect(await partial.exists(), isFalse);
-    expect(await verified.exists(), isTrue);
-  });
+      expect(await partial.exists(), isFalse);
+      expect(await verified.exists(), isTrue);
+    },
+  );
 }
