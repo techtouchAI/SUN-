@@ -78,3 +78,8 @@ app.*.map.json
 **/ios/.symlinks/
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
+
+# Keystore and Keys
+android/key.properties
+**/*.keystore
+**/*.jks

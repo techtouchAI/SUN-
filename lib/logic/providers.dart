@@ -1,59 +1,391 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/load_model.dart';
-import '../models/system_result_model.dart';
+
+import '../core/errors/app_exceptions.dart';
+import '../core/validation/input_validator.dart';
+import '../models/calculation_state.dart';
+import '../models/final_calculation_dto.dart';
 import '../models/grid_schedule_model.dart';
+import '../models/load_list_state.dart';
+import '../models/load_model.dart';
+import '../models/system_mode.dart';
+import '../models/system_settings_model.dart';
+import '../models/system_result_model.dart';
+import '../repositories/load_persistence_repository.dart';
+import '../repositories/settings_persistence_repository.dart';
 import '../repositories/solar_calculation_repository.dart';
 
-// Provide the repository
-final solarCalculationRepositoryProvider = Provider<SolarCalculationRepository>((ref) {
-  return SolarCalculationRepository();
-});
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+final systemErrorProvider = StateProvider<String?>((ref) => null);
+final systemSettingsErrorProvider = StateProvider<String?>((ref) => null);
 
-// StateNotifier to manage the list of loads
-class LoadListNotifier extends StateNotifier<List<LoadModel>> {
-  LoadListNotifier() : super([]);
+final solarCalculationRepositoryProvider = Provider<SolarCalculationRepository>(
+  (ref) => SolarCalculationRepository(),
+);
+
+final loadPersistenceRepositoryProvider = Provider<LoadPersistenceRepository>(
+  (ref) => LoadPersistenceRepository(),
+);
+
+final settingsPersistenceRepositoryProvider =
+    Provider<SettingsPersistenceRepository>(
+      (ref) => SettingsPersistenceRepository(),
+    );
+
+final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
+final panelIscProvider = StateProvider<double>((ref) {
+  final capacity = ref.watch(panelCapacityProvider);
+  return SolarCalculationRepository.getInterpolatedIsc(capacity);
+});
+final inverterLocationProvider = StateProvider<String>((ref) => 'indoor');
+final systemModeProvider = StateProvider<SystemMode>(
+  (ref) => SystemMode.hybrid,
+);
+final solarWattPriceProvider = StateProvider<double>((ref) => 0.16);
+final batteryAmperePriceProvider = StateProvider<double>((ref) => 0.85);
+final breakerPriceProvider = StateProvider<double>((ref) => 0.0);
+final wiringCostProvider = StateProvider<double>((ref) => 0.0);
+final systemVoltageProvider = StateProvider<double>((ref) => 48.0);
+final peakSunHoursProvider = StateProvider<double>((ref) => 4.5);
+final energyLossPercentageProvider = StateProvider<double>((ref) => 30.0);
+final daysOfAutonomyProvider = StateProvider<double>((ref) => 1.0);
+final gridScheduleProvider = StateProvider<GridScheduleModel>(
+  (ref) => const GridScheduleModel(),
+);
+final gridVoltageProvider = StateProvider<double>((ref) => 220.0);
+final iqdExchangeRateProvider = StateProvider<double>((ref) => 1500.0);
+
+class LoadListNotifier extends StateNotifier<LoadListState> {
+  final LoadPersistenceRepository _repository;
+
+  LoadListNotifier(this._repository) : super(const LoadListState()) {
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    try {
+      final loads = await _repository.loadLoads();
+      InputValidator.validateLoads(loads);
+      state = LoadListState(
+        loads: List<LoadModel>.unmodifiable(loads),
+        isLoading: false,
+      );
+    } catch (error) {
+      state = LoadListState(
+        loads: const [],
+        isLoading: false,
+        errorMessage: error.toString(),
+      );
+    }
+  }
 
   void addLoad(LoadModel load) {
-    state = [...state, load];
+    if (state.isLoading) {
+      throw const PersistenceFailure('انتظر اكتمال تحميل الأحمال قبل الإضافة.');
+    }
+    InputValidator.validateLoads([load]);
+    final next = List<LoadModel>.unmodifiable([...state.loads, load]);
+    state = state.copyWith(loads: next, clearError: true);
+    _persist(next);
   }
 
   void updateLoad(LoadModel updatedLoad) {
-    state = [
-      for (final load in state)
+    if (state.isLoading) {
+      throw const PersistenceFailure('انتظر اكتمال تحميل الأحمال قبل التعديل.');
+    }
+    InputValidator.validateLoads([updatedLoad]);
+    final next = List<LoadModel>.unmodifiable([
+      for (final load in state.loads)
         if (load.id == updatedLoad.id) updatedLoad else load,
-    ];
+    ]);
+    state = state.copyWith(loads: next, clearError: true);
+    _persist(next);
   }
 
   void removeLoad(String id) {
-    state = state.where((load) => load.id != id).toList();
+    if (state.isLoading) {
+      throw const PersistenceFailure('انتظر اكتمال تحميل الأحمال قبل الحذف.');
+    }
+    final next = List<LoadModel>.unmodifiable(
+      state.loads.where((load) => load.id != id),
+    );
+    state = state.copyWith(loads: next, clearError: true);
+    _persist(next);
+  }
+
+  Future<void> _persist(List<LoadModel> loads) async {
+    try {
+      await _repository.saveLoads(loads);
+    } catch (error) {
+      state = state.copyWith(errorMessage: error.toString());
+    }
   }
 }
 
-// Provider for the load list state
-final loadListProvider = StateNotifierProvider<LoadListNotifier, List<LoadModel>>((ref) {
-  return LoadListNotifier();
+final loadListProvider = StateNotifierProvider<LoadListNotifier, LoadListState>(
+  (ref) => LoadListNotifier(ref.watch(loadPersistenceRepositoryProvider)),
+);
+
+class SystemSettingsNotifier extends StateNotifier<SystemSettingsModel> {
+  final SettingsPersistenceRepository _repository;
+  final SystemSettingsModel Function() _readLegacySettings;
+  final void Function(SystemSettingsModel) _applyLegacySettings;
+  final ValueChanged<String?> _reportError;
+  bool isLoading = true;
+  bool _syncingLegacySettings = false;
+
+  SystemSettingsNotifier({
+    required SettingsPersistenceRepository repository,
+    required SystemSettingsModel Function() readLegacySettings,
+    required void Function(SystemSettingsModel) applyLegacySettings,
+    required ValueChanged<String?> reportError,
+  }) : _repository = repository,
+       _readLegacySettings = readLegacySettings,
+       _applyLegacySettings = applyLegacySettings,
+       _reportError = reportError,
+       super(const SystemSettingsModel()) {
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    try {
+      final loaded = await _repository.loadSettings();
+      if (!mounted) return;
+      _syncingLegacySettings = true;
+      state = loaded;
+      _applyLegacySettings(loaded);
+      _syncingLegacySettings = false;
+      _reportError(null);
+    } catch (error) {
+      if (mounted) _reportError(error.toString());
+    } finally {
+      if (mounted) isLoading = false;
+    }
+  }
+
+  void updateFromLegacySettings() {
+    if (_syncingLegacySettings) return;
+    try {
+      update(_readLegacySettings());
+    } catch (error) {
+      _reportError(error.toString());
+      _syncingLegacySettings = true;
+      _applyLegacySettings(state);
+      _syncingLegacySettings = false;
+    }
+  }
+
+  void update(SystemSettingsModel value) {
+    InputValidator.validateSystemParameters(
+      panelCapacity: value.panelCapacity,
+      panelIsc: value.panelIsc,
+      peakSunHours: value.peakSunHours,
+      systemVoltage: value.systemVoltage,
+      gridVoltage: value.gridVoltage,
+      energyLossPercentage: value.energyLossPercentage,
+      daysOfAutonomy: value.daysOfAutonomy,
+      solarWattPrice: value.solarWattPrice,
+      batteryAmperePrice: value.batteryAmperePrice,
+      breakerPrice: value.breakerPrice,
+      wiringCost: value.wiringCost,
+    );
+    InputValidator.validateGridSchedule(
+      gridStartHour: value.gridSchedule.gridStartHour,
+      gridOnHours: value.gridSchedule.gridOnHours,
+      gridOffHours: value.gridSchedule.gridOffHours,
+      gridChargeDependencyPercent:
+          value.gridSchedule.gridChargeDependencyPercent,
+    );
+    state = value;
+    _reportError(null);
+    _persist(value);
+  }
+
+  Future<void> _persist(SystemSettingsModel value) async {
+    try {
+      await _repository.saveSettings(value);
+    } catch (error) {
+      if (mounted) _reportError(error.toString());
+    }
+  }
+}
+
+final systemSettingsProvider =
+    StateNotifierProvider<SystemSettingsNotifier, SystemSettingsModel>((ref) {
+      SystemSettingsModel readLegacySettings() => SystemSettingsModel(
+        panelCapacity: ref.read(panelCapacityProvider),
+        panelIsc: ref.read(panelIscProvider),
+        inverterLocation: ref.read(inverterLocationProvider),
+        systemMode: ref.read(systemModeProvider),
+        solarWattPrice: ref.read(solarWattPriceProvider),
+        batteryAmperePrice: ref.read(batteryAmperePriceProvider),
+        breakerPrice: ref.read(breakerPriceProvider),
+        wiringCost: ref.read(wiringCostProvider),
+        systemVoltage: ref.read(systemVoltageProvider),
+        gridVoltage: ref.read(gridVoltageProvider),
+        peakSunHours: ref.read(peakSunHoursProvider),
+        energyLossPercentage: ref.read(energyLossPercentageProvider),
+        daysOfAutonomy: ref.read(daysOfAutonomyProvider),
+        iqdExchangeRate: ref.read(iqdExchangeRateProvider),
+        gridSchedule: ref.read(gridScheduleProvider),
+      );
+
+      void applyLegacySettings(SystemSettingsModel value) {
+        ref.read(panelCapacityProvider.notifier).state = value.panelCapacity;
+        ref.read(panelIscProvider.notifier).state = value.panelIsc;
+        ref.read(inverterLocationProvider.notifier).state =
+            value.inverterLocation;
+        ref.read(systemModeProvider.notifier).state = value.systemMode;
+        ref.read(solarWattPriceProvider.notifier).state = value.solarWattPrice;
+        ref.read(batteryAmperePriceProvider.notifier).state =
+            value.batteryAmperePrice;
+        ref.read(breakerPriceProvider.notifier).state = value.breakerPrice;
+        ref.read(wiringCostProvider.notifier).state = value.wiringCost;
+        ref.read(systemVoltageProvider.notifier).state = value.systemVoltage;
+        ref.read(gridVoltageProvider.notifier).state = value.gridVoltage;
+        ref.read(peakSunHoursProvider.notifier).state = value.peakSunHours;
+        ref.read(energyLossPercentageProvider.notifier).state =
+            value.energyLossPercentage;
+        ref.read(daysOfAutonomyProvider.notifier).state = value.daysOfAutonomy;
+        ref.read(iqdExchangeRateProvider.notifier).state =
+            value.iqdExchangeRate;
+        ref.read(gridScheduleProvider.notifier).state = value.gridSchedule;
+      }
+
+      final notifier = SystemSettingsNotifier(
+        repository: ref.watch(settingsPersistenceRepositoryProvider),
+        readLegacySettings: readLegacySettings,
+        applyLegacySettings: applyLegacySettings,
+        reportError: (message) =>
+            ref.read(systemSettingsErrorProvider.notifier).state = message,
+      );
+
+      ref.listen<double>(panelCapacityProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(panelIscProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<String>(inverterLocationProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<SystemMode>(systemModeProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(solarWattPriceProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(batteryAmperePriceProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(breakerPriceProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(wiringCostProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(systemVoltageProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(gridVoltageProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(peakSunHoursProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(energyLossPercentageProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(daysOfAutonomyProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double>(iqdExchangeRateProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<GridScheduleModel>(gridScheduleProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      return notifier;
+    });
+
+final calculationStateProvider = Provider<CalculationState>((ref) {
+  final loadState = ref.watch(loadListProvider);
+  if (loadState.isLoading) return const CalculationNoLoads();
+  if (loadState.errorMessage != null && loadState.loads.isEmpty) {
+    return CalculationFailed(loadState.errorMessage!);
+  }
+  if (loadState.loads.isEmpty) return const CalculationNoLoads();
+
+  final settings = ref.watch(systemSettingsProvider);
+  final repository = ref.watch(solarCalculationRepositoryProvider);
+  try {
+    final result = repository.calculateSystem(
+      loadState.loads,
+      gridVoltage: settings.gridVoltage,
+      inverterLocation: settings.inverterLocation,
+      panelCapacity: settings.panelCapacity,
+      panelIsc: settings.panelIsc,
+      systemMode: settings.systemMode,
+      gridSchedule: settings.gridSchedule,
+      solarWattPrice: settings.solarWattPrice,
+      batteryAmperePrice: settings.batteryAmperePrice,
+      breakerPrice: settings.breakerPrice,
+      wiringCost: settings.wiringCost,
+      systemVoltage: settings.systemVoltage,
+      peakSunHours: settings.peakSunHours,
+      energyLossPercentage: settings.energyLossPercentage,
+      daysOfAutonomy: settings.daysOfAutonomy,
+    );
+    return CalculationReady(result);
+  } on AppException catch (error) {
+    return CalculationInvalidInput(error);
+  } catch (error) {
+    return CalculationFailed(error);
+  }
 });
 
-// Provider for dynamic panel capacity
-final panelCapacityProvider = StateProvider<double>((ref) => 540.0);
-
-// Provider for dynamic panel Isc
-final panelIscProvider = StateProvider<double>((ref) => 0.0);
-
-// Provider for daytime only mode
-final isDaytimeOnlyProvider = StateProvider<bool>((ref) => false);
-
-// Provider for grid schedule
-final gridScheduleProvider = StateProvider<GridScheduleModel>((ref) => const GridScheduleModel());
-
-// Derived provider for the calculation results
 final systemResultProvider = Provider<SystemResultModel>((ref) {
-  final loads = ref.watch(loadListProvider);
-  final panelCapacity = ref.watch(panelCapacityProvider);
-  final panelIsc = ref.watch(panelIscProvider);
-  final isDaytimeOnly = ref.watch(isDaytimeOnlyProvider);
-  final gridSchedule = ref.watch(gridScheduleProvider);
-  final repository = ref.watch(solarCalculationRepositoryProvider);
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
 
-  return repository.calculateSystem(loads, panelCapacity: panelCapacity, panelIsc: panelIsc, isDaytimeOnly: isDaytimeOnly, gridSchedule: gridSchedule);
+  void reportError(String? message) {
+    Future.microtask(() {
+      if (!disposed) {
+        ref.read(systemErrorProvider.notifier).state = message;
+      }
+    });
+  }
+
+  final state = ref.watch(calculationStateProvider);
+  if (state is CalculationReady) {
+    reportError(null);
+    return state.result;
+  }
+  if (state is CalculationInvalidInput) {
+    reportError(state.error.message);
+    return SystemResultModel.failure(state.error.message);
+  }
+  if (state is CalculationFailed) {
+    final message = state.error.toString();
+    reportError(message);
+    return SystemResultModel.failure(message);
+  }
+  reportError(null);
+  return SystemResultModel.failure('لا توجد أحمال للحساب.');
+});
+
+final finalCalculationDtoProvider = Provider<FinalCalculationDto?>((ref) {
+  final state = ref.watch(calculationStateProvider);
+  if (state is! CalculationReady) return null;
+  final loads = ref.watch(loadListProvider).loads;
+  final settings = ref.watch(systemSettingsProvider);
+  return FinalCalculationDto(
+    projectName: settings.projectName,
+    generatedAt: DateTime.now(),
+    appVersion: '1.0.18+568',
+    calculationVersion: '2.0.0',
+    loads: List.unmodifiable(loads),
+    settings: settings,
+    result: state.result,
+  );
 });
