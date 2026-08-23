@@ -37,6 +37,11 @@ class UpdateInfo {
       assetSize = 0;
 }
 
+typedef LatestReleaseFetcher = Future<http.Response> Function(
+  String currentVersion,
+  String? etag,
+);
+
 class UpdateService {
   static const String repoOwner = 'techtouchAI';
   static const String repoName = 'SUN-';
@@ -46,12 +51,28 @@ class UpdateService {
   static const Duration cacheTtl = Duration(hours: 6);
   static const int maxAttempts = 2;
 
+  final Future<SharedPreferences> Function()? _preferencesLoader;
+  final DateTime Function()? _clock;
+  final LatestReleaseFetcher? _latestReleaseFetcher;
+
+  UpdateService({
+    Future<SharedPreferences> Function()? preferencesLoader,
+    DateTime Function()? clock,
+    LatestReleaseFetcher? latestReleaseFetcher,
+  }) : _preferencesLoader = preferencesLoader,
+       _clock = clock,
+       _latestReleaseFetcher = latestReleaseFetcher;
+
   Future<UpdateInfo> checkUpdateAvailable() async {
     if (!Platform.isAndroid) return const UpdateInfo.none();
 
     final packageInfo = await PackageInfo.fromPlatform();
-    final currentVersion = SemanticBuildVersion.parse(packageInfo.version);
-    final release = await _loadLatestRelease(packageInfo);
+    return checkUpdateAvailableForVersion(packageInfo.version);
+  }
+
+  Future<UpdateInfo> checkUpdateAvailableForVersion(String currentVersionRaw) async {
+    final currentVersion = SemanticBuildVersion.parse(currentVersionRaw);
+    final release = await _loadLatestRelease(currentVersionRaw);
     final latestVersion = SemanticBuildVersion.parse(release.tagName);
     if (!latestVersion.isNewerThan(currentVersion)) {
       return const UpdateInfo.none();
@@ -66,10 +87,11 @@ class UpdateService {
     );
   }
 
-  Future<CachedRelease> _loadLatestRelease(PackageInfo packageInfo) async {
-    final preferences = await SharedPreferences.getInstance();
+  Future<CachedRelease> _loadLatestRelease(String currentVersion) async {
+    final preferences = await (_preferencesLoader?.call() ??
+        SharedPreferences.getInstance());
     final cache = ReleaseCache(preferences);
-    final now = DateTime.now().toUtc();
+    final now = (_clock?.call() ?? DateTime.now()).toUtc();
     final cached = cache.read();
 
     if (cached != null && now.difference(cached.checkedAt) < cacheTtl) {
@@ -83,10 +105,13 @@ class UpdateService {
     }
 
     try {
-      final response = await _getLatestReleaseWithRetry(
-        packageInfo: packageInfo,
-        etag: cached?.etag,
-      );
+      final fetcher = _latestReleaseFetcher;
+      final response = fetcher == null
+          ? await _getLatestReleaseWithRetry(
+              currentVersion: currentVersion,
+              etag: cached?.etag,
+            )
+          : await fetcher(currentVersion, cached?.etag);
       if (response.statusCode == HttpStatus.notModified && cached != null) {
         final refreshed = cached.withCheckedAt(now);
         await cache.save(refreshed);
@@ -122,7 +147,7 @@ class UpdateService {
   }
 
   Future<http.Response> _getLatestReleaseWithRetry({
-    required PackageInfo packageInfo,
+    required String currentVersion,
     String? etag,
   }) async {
     final url = Uri.https(
@@ -135,7 +160,7 @@ class UpdateService {
         final headers = <String, String>{
           'Accept': 'application/vnd.github+json',
           'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'SUN-OTA/${packageInfo.version}',
+          'User-Agent': 'SUN-OTA/$currentVersion',
         };
         if (etag != null && etag.isNotEmpty) headers['If-None-Match'] = etag;
         final response = await http
@@ -201,6 +226,15 @@ class UpdateService {
     }
     if (await destinationFile.exists()) await destinationFile.delete();
     return partialFile.rename(destinationFile.path);
+  }
+
+  static Future<void> deletePartialFile(File? file) async {
+    if (file == null || !await file.exists()) return;
+    try {
+      await file.delete();
+    } catch (_) {
+      // A failed cleanup must not mask the original download error.
+    }
   }
 
   static UpdateAsset selectUniversalApkAsset(List<dynamic> assets) {
@@ -359,13 +393,7 @@ class UpdateService {
       // Do not delete installedFile here. Android reads the FileProvider URI asynchronously.
     } catch (error) {
       if (progressDialogOpen && context.mounted) Navigator.of(context).pop();
-      if (partialFile != null && await partialFile.exists()) {
-        try {
-          await partialFile.delete();
-        } catch (_) {
-          // A failed cleanup must not mask the original download error.
-        }
-      }
+      await deletePartialFile(partialFile);
       if (context.mounted) _showErrorSnackbar(context, error.toString());
     } finally {
       progress.dispose();

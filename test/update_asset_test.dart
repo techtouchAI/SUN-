@@ -177,7 +177,59 @@ void main() {
       UpdateService.retryAtForResponse(tooMany, now),
       now.add(const Duration(seconds: 60)),
     );
-    expect(UpdateService.retryAtForResponse(http.Response('', 500), now), isNull);
+    expect(
+      UpdateService.retryAtForResponse(http.Response('', 500), now),
+      isNull,
+    );
+  });
+
+  test('returns an expired cached release and saves retry time after 403',
+      () async {
+    final now = DateTime.utc(2026, 8, 24, 12);
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final cache = ReleaseCache(preferences);
+    await cache.save(
+      CachedRelease.fromGitHub({
+        'tag_name': 'v1.0.20+570',
+        'assets': [asset(name: UpdateService.universalApkName)],
+      }, etag: 'etag', checkedAt: now.subtract(const Duration(hours: 7))),
+    );
+    final service = UpdateService(
+      preferencesLoader: () async => preferences,
+      clock: () => now,
+      latestReleaseFetcher: (_, _) async =>
+          http.Response('', 403, headers: {'retry-after': '120'}),
+    );
+
+    final update = await service.checkUpdateAvailableForVersion('1.0.19+569');
+    expect(update.isUpdateAvailable, isTrue);
+    expect(update.latestVersion, '1.0.20+570');
+    expect(cache.retryAt(), now.add(const Duration(seconds: 120)));
+  });
+
+  test('defers a 429 check without cached data until the stated retry time',
+      () async {
+    final now = DateTime.utc(2026, 8, 24, 12);
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final service = UpdateService(
+      preferencesLoader: () async => preferences,
+      clock: () => now,
+      latestReleaseFetcher: (_, _) async =>
+          http.Response('', 429, headers: {'retry-after': '60'}),
+    );
+
+    await expectLater(
+      service.checkUpdateAvailableForVersion('1.0.19+569'),
+      throwsA(
+        isA<UpdateCheckDeferred>().having(
+          (value) => value.retryAt,
+          'retryAt',
+          now.add(const Duration(seconds: 60)),
+        ),
+      ),
+    );
   });
 
   test('verifies and promotes an APK atomically while retaining the final file',
@@ -232,5 +284,20 @@ void main() {
     );
     expect(await partial.exists(), isTrue);
     expect(await destination.exists(), isFalse);
+  });
+
+  test('cleans up a failed partial APK without deleting a verified APK',
+      () async {
+    final directory = await Directory.systemTemp.createTemp('sun-ota-test-');
+    addTearDown(() => directory.delete(recursive: true));
+    final partial = File('${directory.path}/update.apk.part');
+    final verified = File('${directory.path}/update.apk');
+    await partial.writeAsBytes([1, 2, 3]);
+    await verified.writeAsBytes([4, 5, 6]);
+
+    await UpdateService.deletePartialFile(partial);
+
+    expect(await partial.exists(), isFalse);
+    expect(await verified.exists(), isTrue);
   });
 }
