@@ -1,48 +1,27 @@
-import 'calculation_breakdown_model.dart';
-
 class SystemResultModel {
-  final double totalDailyConsumptionWh;
+  final double totalDailyConsumptionWh; // Total Wh consumed per day
   final double daytimeConsumptionWh;
   final double nighttimeConsumptionWh;
   final double peakLoadW;
   final double safetyMarginW;
-  final double requiredInverterCapacityW;
-  final double requiredBatteryCapacityAh;
-  final double requiredBatteryEnergyWh;
-  final double usableBatteryEnergyWh;
-  final double systemVoltage;
-  final int requiredPanels;
+  final double requiredInverterCapacityW; // Peak load with safety margin
+  final double requiredBatteryCapacityAh; // Required Ah based on night usage, voltage, and DoD
+  final int requiredPanels; // Number of panels needed based on total consumption and PSH
   final int panelsForDaytime;
   final int panelsForBatteries;
   final double gridContributionPercent;
   final int panelsSavedByGrid;
-  final List<double> dailyProductionCurve;
-  final List<double> hourlyPvPowerW;
-  final List<double> hourlyLoadPowerW;
-  final List<double> hourlyGridPowerW;
-  final List<double> hourlyBatterySocPercent;
-  final double totalPvEnergyWh;
+  final List<double> dailyProductionCurve; // Curve showing power production at different times of day (e.g., Dawn, Morning, Noon, Afternoon, Evening)
   final double requiredGridChargingAmps;
-  final double requiredGridChargingAcAmps;
-  final double timeToFullHours;
   final String suggestedInverterType;
-  final String energyLossPercentage;
-  final String recommendedInverterBrands;
-  final String recommendedPanelBrands;
+
+  // Safety Standards
   final double pvDcBreakerAmps;
   final double batteryDcBreakerAmps;
   final double acBreakerAmps;
   final int wireSizeMm2;
-  final double estimatedCostUsd;
-  final int totalBreakersCount;
-  final String suggestedChargePriority;
-  final String gelBatteryWarning;
-  final String suggestedIpRating;
-  final String electricalEstimateLabel;
-  final String? calculationError;
-  final CalculationBreakdownModel breakdown;
 
-  const SystemResultModel({
+  SystemResultModel({
     required this.totalDailyConsumptionWh,
     required this.daytimeConsumptionWh,
     required this.nighttimeConsumptionWh,
@@ -50,51 +29,21 @@ class SystemResultModel {
     required this.safetyMarginW,
     required this.requiredInverterCapacityW,
     required this.requiredBatteryCapacityAh,
-    this.requiredBatteryEnergyWh = 0,
-    this.usableBatteryEnergyWh = 0,
-    this.systemVoltage = 48,
     required this.requiredPanels,
     required this.panelsForDaytime,
     required this.panelsForBatteries,
     required this.gridContributionPercent,
     required this.panelsSavedByGrid,
     required this.dailyProductionCurve,
-    this.hourlyPvPowerW = const [],
-    this.hourlyLoadPowerW = const [],
-    this.hourlyGridPowerW = const [],
-    this.hourlyBatterySocPercent = const [],
-    this.totalPvEnergyWh = 0,
-    this.requiredGridChargingAmps = 0,
-    this.requiredGridChargingAcAmps = 0,
-    this.timeToFullHours = 0,
+    this.requiredGridChargingAmps = 0.0,
     this.suggestedInverterType = '',
-    this.energyLossPercentage = '',
-    this.recommendedInverterBrands = '',
-    this.recommendedPanelBrands = '',
-    this.pvDcBreakerAmps = 0,
-    this.batteryDcBreakerAmps = 0,
-    this.acBreakerAmps = 0,
+    this.pvDcBreakerAmps = 0.0,
+    this.batteryDcBreakerAmps = 0.0,
+    this.acBreakerAmps = 0.0,
     this.wireSizeMm2 = 0,
-    this.estimatedCostUsd = 0,
-    this.totalBreakersCount = 0,
-    this.suggestedChargePriority = '',
-    this.gelBatteryWarning = '',
-    this.suggestedIpRating = '',
-    this.electricalEstimateLabel = 'تقدير كهربائي أولي غير تنفيذي',
-    this.calculationError,
-    this.breakdown = const CalculationBreakdownModel(
-      daytimePanelsExplanationAr: '',
-      daytimePanelsExplanationEn: '',
-      batteryPanelsExplanationAr: '',
-      batteryPanelsExplanationEn: '',
-      inverterExplanationAr: '',
-      inverterExplanationEn: '',
-      batteryExplanationAr: '',
-      batteryExplanationEn: '',
-    ),
   });
 
-  static SystemResultModel failure(String message) {
+  factory SystemResultModel.empty() {
     return SystemResultModel(
       totalDailyConsumptionWh: 0,
       daytimeConsumptionWh: 0,
@@ -108,8 +57,13 @@ class SystemResultModel {
       panelsForBatteries: 0,
       gridContributionPercent: 0,
       panelsSavedByGrid: 0,
-      dailyProductionCurve: const [0, 0, 0, 0, 0],
-      calculationError: message,
+      dailyProductionCurve: [0, 0, 0, 0, 0], // Dawn, Morning, Noon, Afternoon, Evening
+      requiredGridChargingAmps: 0.0,
+      suggestedInverterType: '',
+      pvDcBreakerAmps: 0.0,
+      batteryDcBreakerAmps: 0.0,
+      acBreakerAmps: 0.0,
+      wireSizeMm2: 0,
     );
   }
 }

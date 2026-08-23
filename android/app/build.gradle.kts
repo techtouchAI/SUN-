@@ -5,24 +5,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-import java.util.Properties
-import java.io.FileInputStream
-
-val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
-
-val releaseStoreFilePath = keystoreProperties.getProperty("storeFile")
-val releaseSigningConfigured = keystorePropertiesFile.exists() &&
-    listOf("storePassword", "keyAlias", "keyPassword").all { key ->
-        !keystoreProperties.getProperty(key).isNullOrBlank()
-    } && !releaseStoreFilePath.isNullOrBlank() &&
-    file(releaseStoreFilePath).exists()
-
 android {
-    namespace = "com.solarexpert.calculator"
+    namespace = "com.example.solar_calculator"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -36,8 +20,8 @@ android {
     }
 
     defaultConfig {
-        // The application ID is the public Android identity of SUN-.
-        applicationId = "com.solarexpert.calculator"
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.example.solar_calculator"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -47,15 +31,6 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val storeFilePath = keystoreProperties["storeFile"] as String?
-            if (storeFilePath != null) {
-                storeFile = file(storeFilePath)
-                storePassword = keystoreProperties["storePassword"] as String?
-                keyAlias = keystoreProperties["keyAlias"] as String?
-                keyPassword = keystoreProperties["keyPassword"] as String?
-            }
-        }
         create("fixedDebug") {
             storeFile = file("keystores/debug.keystore")
             storePassword = "android"
@@ -69,25 +44,13 @@ android {
             signingConfig = signingConfigs.getByName("fixedDebug")
         }
         release {
-            if (releaseSigningConfigured) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.getByName("fixedDebug")
         }
     }
 }
 
 flutter {
     source = "../.."
-}
-
-if (!releaseSigningConfigured) {
-    tasks.configureEach {
-        if (name == "assembleRelease" || name == "bundleRelease" || name == "packageRelease") {
-            doFirst {
-                throw GradleException(
-                    "Release signing is not configured. Provide android/key.properties and the referenced keystore."
-                )
-            }
-        }
-    }
 }
