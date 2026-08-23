@@ -3,7 +3,6 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
-    id("com.google.gms.google-services")
 }
 
 import java.util.Properties
@@ -14,6 +13,13 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+
+val releaseStoreFilePath = keystoreProperties.getProperty("storeFile")
+val releaseSigningConfigured = keystorePropertiesFile.exists() &&
+    listOf("storePassword", "keyAlias", "keyPassword").all { key ->
+        !keystoreProperties.getProperty(key).isNullOrBlank()
+    } && !releaseStoreFilePath.isNullOrBlank() &&
+    file(releaseStoreFilePath).exists()
 
 android {
     namespace = "com.solarexpert.calculator"
@@ -30,7 +36,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // The application ID is the public Android identity of SUN-.
         applicationId = "com.solarexpert.calculator"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -63,11 +69,25 @@ android {
             signingConfig = signingConfigs.getByName("fixedDebug")
         }
         release {
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+if (!releaseSigningConfigured) {
+    tasks.configureEach {
+        if (name == "assembleRelease" || name == "bundleRelease" || name == "packageRelease") {
+            doFirst {
+                throw GradleException(
+                    "Release signing is not configured. Provide android/key.properties and the referenced keystore."
+                )
+            }
+        }
+    }
 }
