@@ -66,9 +66,9 @@ class UpdateService {
     );
   }
 
-  Future<_CachedRelease> _loadLatestRelease(PackageInfo packageInfo) async {
+  Future<CachedRelease> _loadLatestRelease(PackageInfo packageInfo) async {
     final preferences = await SharedPreferences.getInstance();
-    final cache = _ReleaseCache(preferences);
+    final cache = ReleaseCache(preferences);
     final now = DateTime.now().toUtc();
     final cached = cache.read();
 
@@ -93,7 +93,7 @@ class UpdateService {
         return refreshed;
       }
       if (response.statusCode == HttpStatus.ok) {
-        final parsed = _CachedRelease.fromGitHub(
+        final parsed = CachedRelease.fromGitHub(
           jsonDecode(response.body),
           etag: _header(response.headers, 'etag'),
           checkedAt: now,
@@ -101,9 +101,9 @@ class UpdateService {
         await cache.save(parsed);
         return parsed;
       }
-      if (response.statusCode == HttpStatus.forbidden ||
-          response.statusCode == HttpStatus.tooManyRequests) {
-        final nextRetry = retryAtFromHeaders(response.headers, now);
+      final rateLimitRetryAt = retryAtForResponse(response, now);
+      if (rateLimitRetryAt != null) {
+        final nextRetry = rateLimitRetryAt;
         await cache.saveRetryAt(nextRetry);
         if (cached != null) return cached;
         throw UpdateCheckDeferred(nextRetry);
@@ -175,6 +175,32 @@ class UpdateService {
       );
     }
     return now.add(const Duration(minutes: 1));
+  }
+
+  static DateTime? retryAtForResponse(http.Response response, DateTime now) {
+    if (response.statusCode != HttpStatus.forbidden &&
+        response.statusCode != HttpStatus.tooManyRequests) {
+      return null;
+    }
+    return retryAtFromHeaders(response.headers, now);
+  }
+
+  static Future<File> verifyAndPromoteApk({
+    required File partialFile,
+    required File destinationFile,
+    required int expectedSize,
+    required String expectedSha256,
+  }) async {
+    final actualSize = await partialFile.length();
+    if (actualSize != expectedSize) {
+      throw const UpdateFailure('حجم ملف التحديث غير مطابق للنسخة المنشورة.');
+    }
+    final actualHash = await sha256.bind(partialFile.openRead()).first;
+    if (actualHash.toString() != expectedSha256) {
+      throw const UpdateFailure('فشل التحقق من سلامة APK؛ لن يتم تثبيت الملف.');
+    }
+    if (await destinationFile.exists()) await destinationFile.delete();
+    return partialFile.rename(destinationFile.path);
   }
 
   static UpdateAsset selectUniversalApkAsset(List<dynamic> assets) {
@@ -311,18 +337,12 @@ class UpdateService {
           'تعذر تنزيل ملف التحديث. رمز الخادم: ${response.statusCode}.',
         );
       }
-      final actualSize = await partialFile.length();
-      if (actualSize != info.assetSize) {
-        throw const UpdateFailure('حجم ملف التحديث غير مطابق للنسخة المنشورة.');
-      }
-      final actualHash = await sha256.bind(partialFile.openRead()).first;
-      if (actualHash.toString() != info.sha256) {
-        throw const UpdateFailure(
-          'فشل التحقق من سلامة APK؛ لن يتم تثبيت الملف.',
-        );
-      }
-      if (await finalFile.exists()) await finalFile.delete();
-      final installedFile = await partialFile.rename(finalFile.path);
+      final installedFile = await verifyAndPromoteApk(
+        partialFile: partialFile,
+        destinationFile: finalFile,
+        expectedSize: info.assetSize,
+        expectedSha256: info.sha256,
+      );
       partialFile = null;
 
       if (progressDialogOpen && context.mounted) {
@@ -379,20 +399,20 @@ class UpdateCheckDeferred implements Exception {
   const UpdateCheckDeferred(this.retryAt);
 }
 
-class _CachedRelease {
+class CachedRelease {
   final String tagName;
   final UpdateAsset asset;
   final String? etag;
   final DateTime checkedAt;
 
-  const _CachedRelease({
+  const CachedRelease({
     required this.tagName,
     required this.asset,
     required this.etag,
     required this.checkedAt,
   });
 
-  factory _CachedRelease.fromGitHub(
+  factory CachedRelease.fromGitHub(
     dynamic payload, {
     required String? etag,
     required DateTime checkedAt,
@@ -408,7 +428,7 @@ class _CachedRelease {
     }
     SemanticBuildVersion.parse(tagName);
     final asset = UpdateService.selectUniversalApkAsset(assets);
-    return _CachedRelease(
+    return CachedRelease(
       tagName: tagName,
       asset: asset,
       etag: etag,
@@ -416,7 +436,7 @@ class _CachedRelease {
     );
   }
 
-  factory _CachedRelease.fromJson(Map<String, dynamic> json) {
+  factory CachedRelease.fromJson(Map<String, dynamic> json) {
     final tagName = json['tagName'];
     final url = json['url'];
     final sha256 = json['sha256'];
@@ -430,7 +450,7 @@ class _CachedRelease {
         checkedAt is! String) {
       throw const FormatException('Invalid cached update release.');
     }
-    return _CachedRelease(
+    return CachedRelease(
       tagName: tagName,
       asset: UpdateAsset(
         name: UpdateService.universalApkName,
@@ -443,7 +463,7 @@ class _CachedRelease {
     );
   }
 
-  _CachedRelease withCheckedAt(DateTime value) => _CachedRelease(
+  CachedRelease withCheckedAt(DateTime value) => CachedRelease(
     tagName: tagName,
     asset: asset,
     etag: etag,
@@ -460,18 +480,18 @@ class _CachedRelease {
   };
 }
 
-class _ReleaseCache {
+class ReleaseCache {
   static const _releaseKey = 'ota.release.cache.v1';
   static const _retryAtKey = 'ota.release.retry_at.v1';
   final SharedPreferences preferences;
 
-  const _ReleaseCache(this.preferences);
+  const ReleaseCache(this.preferences);
 
-  _CachedRelease? read() {
+  CachedRelease? read() {
     final raw = preferences.getString(_releaseKey);
     if (raw == null) return null;
     try {
-      return _CachedRelease.fromJson(
+      return CachedRelease.fromJson(
         Map<String, dynamic>.from(jsonDecode(raw)),
       );
     } catch (_) {
@@ -486,7 +506,7 @@ class _ReleaseCache {
     return DateTime.tryParse(raw)?.toUtc();
   }
 
-  Future<void> save(_CachedRelease value) async {
+  Future<void> save(CachedRelease value) async {
     await preferences.setString(_releaseKey, jsonEncode(value.toJson()));
     await preferences.remove(_retryAtKey);
   }
