@@ -60,7 +60,18 @@ class UpdateService {
     if (!Platform.isAndroid) return const UpdateInfo.none();
 
     final packageInfo = await PackageInfo.fromPlatform();
-    return checkUpdateAvailableForVersion(packageInfo.version);
+    return checkUpdateAvailableForVersion(
+      versionWithBuildNumber(packageInfo.version, packageInfo.buildNumber),
+    );
+  }
+
+  static String versionWithBuildNumber(String version, String buildNumber) {
+    final normalizedVersion = version.trim();
+    if (normalizedVersion.contains('+')) return normalizedVersion;
+    final normalizedBuild = buildNumber.trim();
+    return int.tryParse(normalizedBuild) == null
+        ? normalizedVersion
+        : '$normalizedVersion+$normalizedBuild';
   }
 
   Future<UpdateInfo> checkUpdateAvailableForVersion(

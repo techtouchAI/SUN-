@@ -207,6 +207,33 @@ void main() {
     expect(second.latestVersion, '1.0.22+572');
   });
 
+  test('combines PackageInfo version and Android build number for OTA', () {
+    expect(
+      UpdateService.versionWithBuildNumber('1.0.24', '2569'),
+      '1.0.24+2569',
+    );
+    expect(
+      UpdateService.versionWithBuildNumber('1.0.24+2569', '2569'),
+      '1.0.24+2569',
+    );
+  });
+
+  test(
+    'does not offer an identical release and Android build as an update',
+    () async {
+      final service = UpdateService(
+        latestReleaseFetcher: (_) async =>
+            http.Response(releaseBody('v1.0.24+2569'), HttpStatus.ok),
+      );
+
+      final update = await service.checkUpdateAvailableForVersion(
+        '1.0.24+2569',
+      );
+
+      expect(update.isUpdateAvailable, isFalse);
+    },
+  );
+
   test(
     'verifies and promotes an APK atomically while retaining the final file',
     () async {
