@@ -61,7 +61,8 @@ void main() {
       throwsA(isA<UpdateFailure>()),
     );
     expect(
-      () => UpdateService.selectUniversalApkAsset([asset(name: 'release.html')]),
+      () =>
+          UpdateService.selectUniversalApkAsset([asset(name: 'release.html')]),
       throwsA(isA<UpdateFailure>()),
     );
   });
@@ -69,7 +70,10 @@ void main() {
   test('rejects malformed digest, non-GitHub URL and duplicate APK', () {
     expect(
       () => UpdateService.selectUniversalApkAsset([
-        asset(name: UpdateService.universalApkName, digest: 'sha256:not-a-hash'),
+        asset(
+          name: UpdateService.universalApkName,
+          digest: 'sha256:not-a-hash',
+        ),
       ]),
       throwsA(isA<UpdateFailure>()),
     );
@@ -196,9 +200,7 @@ void main() {
     );
 
     final first = await service.checkUpdateAvailableForVersion('1.0.20+570');
-    final second = await service.checkUpdateAvailableForVersion(
-      '1.0.20+570',
-    );
+    final second = await service.checkUpdateAvailableForVersion('1.0.20+570');
 
     expect(calls, 2);
     expect(first.latestVersion, '1.0.21+571');

@@ -36,9 +36,8 @@ class UpdateInfo {
       assetSize = 0;
 }
 
-typedef LatestReleaseFetcher = Future<http.Response> Function(
-  String currentVersion,
-);
+typedef LatestReleaseFetcher =
+    Future<http.Response> Function(String currentVersion);
 
 class UpdateService {
   static const String repoOwner = 'techtouchAI';
@@ -393,10 +392,7 @@ class PublishedRelease {
   final String tagName;
   final UpdateAsset asset;
 
-  const PublishedRelease({
-    required this.tagName,
-    required this.asset,
-  });
+  const PublishedRelease({required this.tagName, required this.asset});
 
   factory PublishedRelease.fromGitHub(dynamic payload) {
     if (payload is! Map) {
@@ -410,10 +406,7 @@ class PublishedRelease {
     }
     SemanticBuildVersion.parse(tagName);
     final asset = UpdateService.selectUniversalApkAsset(assets);
-    return PublishedRelease(
-      tagName: tagName,
-      asset: asset,
-    );
+    return PublishedRelease(tagName: tagName, asset: asset);
   }
 }
 
