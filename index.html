@@ -128,7 +128,7 @@
         try {
           const [release, workflowData] = await Promise.all([
             getJson(`${api}/releases/latest`),
-            getJson(`${api}/actions/runs?branch=${branch}&per_page=8&exclude_pull_requests=true`),
+            getJson(`${api}/actions/workflows/flutter_build.yml/runs?per_page=8&exclude_pull_requests=true`),
           ]);
           publishedVersion = normalizeVersion(release.tag_name);
           $("current-version").textContent = publishedVersion;
