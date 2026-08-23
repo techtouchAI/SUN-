@@ -1,17 +1,107 @@
-# solar_calculator
+# SUN- — حاسبة تقدير منظومات الطاقة الشمسية
 
-A new Flutter project.
+SUN- تطبيق Flutter عربي لتقدير أولي لمكونات منظومة شمسية انطلاقاً من الأحمال وإعدادات النظام والشبكة. يحافظ هذا الفرع على واجهة baseline الأصلية من الالتزام `d94c883`، بينما تتركز التغييرات الجديدة في الحساب والتحقق والحفظ والتصدير والتحديث والبناء.
 
-## Getting Started
+> النتائج تقديرية أولية وليست مخططاً كهربائياً تنفيذياً أو شهادة امتثال لمعيار NEC.
 
-This project is a starting point for a Flutter application.
+## الواجهة والميزات الحالية
 
-A few resources to get you started if this is your first Flutter project:
+يحافظ التطبيق على شاشة إدخال الأحمال الأصلية بتبويبي الإدخال المفصل والسريع، وحوار تعديل الحمل، وإعدادات وضع التشغيل والبطارية والشبكة، وصفحة النتائج والرسم وصفحة الإعدادات. لم تُعد صياغة layout أو navigation أو الثيم أو عناصر العرض. التغيير المحدود داخل الشاشات هو استخدام parser مركزي للأرقام والتحقق من القيم قبل إرسالها إلى الخلفية، مع إظهار خطأ واضح عند رفض الإدخال.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+يدعم نموذج المجال حقولاً إضافية مثل الكمية وساعات النهار والليل والفترات المخصصة، كما يدعم `gridStartHour` في نموذج جدول الشبكة. حفاظاً على تصميم baseline، لا يضيف هذا الفرع محرراً بصرياً لهذه الحقول؛ إدخال الواجهة الحالية يعتمد على ساعات الاستخدام اليومية وساعات تشغيل/انقطاع الشبكة الموجودة أصلاً، وتبقى القيم الإضافية متاحة للحفظ والحساب والاختبار البرمجي.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## المنصات
+
+توجد تهيئة للمشروع على Android وWeb وiOS وmacOS وWindows وLinux. تم التحقق فعلياً محلياً من Web release وAndroid debug وLinux release. يحتاج iOS وmacOS إلى Xcode وCocoaPods وبيئة Apple، ويحتاج Windows إلى Windows toolchain؛ لذلك لا يُدّعى نجاح بنائها من بيئة Linux.
+
+مسار OTA يعمل على Android فقط. لا يستورد المسار المشترك `dart:io`، ولا يحاول Web أو desktop تثبيت APK.
+
+## المدخلات والوحدات
+
+| المدخل | الوحدة | القيد المركزي |
+| --- | --- | --- |
+| قدرة الحمل | W أو A أو ton | قيمة finite وأكبر من صفر؛ تحويل A يعتمد جهد الشبكة ومعامل قدرة مفترض 1.0. |
+| ساعات الاستخدام | ساعة/يوم | من 0 إلى 24. |
+| ساعات النهار والليل | ساعة/يوم | عندما تُستخدم من نموذج المجال، كل قيمة من 0 إلى 24 ومجموعهما لا يتجاوز 24. |
+| معامل تيار البدء | بلا وحدة | من 1 إلى 10. |
+| قدرة اللوح وIsc | W وA | قيم finite وأكبر من صفر. |
+| PSH | ساعة شمس ذروة/يوم | أكبر من صفر وبحد أقصى 24. |
+| جهد النظام والشبكة | V | أكبر من صفر. |
+| الفقد العام | % | من 0 إلى أقل من 100. |
+| الاستقلالية | يوم | أكبر من صفر وبحد أقصى 30. |
+| جدول الشبكة | ساعة | `gridStartHour` من 0 إلى أقل من 24، ومجموع التشغيل والانقطاع 24، والنافذة لا تتجاوز نهاية اليوم. |
+
+لا تقبل طبقة التحقق `NaN` أو `Infinity` أو الأصفار غير الصالحة أو النتائج الهندسية السالبة. يدعم `InputParser` الأرقام العربية والفارسية والفاصلة العربية والغربية.
+
+## نموذج الحساب
+
+لا توجد نسبة ثابتة 40/60. يبني المحرك ملف حمل من 24 ساعة اعتماداً على الساعات المتاحة لكل حمل، ويستخدم الملف نفسه لحساب الطاقة والقدرة المتزامنة والذروة. يدعم نموذج المجال فترات تشغيل مخصصة، لكن واجهة baseline لا تعرض محرراً لها.
+
+```text
+load_power_W = quantity × input_power_W
+load_energy_Wh = load_power_W × operating_hours
+peak_load_W = maximum simultaneous load including startup multiplier
+inverter_capacity_W = peak_load_W × (1 + safety margin)
+```
+
+يفصل المحرك بين سعة البطارية الاسمية والطاقة اللازمة للشحن:
+
+```text
+battery_output_energy_Wh = night_energy_Wh × autonomy_days / inverter_efficiency
+nominal_battery_energy_Wh = battery_output_energy_Wh / (DoD × battery_efficiency)
+battery_capacity_Ah = nominal_battery_energy_Wh / system_voltage_V
+required_battery_charge_Wh = battery_output_energy_Wh / (DoD × battery_efficiency × charge_efficiency)
+```
+
+تحسب طاقة اللوح قبل التقريب، ثم يطبق أثر الشبكة على الطاقة المطلوبة لا على عدد الألواح المقرب:
+
+```text
+panel_daily_energy_Wh = panel_power_W × PSH × (1 − PV_loss_fraction)
+remaining_battery_pv_Wh = required_battery_charge_Wh × (1 − grid_charge_fraction)
+panel_count = ceil(required_energy_Wh / panel_daily_energy_Wh)
+```
+
+في Hybrid يمكن لمساهمة الشبكة تقليل ألواح شحن البطارية ضمن نافذة الجدول. في Off-grid لا تُحسب مساهمة الشبكة. في Direct-on-grid لا تُظهر النتائج بطارية أو ألواح شحن بطارية. في UPS لا يعتمد النموذج الحالي على إنتاج PV.
+
+## الخسائر والحدود الهندسية
+
+الخسارة العامة معامل PV يطبق مرة واحدة. كفاءة العاكس وكفاءة البطارية وكفاءة الشحن معاملات مستقلة. يستخدم النموذج PSH متوسطاً يومياً ولا يستخدم irradiance أو بيانات موقع حقيقية. الأسعار تقديرية وليست BOM من مورد.
+
+يصف التطبيق مخرجات القواطع والأسلاك بأنها **تقدير كهربائي أولي غير تنفيذي**. لا يدعي NEC ولا يعطي تصميماً نهائياً عند غياب بيانات Voc وVmp وIsc وImp، تكوين السلاسل، طول الكابل، الحرارة، طريقة التمديد، هبوط الجهد ومتطلبات الحماية.
+
+## الحفظ
+
+تحفظ الأحمال والإعدادات بصيغة versioned. يتسلسل حفظ الأحمال، وتوجد نسخة احتياطية من آخر payload صالح. فساد البيانات أو فشل الحفظ يخرج كخطأ typed واضح ولا يتحول إلى قائمة فارغة صامتة. تتوافق facade providers مع providers القديمة التي تعتمد عليها واجهة baseline، مع ربطها داخلياً بـ`SystemSettingsModel` و`SettingsPersistenceRepository`.
+
+## PDF
+
+يبقى زر تصدير PDF واستدعاؤه في Dashboard كما هو. يمرر wrapper التوافق المدخلات القديمة إلى `FinalCalculationDto`، وتنتج الخدمة تقريراً يضم المدخلات والأحمال والنتائج والافتراضات والتحذيرات وجدول الشبكة. لا يمثل التقرير اعتماداً تنفيذياً.
+
+## OTA وAndroid release
+
+يبحث OTA على Android حصراً عن asset باسم `sun-universal-release.apk`. هذا Universal APK واحد يضم المعماريات التي يبنيها المشروع ولا يحتاج إلى اختيار ABI. يرفض HTML وAAB والأسماء الأخرى والروابط غير الموثوقة وdigest غير الصالح، ويتحقق من SHA-256 بعد التنزيل ثم ينظف الملف المؤقت.
+
+ينتج Release workflow ملفين لغرضين مختلفين: `sun-universal-release.apk` للتوزيع المباشر وOTA، و`sun-release.aab` لـGoogle Play. يُبنى الملفان بنفس Release keystore وalias؛ لا يُثبت AAB مباشرة عبر OTA. ينظف workflow أصول APK القديمة من الإصدار قبل نشر الأصول الجديدة، وينشئ `SHA256SUMS.txt`.
+
+## البناء المحلي
+
+```bash
+flutter pub get
+flutter analyze
+flutter test
+flutter build web --release
+flutter build apk --debug
+flutter build linux --release
+```
+
+يتطلب Android release ملف `android/key.properties` وkeystore خارج Git. يعمل debug بمفتاح التطوير فقط. لا توضع أسرار التوقيع في المستودع أو سجلات CI. إخراج Release المباشر في CI يعاد تسميته إلى `sun-universal-release.apk`، بينما يعاد تسمية Bundle إلى `sun-release.aab`.
+
+## الاختبارات وCI
+
+تتضمن suite الحالية 28 اختباراً ناجحاً تغطي محرك الحساب وملف 24 ساعة، حدود التحقق، parser الأرقام، الحفظ والاسترداد، providers ومسار التطبيق، مقارنة الإصدارات، واختيار Universal APK، إضافة إلى اختبار إقلاع واجهة baseline. يفحص CI تنسيق backend والاختبارات، و`flutter analyze`، والاختبارات، وبناء Web وAndroid debug. يفصل Release workflow عن CI بصلاحيات أقل، ويثبت Actions على SHA وينشئ checksums.
+
+## ملاحظات التطوير
+
+يوجد فرع محلي محفوظ `pre-ui-preserving-rebuild` للنسخة السابقة التي احتوت تغييرات الواجهة، بينما يعمل هذا الفرع باسم `ui-preserving-rebuild` انطلاقاً من baseline. قبل الدمج إلى `golden-version` يجب مراجعة Pull Request بصرياً، لأن الهدف هو اعتماد الإصلاحات الخلفية مع الحفاظ على شكل التطبيق الأصلي.
+
+هذه الأداة لا تستبدل مهندساً كهربائياً مرخصاً أو بيانات المصنع أو كود البناء المحلي. يجب مراجعة كل نتيجة ميدانياً وفق نوع البطارية والعاكس واللوح وتكوين السلاسل ودرجات الحرارة وطول الكابلات والحماية والتهوية وشروط الشبكة.
