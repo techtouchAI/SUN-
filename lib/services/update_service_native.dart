@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -72,15 +71,11 @@ class UpdateService {
       );
     }
 
-    final deviceInfo = await DeviceInfoPlugin().androidInfo;
-    final abi = deviceInfo.supportedAbis.isEmpty
-        ? ''
-        : deviceInfo.supportedAbis.first;
     final assets = release['assets'];
     if (assets is! List) {
       throw const UpdateFailure('الإصدار لا يحتوي على قائمة أصول.');
     }
-    final asset = selectApkAsset(assets, abi);
+    final asset = selectUniversalApkAsset(assets);
     return UpdateInfo(
       isUpdateAvailable: true,
       latestVersion: latestVersion.display,
@@ -110,20 +105,19 @@ class UpdateService {
     throw UpdateFailure('تعذر الاتصال بخادم التحديث: $lastError');
   }
 
-  static UpdateAsset selectApkAsset(List<dynamic> assets, String abi) {
-    if (abi.trim().isEmpty) {
-      throw const UpdateFailure('لا يمكن تحديد معمارية جهاز Android.');
-    }
-    final valid = <UpdateAsset>[];
+  static const universalApkName = 'sun-universal-release.apk';
+
+  static UpdateAsset selectUniversalApkAsset(List<dynamic> assets) {
+    final matching = <UpdateAsset>[];
     for (final item in assets) {
       if (item is! Map) continue;
       final name = item['name'];
       final url = item['browser_download_url'];
       final digest = item['digest'];
       if (name is! String || url is! String || digest is! String) continue;
+      if (name.toLowerCase() != universalApkName) continue;
       final parsedUrl = Uri.tryParse(url);
       final normalizedDigest = digest.toLowerCase();
-      if (!name.toLowerCase().endsWith('.apk')) continue;
       if (parsedUrl == null ||
           parsedUrl.scheme != 'https' ||
           parsedUrl.host != 'github.com') {
@@ -131,32 +125,18 @@ class UpdateService {
       }
       if (!normalizedDigest.startsWith('sha256:')) continue;
       final hash = normalizedDigest.substring('sha256:'.length);
-      if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(hash)) {
-        continue;
-      }
-      valid.add(UpdateAsset(name: name, url: url, sha256: hash));
+      if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(hash)) continue;
+      matching.add(UpdateAsset(name: name, url: url, sha256: hash));
     }
-    if (valid.isEmpty) {
-      throw const UpdateFailure('لا يوجد APK صالح مرفق مع الإصدار.');
-    }
-    final abiToken = switch (abi) {
-      'arm64-v8a' => 'arm64-v8a',
-      'armeabi-v7a' => 'armeabi-v7a',
-      'x86_64' => 'x86_64',
-      'x86' => 'x86',
-      _ => abi.toLowerCase(),
-    };
-    final matching = valid.where((asset) {
-      final name = asset.name.toLowerCase();
-      if (abi == 'x86' && name.contains('x86_64')) return false;
-      return name.contains(abiToken);
-    }).toList();
     if (matching.isEmpty) {
-      throw UpdateFailure(
-        'لا يوجد APK مطابق لمعمارية الجهاز: ${abi.isEmpty ? 'غير معروفة' : abi}.',
+      throw const UpdateFailure('لا يوجد Universal APK صالح مرفق مع الإصدار.');
+    }
+    if (matching.length > 1) {
+      throw const UpdateFailure(
+        'الإصدار يحتوي على أكثر من Universal APK بالاسم نفسه.',
       );
     }
-    return matching.first;
+    return matching.single;
   }
 
   Future<void> checkForUpdatesAndShowDialog(BuildContext context) async {

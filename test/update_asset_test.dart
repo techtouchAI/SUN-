@@ -7,62 +7,75 @@ const validHash =
 
 Map<String, String> asset({
   required String name,
-  String url =
-      'https://github.com/techtouchAI/SUN-/releases/download/v1.0.19/app-arm64-v8a-release.apk',
+  String? url,
   String digest = 'sha256:$validHash',
-}) => {'name': name, 'browser_download_url': url, 'digest': digest};
+}) {
+  return {
+    'name': name,
+    'browser_download_url':
+        url ??
+        'https://github.com/techtouchAI/SUN-/releases/download/v1.0.19/$name',
+    'digest': digest,
+  };
+}
 
 void main() {
-  test('selects the exact Android ABI and rejects x86/x86_64 confusion', () {
-    final selected = UpdateService.selectApkAsset([
+  test('selects the single universal APK by its exact name', () {
+    final selected = UpdateService.selectUniversalApkAsset([
+      asset(name: 'app-arm64-v8a-release.apk'),
+      asset(name: UpdateService.universalApkName),
       asset(name: 'app-x86_64-release.apk'),
-      asset(
-        name: 'app-x86-release.apk',
-        url:
-            'https://github.com/techtouchAI/SUN-/releases/download/v1.0.19/app-x86-release.apk',
-      ),
-    ], 'x86');
-    expect(selected.name, 'app-x86-release.apk');
+    ]);
+
+    expect(selected.name, UpdateService.universalApkName);
   });
 
-  test('rejects missing APK, HTML asset and malformed digest', () {
+  test('rejects missing universal APK, split APK and HTML asset', () {
     expect(
-      () => UpdateService.selectApkAsset([], 'arm64-v8a'),
+      () => UpdateService.selectUniversalApkAsset([]),
       throwsA(isA<UpdateFailure>()),
     );
     expect(
-      () => UpdateService.selectApkAsset([
-        asset(
-          name: 'release.html',
-          url:
-              'https://github.com/techtouchAI/SUN-/releases/download/v1.0.19/release.html',
-        ),
-      ], 'arm64-v8a'),
+      () => UpdateService.selectUniversalApkAsset([
+        asset(name: 'app-arm64-v8a-release.apk'),
+      ]),
       throwsA(isA<UpdateFailure>()),
     );
     expect(
-      () => UpdateService.selectApkAsset([
-        asset(name: 'app-arm64-v8a-release.apk', digest: 'sha256:not-a-hash'),
-      ], 'arm64-v8a'),
+      () =>
+          UpdateService.selectUniversalApkAsset([asset(name: 'release.html')]),
       throwsA(isA<UpdateFailure>()),
     );
   });
 
-  test('rejects wrong architecture and non-GitHub download URL', () {
-    expect(
-      () => UpdateService.selectApkAsset([
-        asset(name: 'app-armeabi-v7a-release.apk'),
-      ], 'arm64-v8a'),
-      throwsA(isA<UpdateFailure>()),
-    );
-    expect(
-      () => UpdateService.selectApkAsset([
-        asset(
-          name: 'app-arm64-v8a-release.apk',
-          url: 'https://example.com/app.apk',
-        ),
-      ], 'arm64-v8a'),
-      throwsA(isA<UpdateFailure>()),
-    );
-  });
+  test(
+    'rejects malformed digest, non-GitHub URL and duplicate universal APK',
+    () {
+      expect(
+        () => UpdateService.selectUniversalApkAsset([
+          asset(
+            name: UpdateService.universalApkName,
+            digest: 'sha256:not-a-hash',
+          ),
+        ]),
+        throwsA(isA<UpdateFailure>()),
+      );
+      expect(
+        () => UpdateService.selectUniversalApkAsset([
+          asset(
+            name: UpdateService.universalApkName,
+            url: 'https://example.com/sun-universal-release.apk',
+          ),
+        ]),
+        throwsA(isA<UpdateFailure>()),
+      );
+      expect(
+        () => UpdateService.selectUniversalApkAsset([
+          asset(name: UpdateService.universalApkName),
+          asset(name: UpdateService.universalApkName),
+        ]),
+        throwsA(isA<UpdateFailure>()),
+      );
+    },
+  );
 }

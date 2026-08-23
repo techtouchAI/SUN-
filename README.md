@@ -77,9 +77,15 @@ panel_count = ceil(required_energy_Wh / panel_daily_energy_Wh)
 
 ## التحديث داخل التطبيق
 
-يعمل فحص OTA على Android فقط. يقارن رقم الإصدار ورقم البناء، ويختار APK المطابق لمعمارية الجهاز، ويرفض الأصول غير المنتهية بـAPK أو التي لا تملك digest من نوع SHA-256 أو التي ليست من نطاق GitHub الموثوق. بعد التنزيل يحسب SHA-256 للملف ويمنع التثبيت عند الاختلاف، ثم يحذف الملف المؤقت بعد انتهاء العملية.
+يعمل فحص OTA على Android فقط. يقارن رقم الإصدار ورقم البناء، ويبحث حصراً عن asset باسم `sun-universal-release.apk`، وهو APK واحد Universal يضم المعماريات التي يبنيها المشروع ولا يحتاج إلى معرفة ABI الجهاز. يرفض الأصول غير المطابقة للاسم أو التي لا تملك digest من نوع SHA-256 أو التي ليست من نطاق GitHub الموثوق. بعد التنزيل يحسب SHA-256 للملف ويمنع التثبيت عند الاختلاف، ثم يحذف الملف المؤقت بعد انتهاء العملية.
 
-ينبغي نشر كل APK في GitHub Release مع digest واضح. لا يعتمد التطبيق على صفحة الإصدار كبديل لملف APK، ولا يحاول تثبيت HTML أو AAB.
+ينبغي نشر Universal APK في GitHub Release مع digest واضح. لا يعتمد التطبيق على صفحة الإصدار كبديل لملف APK، ولا يحاول تثبيت HTML أو AAB. وجود APK واحد يلغي مسار اختيار ملفات ABI المتعددة في OTA، لكنه يزيد حجم التنزيل مقارنة بالـsplit APK.
+
+## Android release artifacts والتوقيع
+
+ينتج Release workflow ملفين مقصودين لغرضين مختلفين: `sun-universal-release.apk` للتوزيع المباشر وOTA، و`sun-release.aab` للنشر عبر Google Play. كلاهما يُبنى من نفس مهمة Release وبنفس `release.keystore` وalias، لذلك يبقى توقيع التطبيق موحداً بين قنوات التوزيع. لا يُثبت AAB مباشرة عبر OTA؛ Google Play يحوله إلى APKs مناسبة للأجهزة عند التوزيع.
+
+أي تغيير في keystore أو alias أو شهادة التوقيع يمنع Android من اعتبار التحديث ترقية للتطبيق المثبت. لذلك يجب حفظ keystore الإنتاجي خارج GitHub Secrets العامة، وعدم إنشاء مفتاح جديد عند كل إصدار.
 
 ## البناء المحلي
 
@@ -90,6 +96,9 @@ flutter pub get
 flutter analyze
 flutter test
 flutter build apk --release
+# The direct-distribution output is renamed by Release CI to
+# build/app/outputs/flutter-apk/sun-universal-release.apk.
+flutter build appbundle --release
 flutter build web
 ```
 
