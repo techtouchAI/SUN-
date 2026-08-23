@@ -63,8 +63,8 @@
           <p>يتم تحديث `pubspec.yaml` برقم الإصدار الجديد ثم تشغيل Flutter Release. لا يُخزن GitHub Token بعد انتهاء الطلب.</p>
           <form id="release-form">
             <label for="version">الإصدار الجديد</label>
-            <input id="version" dir="ltr" pattern="\d+\.\d+\.\d+\+\d+" placeholder="مثال: 1.0.19+569" required />
-            <div class="hint">يجب أن يكون أعلى من الإصدار المنشور.</div>
+            <input id="version" dir="ltr" pattern="\d+\.\d+\.\d+\+\d+" placeholder="مثال: 1.0.24+2569" required />
+            <div class="hint">يجب أن يكون رقم النسخة ورقم بناء Android أعلى من الإصدار المنشور؛ لا تستخدم رقم بناء أقل من 2569.</div>
 
             <label for="message">رسالة التحديث للمستخدم</label>
             <textarea id="message" placeholder="مثال: تحسين ثبات الحسابات وإصلاح حفظ الإعدادات." required></textarea>
@@ -94,6 +94,7 @@
       const repo = "techtouchAI/SUN-";
       const branch = "golden-version";
       const api = `https://api.github.com/repos/${repo}`;
+      const minSupportedAndroidVersionCode = 2569;
       let publishedVersion = null;
 
       const $ = id => document.getElementById(id);
@@ -156,8 +157,11 @@
         const message = $("message").value.trim();
         const tokenInput = $("token");
         const token = tokenInput.value.trim();
-        if (!versionParts(version)) return showStatus("صيغة الإصدار الصحيحة هي: 1.0.19+569.", "error");
+        const nextParts = versionParts(version);
+        const currentParts = versionParts(publishedVersion || "");
+        if (!nextParts) return showStatus("صيغة الإصدار الصحيحة هي: 1.0.24+2569.", "error");
         if (!publishedVersion || !isHigher(version, publishedVersion)) return showStatus(`الإصدار يجب أن يكون أعلى من ${publishedVersion || "الإصدار المنشور"}.`, "error");
+        if (nextParts[3] < minSupportedAndroidVersionCode || (currentParts && nextParts[3] <= currentParts[3])) return showStatus(`رقم بناء Android يجب أن يكون أعلى من ${Math.max(minSupportedAndroidVersionCode - 1, currentParts ? currentParts[3] : 0)} لتثبيت التحديث فوق النسخة الحالية.`, "error");
         if (message.length < 3) return showStatus("اكتب رسالة تحديث واضحة للمستخدم.", "error");
         if (token.length < 20) return showStatus("أدخل GitHub Token صحيحاً ومحدود الصلاحيات.", "error");
 
