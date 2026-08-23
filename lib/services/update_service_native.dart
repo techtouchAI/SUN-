@@ -9,7 +9,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/errors/app_exceptions.dart';
 import 'version_comparator.dart';
@@ -37,8 +36,9 @@ class UpdateInfo {
       assetSize = 0;
 }
 
-typedef LatestReleaseFetcher =
-    Future<http.Response> Function(String currentVersion, String? etag);
+typedef LatestReleaseFetcher = Future<http.Response> Function(
+  String currentVersion,
+);
 
 class UpdateService {
   static const String repoOwner = 'techtouchAI';
@@ -46,19 +46,15 @@ class UpdateService {
   static const String universalApkName = 'sun-universal-release.apk';
   static const Duration requestTimeout = Duration(seconds: 20);
   static const Duration downloadTimeout = Duration(minutes: 10);
-  static const Duration cacheTtl = Duration(hours: 6);
   static const int maxAttempts = 2;
 
-  final Future<SharedPreferences> Function()? _preferencesLoader;
   final DateTime Function()? _clock;
   final LatestReleaseFetcher? _latestReleaseFetcher;
 
   UpdateService({
-    Future<SharedPreferences> Function()? preferencesLoader,
     DateTime Function()? clock,
     LatestReleaseFetcher? latestReleaseFetcher,
-  }) : _preferencesLoader = preferencesLoader,
-       _clock = clock,
+  }) : _clock = clock,
        _latestReleaseFetcher = latestReleaseFetcher;
 
   Future<UpdateInfo> checkUpdateAvailable() async {
@@ -87,51 +83,20 @@ class UpdateService {
     );
   }
 
-  Future<CachedRelease> _loadLatestRelease(String currentVersion) async {
-    final preferences =
-        await (_preferencesLoader?.call() ?? SharedPreferences.getInstance());
-    final cache = ReleaseCache(preferences);
+  Future<PublishedRelease> _loadLatestRelease(String currentVersion) async {
     final now = (_clock?.call() ?? DateTime.now()).toUtc();
-    final cached = cache.read();
-
-    if (cached != null && now.difference(cached.checkedAt) < cacheTtl) {
-      return cached;
-    }
-
-    final retryAt = cache.retryAt();
-    if (retryAt != null && now.isBefore(retryAt)) {
-      if (cached != null) return cached;
-      throw UpdateCheckDeferred(retryAt);
-    }
 
     try {
       final fetcher = _latestReleaseFetcher;
       final response = fetcher == null
-          ? await _getLatestReleaseWithRetry(
-              currentVersion: currentVersion,
-              etag: cached?.etag,
-            )
-          : await fetcher(currentVersion, cached?.etag);
-      if (response.statusCode == HttpStatus.notModified && cached != null) {
-        final refreshed = cached.withCheckedAt(now);
-        await cache.save(refreshed);
-        return refreshed;
-      }
+          ? await _getLatestReleaseWithRetry(currentVersion: currentVersion)
+          : await fetcher(currentVersion);
       if (response.statusCode == HttpStatus.ok) {
-        final parsed = CachedRelease.fromGitHub(
-          jsonDecode(response.body),
-          etag: _header(response.headers, 'etag'),
-          checkedAt: now,
-        );
-        await cache.save(parsed);
-        return parsed;
+        return PublishedRelease.fromGitHub(jsonDecode(response.body));
       }
       final rateLimitRetryAt = retryAtForResponse(response, now);
       if (rateLimitRetryAt != null) {
-        final nextRetry = rateLimitRetryAt;
-        await cache.saveRetryAt(nextRetry);
-        if (cached != null) return cached;
-        throw UpdateCheckDeferred(nextRetry);
+        throw UpdateCheckDeferred(rateLimitRetryAt);
       }
       throw UpdateFailure(
         'تعذر التحقق من التحديثات. رمز الخادم: ${response.statusCode}.',
@@ -141,14 +106,12 @@ class UpdateService {
     } on UpdateFailure {
       rethrow;
     } catch (error) {
-      if (cached != null) return cached;
       throw UpdateFailure('تعذر الاتصال بخادم التحديث: $error');
     }
   }
 
   Future<http.Response> _getLatestReleaseWithRetry({
     required String currentVersion,
-    String? etag,
   }) async {
     final url = Uri.https(
       'api.github.com',
@@ -162,7 +125,6 @@ class UpdateService {
           'X-GitHub-Api-Version': '2022-11-28',
           'User-Agent': 'SUN-OTA/$currentVersion',
         };
-        if (etag != null && etag.isNotEmpty) headers['If-None-Match'] = etag;
         final response = await http
             .get(url, headers: headers)
             .timeout(requestTimeout);
@@ -427,24 +389,16 @@ class UpdateCheckDeferred implements Exception {
   const UpdateCheckDeferred(this.retryAt);
 }
 
-class CachedRelease {
+class PublishedRelease {
   final String tagName;
   final UpdateAsset asset;
-  final String? etag;
-  final DateTime checkedAt;
 
-  const CachedRelease({
+  const PublishedRelease({
     required this.tagName,
     required this.asset,
-    required this.etag,
-    required this.checkedAt,
   });
 
-  factory CachedRelease.fromGitHub(
-    dynamic payload, {
-    required String? etag,
-    required DateTime checkedAt,
-  }) {
+  factory PublishedRelease.fromGitHub(dynamic payload) {
     if (payload is! Map) {
       throw const UpdateFailure('استجابة التحديث غير صالحة.');
     }
@@ -456,89 +410,11 @@ class CachedRelease {
     }
     SemanticBuildVersion.parse(tagName);
     final asset = UpdateService.selectUniversalApkAsset(assets);
-    return CachedRelease(
+    return PublishedRelease(
       tagName: tagName,
       asset: asset,
-      etag: etag,
-      checkedAt: checkedAt,
     );
   }
-
-  factory CachedRelease.fromJson(Map<String, dynamic> json) {
-    final tagName = json['tagName'];
-    final url = json['url'];
-    final sha256 = json['sha256'];
-    final size = json['size'];
-    final checkedAt = json['checkedAt'];
-    if (tagName is! String ||
-        url is! String ||
-        sha256 is! String ||
-        size is! int ||
-        size <= 0 ||
-        checkedAt is! String) {
-      throw const FormatException('Invalid cached update release.');
-    }
-    return CachedRelease(
-      tagName: tagName,
-      asset: UpdateAsset(
-        name: UpdateService.universalApkName,
-        url: url,
-        sha256: sha256,
-        size: size,
-      ),
-      etag: json['etag'] as String?,
-      checkedAt: DateTime.parse(checkedAt).toUtc(),
-    );
-  }
-
-  CachedRelease withCheckedAt(DateTime value) => CachedRelease(
-    tagName: tagName,
-    asset: asset,
-    etag: etag,
-    checkedAt: value,
-  );
-
-  Map<String, Object?> toJson() => {
-    'tagName': tagName,
-    'url': asset.url,
-    'sha256': asset.sha256,
-    'size': asset.size,
-    'etag': etag,
-    'checkedAt': checkedAt.toIso8601String(),
-  };
-}
-
-class ReleaseCache {
-  static const _releaseKey = 'ota.release.cache.v1';
-  static const _retryAtKey = 'ota.release.retry_at.v1';
-  final SharedPreferences preferences;
-
-  const ReleaseCache(this.preferences);
-
-  CachedRelease? read() {
-    final raw = preferences.getString(_releaseKey);
-    if (raw == null) return null;
-    try {
-      return CachedRelease.fromJson(Map<String, dynamic>.from(jsonDecode(raw)));
-    } catch (_) {
-      preferences.remove(_releaseKey);
-      return null;
-    }
-  }
-
-  DateTime? retryAt() {
-    final raw = preferences.getString(_retryAtKey);
-    if (raw == null) return null;
-    return DateTime.tryParse(raw)?.toUtc();
-  }
-
-  Future<void> save(CachedRelease value) async {
-    await preferences.setString(_releaseKey, jsonEncode(value.toJson()));
-    await preferences.remove(_retryAtKey);
-  }
-
-  Future<void> saveRetryAt(DateTime value) =>
-      preferences.setString(_retryAtKey, value.toUtc().toIso8601String());
 }
 
 String? _header(Map<String, String> headers, String name) {
