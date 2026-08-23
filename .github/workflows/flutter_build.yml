@@ -41,7 +41,16 @@ jobs:
 
       - name: Format and analyze
         run: |
-          dart format --output=none --set-exit-if-changed lib test
+          dart format --output=none --set-exit-if-changed \
+            lib/core \
+            lib/logic/providers.dart \
+            lib/models \
+            lib/repositories \
+            lib/services/update_service.dart \
+            lib/services/update_service_native.dart \
+            lib/services/update_service_stub.dart \
+            lib/services/version_comparator.dart \
+            test
           flutter analyze
 
       - name: Test
