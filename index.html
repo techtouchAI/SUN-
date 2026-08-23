@@ -106,8 +106,14 @@
       function isHigher(next, current) { const a = versionParts(next), b = versionParts(current); if (!a || !b) return false; return a.some((part, index) => part !== b[index] && (a.slice(0, index).every((prior, priorIndex) => prior === b[priorIndex])) && part > b[index]); }
       function base64Encode(text) { const bytes = new TextEncoder().encode(text); let binary = ""; bytes.forEach(byte => binary += String.fromCharCode(byte)); return btoa(binary); }
       function base64Decode(value) { const binary = atob(value.replace(/\n/g, "")); const bytes = Uint8Array.from(binary, char => char.charCodeAt(0)); return new TextDecoder().decode(bytes); }
-      function escapeHtml(value) { return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]); }
+      function escapeHtml(value) { return String(value).replace(/[&<>\"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]); }
       function runStatus(run) { if (run.conclusion === "success") return "نجح البناء"; if (run.conclusion) return "فشل البناء"; return run.status === "in_progress" ? "قيد البناء" : "في الانتظار"; }
+      function releaseMessage(body) {
+        const text = (body || "").trim();
+        if (!text) return "لا توجد رسالة إصدار منشورة.";
+        if (text.includes("Full Changelog") && text.length > 400) return "هذا إصدار سابق بملاحظات GitHub التلقائية. ستظهر رسالة OTA التي تكتبها هنا بوضوح عند إصدار النسخة التالية.";
+        return text;
+      }
 
       async function getJson(url, options = {}) {
         const response = await fetch(url, options);
@@ -127,7 +133,7 @@
           publishedVersion = normalizeVersion(release.tag_name);
           $("current-version").textContent = publishedVersion;
           $("release-date").textContent = release.published_at ? `نُشر في ${new Date(release.published_at).toLocaleString("ar-IQ")}` : "تاريخ النشر غير متاح";
-          $("release-message").textContent = release.body || "لا توجد رسالة إصدار منشورة.";
+          $("release-message").textContent = releaseMessage(release.body);
           const desiredAssets = ["sun-universal-release.apk", "sun-release.aab", "SHA256SUMS.txt"];
           $("assets").innerHTML = desiredAssets.map(name => {
             const asset = release.assets.find(item => item.name === name);
