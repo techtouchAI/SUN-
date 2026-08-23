@@ -38,9 +38,11 @@ jobs:
       - name: Apply requested OTA version
         if: ${{ inputs.release_version != '' }}
         shell: bash
+        env:
+          RELEASE_VERSION: ${{ inputs.release_version }}
         run: |
           set -euo pipefail
-          version="${{ inputs.release_version }}"
+          version="$RELEASE_VERSION"
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]] || {
             echo 'release_version must use the form 1.0.19+569.' >&2
             exit 1
@@ -49,9 +51,11 @@ jobs:
 
       - name: Prepare OTA release message
         shell: bash
+        env:
+          RELEASE_MESSAGE: ${{ inputs.release_message }}
         run: |
           set -euo pipefail
-          message="${{ inputs.release_message }}"
+          message="$RELEASE_MESSAGE"
           if [ -z "$message" ]; then
             message='تحديث إصدار SUN.'
           fi
