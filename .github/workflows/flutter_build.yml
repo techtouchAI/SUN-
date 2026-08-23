@@ -4,7 +4,18 @@ on:
   push:
     branches:
       - golden-version
+    paths:
+      - pubspec.yaml
   workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Flutter version in the form 1.0.19+569. Leave empty to use pubspec.yaml.'
+        required: false
+        type: string
+      release_message:
+        description: 'User-facing OTA release message.'
+        required: false
+        type: string
 
 concurrency:
   group: flutter-release-${{ github.ref }}
@@ -23,6 +34,28 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Apply requested OTA version
+        if: ${{ inputs.release_version != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ inputs.release_version }}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]] || {
+            echo 'release_version must use the form 1.0.19+569.' >&2
+            exit 1
+          }
+          sed -i "s/^version: .*/version: ${version}/" pubspec.yaml
+
+      - name: Prepare OTA release message
+        shell: bash
+        run: |
+          set -euo pipefail
+          message="${{ inputs.release_message }}"
+          if [ -z "$message" ]; then
+            message='تحديث إصدار SUN.'
+          fi
+          printf '%s\n' "$message" > build-release-notes.md
 
       - name: Set up Java
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
@@ -114,6 +147,7 @@ jobs:
             build/app/outputs/flutter-apk/sun-universal-release.apk
             build/app/outputs/bundle/release/sun-release.aab
             build/SHA256SUMS.txt
+            build-release-notes.md
           if-no-files-found: error
           retention-days: 14
 
@@ -157,7 +191,8 @@ jobs:
           tag_name: ${{ needs.build.outputs.version }}
           name: Release ${{ needs.build.outputs.version }}
           files: dist/**
-          generate_release_notes: true
+          body_path: dist/build-release-notes.md
+          generate_release_notes: false
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
