@@ -4,10 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta http-equiv="refresh" content="0; url=https://sunotaadmin-5jbq8fdf.manus.space/admin" />
     <title>تحويل إلى إدارة تحديثات SUN</title>
+    <script src="./config.js"></script>
     <script>
-      window.location.replace("https://sunotaadmin-5jbq8fdf.manus.space/admin");
+      const adminUrl = window.SUN_OTA_ADMIN_URL;
+      if (typeof adminUrl === "string" && /^https:\/\//.test(adminUrl)) {
+        window.location.replace(adminUrl);
+      }
     </script>
     <style>
       :root { color-scheme: light; }
@@ -23,7 +26,13 @@
     <main>
       <h1>جاري فتح إدارة تحديثات SUN</h1>
       <p>سيتم تحويلك إلى لوحة الإدارة الآمنة. لا تدخل GitHub Token في هذه الصفحة.</p>
-      <a href="https://sunotaadmin-5jbq8fdf.manus.space/admin">فتح لوحة الإدارة</a>
+      <a id="admin-link" href="#">فتح لوحة الإدارة</a>
     </main>
+    <script>
+      const adminLink = document.getElementById("admin-link");
+      if (adminLink && typeof window.SUN_OTA_ADMIN_URL === "string") {
+        adminLink.href = window.SUN_OTA_ADMIN_URL;
+      }
+    </script>
   </body>
 </html>
