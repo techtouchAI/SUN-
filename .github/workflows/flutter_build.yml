@@ -50,10 +50,19 @@ jobs:
           RELEASE_MESSAGE: ${{ inputs.release_message }}
         run: |
           set -euo pipefail
-          message="$RELEASE_MESSAGE"
-          if [ -z "$message" ]; then
-            message='تحديث إصدار SUN.'
+          metadata_version="$(jq -r '.version // empty' ota_release.json)"
+          metadata_message="$(jq -r '.message // empty' ota_release.json)"
+          current_version="$(sed -n 's/^version: //p' pubspec.yaml | tr -d '\r')"
+          test "$metadata_version" = "$current_version" || {
+            echo 'ota_release.json version must match pubspec.yaml.' >&2
+            exit 1
+          }
+          if [ -n "$RELEASE_MESSAGE" ] && [ "$RELEASE_MESSAGE" != "$metadata_message" ]; then
+            echo 'release_message must match ota_release.json.' >&2
+            exit 1
           fi
+          message="$metadata_message"
+          test -n "$message" || message='تحديث إصدار SUN.'
           printf '%s\n' "$message" > build-release-notes.md
 
       - name: Set up Java

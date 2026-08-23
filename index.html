@@ -165,14 +165,47 @@
         button.disabled = true;
         showStatus("جاري تحديث رقم الإصدار ثم إرسال طلب البناء الموقّع إلى GitHub…", "info");
         try {
-          const file = await getJson(`${api}/contents/pubspec.yaml?ref=${branch}`, { headers: headers(token) });
+          const [ref, file] = await Promise.all([
+            getJson(`${api}/git/ref/heads/${branch}`, { headers: headers(token) }),
+            getJson(`${api}/contents/pubspec.yaml?ref=${branch}`, { headers: headers(token) }),
+          ]);
           const original = base64Decode(file.content);
           const updated = original.replace(/^version:\s*.*$/m, `version: ${version}`);
           if (updated === original) throw new Error("لم يتم العثور على سطر version في pubspec.yaml.");
-          await getJson(`${api}/contents/pubspec.yaml`, {
-            method: "PUT",
+          const baseCommit = await getJson(`${api}/git/commits/${ref.object.sha}`, { headers: headers(token) });
+          const metadata = JSON.stringify({ version, message, updatedAt: new Date().toISOString() }, null, 2) + "\n";
+          const [pubspecBlob, metadataBlob] = await Promise.all([
+            getJson(`${api}/git/blobs`, {
+              method: "POST",
+              headers: { ...headers(token), "Content-Type": "application/json" },
+              body: JSON.stringify({ content: updated, encoding: "utf-8" }),
+            }),
+            getJson(`${api}/git/blobs`, {
+              method: "POST",
+              headers: { ...headers(token), "Content-Type": "application/json" },
+              body: JSON.stringify({ content: metadata, encoding: "utf-8" }),
+            }),
+          ]);
+          const tree = await getJson(`${api}/git/trees`, {
+            method: "POST",
             headers: { ...headers(token), "Content-Type": "application/json" },
-            body: JSON.stringify({ message: `chore(release): prepare v${version}`, content: base64Encode(updated), sha: file.sha, branch }),
+            body: JSON.stringify({
+              base_tree: baseCommit.tree.sha,
+              tree: [
+                { path: "pubspec.yaml", mode: "100644", type: "blob", sha: pubspecBlob.sha },
+                { path: "ota_release.json", mode: "100644", type: "blob", sha: metadataBlob.sha },
+              ],
+            }),
+          });
+          const commit = await getJson(`${api}/git/commits`, {
+            method: "POST",
+            headers: { ...headers(token), "Content-Type": "application/json" },
+            body: JSON.stringify({ message: `chore(release): prepare v${version}`, tree: tree.sha, parents: [ref.object.sha] }),
+          });
+          await getJson(`${api}/git/refs/heads/${branch}`, {
+            method: "PATCH",
+            headers: { ...headers(token), "Content-Type": "application/json" },
+            body: JSON.stringify({ sha: commit.sha, force: false }),
           });
           await getJson(`${api}/actions/workflows/flutter_build.yml/dispatches`, {
             method: "POST",
