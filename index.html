@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c4b36" />
+    <title>إدارة تحديثات SUN الهوائية</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; color: #123326; background: #f4f8f5; font-family: Tahoma, Arial, sans-serif; }
+      .shell { width: min(1160px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 54px; }
+      .hero { position: relative; overflow: hidden; padding: 38px; border-radius: 24px; color: #fff; background: radial-gradient(circle at 75% 20%, rgba(101, 210, 137, .3), transparent 30%), linear-gradient(135deg, #092f23, #0f5e40); box-shadow: 0 22px 50px rgba(6, 61, 38, .2); }
+      .hero::after { content: "☀"; position: absolute; left: -24px; bottom: -56px; font-size: 190px; color: rgba(255,255,255,.08); }
+      h1 { position: relative; margin: 0; font-size: clamp(1.8rem, 4vw, 2.6rem); }
+      .hero p { position: relative; max-width: 720px; margin: 12px 0 0; line-height: 1.8; color: #e2fae9; }
+      .pill { display: inline-flex; gap: 8px; margin-bottom: 18px; padding: 7px 10px; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; background: rgba(255,255,255,.1); font-size: .82rem; }
+      .grid { display: grid; grid-template-columns: 1.04fr .96fr; gap: 22px; margin-top: 22px; }
+      .panel { padding: 24px; border: 1px solid #d8e8dd; border-radius: 20px; background: #fff; box-shadow: 0 12px 28px rgba(17, 71, 45, .07); }
+      .panel h2 { display: flex; gap: 9px; align-items: center; margin: 0 0 7px; font-size: 1.15rem; }
+      .panel > p { margin: 0 0 20px; color: #5a7467; line-height: 1.7; font-size: .9rem; }
+      .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+      .stat { min-height: 118px; padding: 16px; border: 1px solid #d8eee0; border-radius: 16px; background: linear-gradient(180deg, #fbfffc, #eefaf2); }
+      .stat span { display: block; color: #688375; font-size: .78rem; }
+      .stat strong { display: block; margin-top: 12px; font-size: clamp(1rem, 2vw, 1.4rem); color: #0d6a42; overflow-wrap: anywhere; }
+      .assets, .runs { display: grid; gap: 10px; }
+      .asset, .run { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px; border: 1px solid #e1ebe4; border-radius: 13px; color: inherit; text-decoration: none; background: #fff; }
+      .asset:hover, .run:hover { border-color: #46a56e; background: #f7fff9; }
+      .asset small, .run small { display: block; margin-top: 4px; color: #71877b; }
+      label { display: block; margin: 16px 0 7px; font-size: .88rem; font-weight: 700; }
+      input, textarea { width: 100%; border: 1px solid #cfe0d5; border-radius: 12px; padding: 12px 13px; font: inherit; color: #16392a; background: #fff; outline: none; }
+      input:focus, textarea:focus { border-color: #16834f; box-shadow: 0 0 0 3px rgba(22, 131, 79, .14); }
+      textarea { min-height: 110px; resize: vertical; }
+      .hint { margin-top: 6px; color: #6b8275; font-size: .78rem; line-height: 1.65; }
+      .security { margin-top: 18px; padding: 13px; border-right: 4px solid #e0a622; border-radius: 10px; background: #fff9e9; color: #735719; font-size: .82rem; line-height: 1.7; }
+      button { width: 100%; margin-top: 20px; padding: 14px; border: 0; border-radius: 12px; color: #fff; background: #126b43; font: inherit; font-weight: 700; cursor: pointer; transition: transform .15s, background .15s; }
+      button:hover { background: #0b5836; } button:active { transform: scale(.985); } button:disabled { cursor: wait; opacity: .65; }
+      .status { display: none; margin-top: 16px; padding: 13px; border-radius: 11px; line-height: 1.7; font-size: .88rem; }
+      .status.show { display: block; }.status.info { background: #eaf4ff; color: #1f5f93; }.status.success { background: #e7f8ed; color: #17663c; }.status.error { background: #fff0ee; color: #9b3328; }
+      .message { margin: 18px 0; padding: 15px; border-radius: 14px; background: #f3f7f5; color: #567064; line-height: 1.8; white-space: pre-wrap; }
+      .tag { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #dff5e6; color: #17663c; font-size: .74rem; font-weight: 700; }
+      .footer { margin-top: 24px; color: #708579; text-align: center; font-size: .82rem; }
+      @media (max-width: 820px) { .shell { width: min(100% - 22px, 680px); padding-top: 12px; }.hero { padding: 27px 22px; border-radius: 18px; }.grid { grid-template-columns: 1fr; }.stats { grid-template-columns: 1fr; }.panel { padding: 19px; } }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="pill">● الفرع الذهبي <b>golden-version</b></div>
+        <h1>إدارة تحديثات SUN الهوائية</h1>
+        <p>أنشئ تحديث Android موقّعاً للتطبيق المثبت من هذه الصفحة فقط. يبقى مفتاح التوقيع داخل GitHub Secrets، ويُبنى Universal APK واحد لعملية OTA.</p>
+      </section>
+
+      <section class="stats" aria-label="حالة الإصدار">
+        <article class="stat"><span>الإصدار المنشور</span><strong id="current-version">جاري القراءة…</strong></article>
+        <article class="stat"><span>آخر حالة بناء</span><strong id="current-run">جاري القراءة…</strong></article>
+        <article class="stat"><span>التوقيع</span><strong>GitHub Secrets</strong></article>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <h2>⇧ إصدار تحديث OTA جديد</h2>
+          <p>يتم تحديث `pubspec.yaml` برقم الإصدار الجديد ثم تشغيل Flutter Release. لا يُخزن GitHub Token بعد انتهاء الطلب.</p>
+          <form id="release-form">
+            <label for="version">الإصدار الجديد</label>
+            <input id="version" dir="ltr" pattern="\d+\.\d+\.\d+\+\d+" placeholder="مثال: 1.0.19+569" required />
+            <div class="hint">يجب أن يكون أعلى من الإصدار المنشور.</div>
+
+            <label for="message">رسالة التحديث للمستخدم</label>
+            <textarea id="message" placeholder="مثال: تحسين ثبات الحسابات وإصلاح حفظ الإعدادات." required></textarea>
+
+            <label for="token">GitHub Token مؤقت</label>
+            <input id="token" type="password" dir="ltr" autocomplete="off" placeholder="github_pat_…" required />
+            <div class="hint">Token محدود للمستودع SUN- فقط. يحتاج Contents: Write وActions: Write. لا تضع Token في كود أو ملف.</div>
+            <div class="security">تنبيه: هذه صفحة GitHub Pages ثابتة؛ Token ينتقل مباشرة من متصفحك إلى GitHub API ثم يُمسح من الحقل. لا تستخدم جهازاً عاماً ولا تمنح token صلاحيات أوسع من الضروري.</div>
+            <button id="submit" type="submit">إنشاء تحديث OTA موقّع</button>
+            <div id="status" class="status" role="status"></div>
+          </form>
+        </article>
+
+        <article class="panel">
+          <h2>▣ الإصدار والملفات الحالية</h2>
+          <p id="release-date">جاري قراءة آخر GitHub Release…</p>
+          <div class="message" id="release-message">—</div>
+          <div class="assets" id="assets"></div>
+          <h2 style="margin-top:24px">↻ حالة عمليات البناء</h2>
+          <div class="runs" id="runs"></div>
+        </article>
+      </section>
+      <p class="footer">لا يُرفع AAB عبر OTA. الملف الصحيح هو <b>sun-universal-release.apk</b>، ويستعمل نفس Release keystore الموجود في GitHub Actions.</p>
+    </main>
+
+    <script>
+      const repo = "techtouchAI/SUN-";
+      const branch = "golden-version";
+      const api = `https://api.github.com/repos/${repo}`;
+      let publishedVersion = null;
+
+      const $ = id => document.getElementById(id);
+      const statusBox = $("status");
+      function showStatus(text, type = "info") { statusBox.textContent = text; statusBox.className = `status show ${type}`; }
+      function clearStatus() { statusBox.className = "status"; statusBox.textContent = ""; }
+      function headers(token) { return { Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", Authorization: `Bearer ${token}` }; }
+      function normalizeVersion(value) { return value.trim().replace(/^v/i, ""); }
+      function versionParts(value) { const found = normalizeVersion(value).match(/^(\d+)\.(\d+)\.(\d+)\+(\d+)$/); return found ? found.slice(1).map(Number) : null; }
+      function isHigher(next, current) { const a = versionParts(next), b = versionParts(current); if (!a || !b) return false; return a.some((part, index) => part !== b[index] && (a.slice(0, index).every((prior, priorIndex) => prior === b[priorIndex])) && part > b[index]); }
+      function base64Encode(text) { const bytes = new TextEncoder().encode(text); let binary = ""; bytes.forEach(byte => binary += String.fromCharCode(byte)); return btoa(binary); }
+      function base64Decode(value) { const binary = atob(value.replace(/\n/g, "")); const bytes = Uint8Array.from(binary, char => char.charCodeAt(0)); return new TextDecoder().decode(bytes); }
+      function escapeHtml(value) { return String(value).replace(/[&<>"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]); }
+      function runStatus(run) { if (run.conclusion === "success") return "نجح البناء"; if (run.conclusion) return "فشل البناء"; return run.status === "in_progress" ? "قيد البناء" : "في الانتظار"; }
+
+      async function getJson(url, options = {}) {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.message || `GitHub API error: ${response.status}`);
+        }
+        return response.status === 204 ? {} : response.json();
+      }
+
+      async function loadReleaseState() {
+        try {
+          const [release, workflowData] = await Promise.all([
+            getJson(`${api}/releases/latest`),
+            getJson(`${api}/actions/runs?branch=${branch}&per_page=8&exclude_pull_requests=true`),
+          ]);
+          publishedVersion = normalizeVersion(release.tag_name);
+          $("current-version").textContent = publishedVersion;
+          $("release-date").textContent = release.published_at ? `نُشر في ${new Date(release.published_at).toLocaleString("ar-IQ")}` : "تاريخ النشر غير متاح";
+          $("release-message").textContent = release.body || "لا توجد رسالة إصدار منشورة.";
+          const desiredAssets = ["sun-universal-release.apk", "sun-release.aab", "SHA256SUMS.txt"];
+          $("assets").innerHTML = desiredAssets.map(name => {
+            const asset = release.assets.find(item => item.name === name);
+            return asset ? `<a class="asset" href="${asset.browser_download_url}" target="_blank" rel="noreferrer"><span><b>${escapeHtml(name)}</b><small>${Math.round(asset.size / 1024 / 1024 * 10) / 10} MB</small></span><span>↗</span></a>` : `<div class="asset"><span><b>${escapeHtml(name)}</b><small>غير متاح في هذا الإصدار</small></span></div>`;
+          }).join("");
+          const runs = workflowData.workflow_runs.filter(run => run.name === "Flutter Release").slice(0, 4);
+          $("current-run").textContent = runs[0] ? runStatus(runs[0]) : "لا توجد عملية";
+          $("runs").innerHTML = runs.map(run => `<a class="run" href="${run.html_url}" target="_blank" rel="noreferrer"><span><b>${escapeHtml(run.display_title || "Flutter Release")}</b><small>${new Date(run.updated_at).toLocaleString("ar-IQ")}</small></span><span class="tag">${runStatus(run)}</span></a>`).join("") || "<div class='run'>لا توجد عمليات إصدار.</div>";
+        } catch (error) {
+          $("current-version").textContent = "تعذر القراءة";
+          $("current-run").textContent = "تعذر القراءة";
+          $("release-message").textContent = "تعذر قراءة حالة GitHub Release. تحقق من الاتصال ثم أعد تحميل الصفحة.";
+        }
+      }
+
+      $("release-form").addEventListener("submit", async event => {
+        event.preventDefault();
+        clearStatus();
+        const version = normalizeVersion($("version").value);
+        const message = $("message").value.trim();
+        const tokenInput = $("token");
+        const token = tokenInput.value.trim();
+        if (!versionParts(version)) return showStatus("صيغة الإصدار الصحيحة هي: 1.0.19+569.", "error");
+        if (!publishedVersion || !isHigher(version, publishedVersion)) return showStatus(`الإصدار يجب أن يكون أعلى من ${publishedVersion || "الإصدار المنشور"}.`, "error");
+        if (message.length < 3) return showStatus("اكتب رسالة تحديث واضحة للمستخدم.", "error");
+        if (token.length < 20) return showStatus("أدخل GitHub Token صحيحاً ومحدود الصلاحيات.", "error");
+
+        const button = $("submit");
+        button.disabled = true;
+        showStatus("جاري تحديث رقم الإصدار ثم إرسال طلب البناء الموقّع إلى GitHub…", "info");
+        try {
+          const file = await getJson(`${api}/contents/pubspec.yaml?ref=${branch}`, { headers: headers(token) });
+          const original = base64Decode(file.content);
+          const updated = original.replace(/^version:\s*.*$/m, `version: ${version}`);
+          if (updated === original) throw new Error("لم يتم العثور على سطر version في pubspec.yaml.");
+          await getJson(`${api}/contents/pubspec.yaml`, {
+            method: "PUT",
+            headers: { ...headers(token), "Content-Type": "application/json" },
+            body: JSON.stringify({ message: `chore(release): prepare v${version}`, content: base64Encode(updated), sha: file.sha, branch }),
+          });
+          await getJson(`${api}/actions/workflows/flutter_build.yml/dispatches`, {
+            method: "POST",
+            headers: { ...headers(token), "Content-Type": "application/json" },
+            body: JSON.stringify({ ref: branch, inputs: { release_version: version, release_message: message } }),
+          });
+          showStatus(`تم إرسال إصدار ${version}. سيظهر رابط البناء وملف OTA هنا بعد أن تبدأ GitHub Actions.`, "success");
+          $("version").value = ""; $("message").value = ""; tokenInput.value = "";
+          setTimeout(loadReleaseState, 3500);
+        } catch (error) {
+          tokenInput.value = "";
+          showStatus(error.message || "تعذر إرسال طلب الإصدار. تحقق من صلاحيات Token والاتصال.", "error");
+        } finally { button.disabled = false; }
+      });
+
+      loadReleaseState();
+    </script>
+  </body>
+</html>

@@ -1,11 +1,6 @@
 name: Flutter Release
 
 on:
-  push:
-    branches:
-      - golden-version
-    paths:
-      - pubspec.yaml
   workflow_dispatch:
     inputs:
       release_version:
