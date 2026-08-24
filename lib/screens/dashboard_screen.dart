@@ -163,7 +163,8 @@ class DashboardScreen extends ConsumerWidget {
                                 if (systemMode != SystemMode.directOnGrid)
                                   '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
                               ],
-                              headerValue: '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
+                              headerValue:
+                                  '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
                             ),
                           ),
                           _buildResultCard(
@@ -182,7 +183,8 @@ class DashboardScreen extends ConsumerWidget {
                                 if (result.suggestedIpRating.isNotEmpty)
                                   'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
                               ],
-                              headerValue: '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
+                              headerValue:
+                                  '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
                             ),
                           ),
                           if (systemMode != SystemMode.directOnGrid)
@@ -209,8 +211,10 @@ class DashboardScreen extends ConsumerWidget {
                                   if (result.gelBatteryWarning.isNotEmpty)
                                     result.gelBatteryWarning,
                                 ],
-                                headerValue: '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh)',
-                                headerSubtitle: 'بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
+                                headerValue:
+                                    '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh)',
+                                headerSubtitle:
+                                    'بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
                               ),
                             ),
                           if (systemMode != SystemMode.ups)
@@ -231,17 +235,25 @@ class DashboardScreen extends ConsumerWidget {
                                       SystemMode.directOnGrid) ...[
                                     '\n${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
                                     result.breakdown.batteryPanelsExplanationAr,
-                                    if (result.breakdown.mpptRecommendationAr.isNotEmpty)
+                                    if (result
+                                        .breakdown
+                                        .mpptRecommendationAr
+                                        .isNotEmpty)
                                       '\n${result.breakdown.mpptRecommendationAr}',
                                   ],
                                   '\nالمجموع الكلي: ${result.requiredPanels} لوح',
                                   if (systemMode != SystemMode.directOnGrid)
                                     '\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.',
-                                  if (result.breakdown.floatPreservationRecommendationAr.isNotEmpty)
+                                  if (result
+                                      .breakdown
+                                      .floatPreservationRecommendationAr
+                                      .isNotEmpty)
                                     '\n${result.breakdown.floatPreservationRecommendationAr}',
                                 ],
-                                headerValue: '${result.requiredPanels} ${AppStrings.panelsUnit}',
-                                headerSubtitle: 'تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W',
+                                headerValue:
+                                    '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                                headerSubtitle:
+                                    'تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W',
                               ),
                             ),
                           _buildResultCard(
@@ -263,13 +275,14 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           _buildResultCard(
                             title: AppStrings.safetyStandardsTitle,
-                            value: 'NEC Standards',
+                            value: 'تقدير حماية أولي',
                             icon: Icons.health_and_safety,
                             color: Colors.redAccent,
                             onTap: () => _showExplanationModal(
                               context,
                               AppStrings.safetyStandardsTitle,
                               [
+                                'هذه القيم تقديرية أولية وتحتاج مراجعة مهندس كهرباء قبل اعتماد التصميم والتنفيذ.',
                                 if (result.pvDcBreakerAmps > 0)
                                   '${AppStrings.pvBreaker}: ${result.pvDcBreakerAmps.toStringAsFixed(1)} A',
                                 if (result.batteryDcBreakerAmps > 0)
@@ -279,7 +292,7 @@ class DashboardScreen extends ConsumerWidget {
                                 if (result.wireSizeMm2 > 0)
                                   '${AppStrings.dcWireSize}: ${result.wireSizeMm2} ${AppStrings.wireMm2}',
                               ],
-                              headerValue: 'NEC Standards',
+                              headerValue: 'تقدير حماية أولي',
                             ),
                           ),
                           _buildResultCard(
@@ -297,7 +310,8 @@ class DashboardScreen extends ConsumerWidget {
                                 '${(result.estimatedCostUsd * ref.watch(iqdExchangeRateProvider)).toStringAsFixed(0)} ${AppStrings.costInIqd}',
                                 '\n${AppStrings.pricingDisclaimer}',
                               ],
-                              headerValue: '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
+                              headerValue:
+                                  '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
                             ),
                           ),
                         ],
@@ -394,10 +408,7 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     headerSubtitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ],
                 const Divider(height: 24, thickness: 1.5),
@@ -406,51 +417,49 @@ class DashboardScreen extends ConsumerWidget {
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: details
-                          .map(
-                            (detail) {
-                              final parts = detail.split(':');
-                              final hasTitle = parts.length > 1 && parts[0].length < 60;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      '• ',
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                    Expanded(
-                                      child: hasTitle
-                                          ? RichText(
-                                              text: TextSpan(
-                                                style: const TextStyle(
-                                                    fontSize: 16,
-                                                    color: Colors.black),
-                                                children: [
-                                                  TextSpan(
-                                                    text: '${parts[0]}:\n',
-                                                    style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold),
-                                                  ),
-                                                  TextSpan(
-                                                    text: parts.sublist(1).join(':').trim(),
-                                                  ),
-                                                ],
+                      children: details.map((detail) {
+                        final parts = detail.split(':');
+                        final hasTitle =
+                            parts.length > 1 && parts[0].length < 60;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('• ', style: TextStyle(fontSize: 18)),
+                              Expanded(
+                                child: hasTitle
+                                    ? RichText(
+                                        text: TextSpan(
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.black,
+                                          ),
+                                          children: [
+                                            TextSpan(
+                                              text: '${parts[0]}:\n',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
                                               ),
-                                            )
-                                          : Text(
-                                              detail,
-                                              style: const TextStyle(fontSize: 16),
                                             ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          )
-                          .toList(),
+                                            TextSpan(
+                                              text: parts
+                                                  .sublist(1)
+                                                  .join(':')
+                                                  .trim(),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    : Text(
+                                        detail,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),
@@ -523,10 +532,7 @@ class DashboardScreen extends ConsumerWidget {
                   textAlign: TextAlign.center,
                   maxLines: 4,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade800,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
                 ),
               ],
             ],
