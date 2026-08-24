@@ -120,6 +120,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               content: SingleChildScrollView(
                 child: Form(
                   key: editFormKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -437,6 +438,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                               padding: const EdgeInsets.all(16.0),
                               child: Form(
                                 key: _detailedFormKey,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
@@ -552,6 +555,8 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                               padding: const EdgeInsets.all(16.0),
                               child: Form(
                                 key: _quickFormKey,
+                                autovalidateMode:
+                                    AutovalidateMode.onUserInteraction,
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
