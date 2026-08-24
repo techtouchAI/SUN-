@@ -26,3 +26,9 @@ The baseline deliberately tests conditions that must **not** turn into a plausib
 ## Guardrails for later scope expansion
 
 Any future work that adds PV topology, installation data or a licensed jurisdictional ruleset must retain this suite and add corresponding cases. A later ruleset may produce a protection-device or conductor recommendation only after the current data-sufficiency checks remain satisfied and the newly required inputs and rules are traceable.
+
+## Display invariants
+
+The protection-details sheet projects every report through the four canonical result kinds, in this fixed order: PV array current, inverter DC-bus current, inverter AC output current, then DC conductor assessment. The projection selects only the first record for each kind and creates an explicit unavailable record for a missing kind. This is a deliberate display invariant: a malformed, duplicated, or persisted result list cannot create duplicate electrical rows in the user interface.
+
+Trace stages are localized as Arabic badges and rendered inside an RTL row beside their message. A trace containing only the same validation message already shown as the unavailable reason is suppressed, so non-applicable results do not repeat their explanation in a redundant details panel.

@@ -39,6 +39,14 @@ class SafetyAuditTraceEntry {
   final String messageAr;
 
   const SafetyAuditTraceEntry({required this.stageAr, required this.messageAr});
+
+  String get stageLabelAr => switch (stageAr) {
+    'Source Input' => 'مدخل المصدر',
+    'Calculation Rule' => 'قاعدة الحساب',
+    'Final Result' => 'النتيجة',
+    'Validation' => 'التحقق',
+    _ => stageAr,
+  };
 }
 
 /// Immutable electrical quantities normalized from existing SUN settings and
@@ -111,6 +119,12 @@ class SafetyAuditReport {
       ),
     );
   }
+
+  /// Canonical presentation projection. It prevents duplicated persisted or
+  /// malformed result records from creating duplicate rows in the UI, while
+  /// preserving the established electrical-result order.
+  List<SafetyProtectionResult> get presentationResults =>
+      List.unmodifiable(ProtectionResultKind.values.map(resultFor));
 
   bool get hasCalculatedValue => results.any((result) => result.isCalculated);
 
