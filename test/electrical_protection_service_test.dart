@@ -36,14 +36,14 @@ void main() {
     expect(dcBus.status, ProtectionResultStatus.calculated);
     expect(dcBus.value, closeTo(105, 0.0001));
     expect(dcBus.unit, 'A');
-    expect(dcBus.kind.labelAr, 'جوزات البطاريات DC');
+    expect(dcBus.kind.labelAr, 'جوزات البطاريات (DC Breakers)');
     expect(
       dcBus.trace.map((entry) => entry.messageAr).join(' '),
       contains('ليس تيار مصفوفة PV'),
     );
     expect(acOutput.status, ProtectionResultStatus.calculated);
     expect(acOutput.value, closeTo(5040 / 220, 0.0001));
-    expect(acOutput.kind.labelAr, 'جوزات التيار المتردد AC');
+    expect(acOutput.kind.labelAr, 'جوزات التيار المتردد (AC Breakers)');
     expect(
       acOutput.trace.map((entry) => entry.messageAr).join(' '),
       contains('نموذج أحادي الطور'),
@@ -67,7 +67,7 @@ void main() {
     expect(pv.status, ProtectionResultStatus.missingData);
     expect(pv.value, isNull);
     expect(pv.displayValueAr, 'غير متاح — بيانات غير كافية');
-    expect(pv.kind.labelAr, 'جوزات الألواح DC');
+    expect(pv.kind.labelAr, 'جوزات الألواح (DC Breakers)');
     expect(pv.unavailableReasonAr, contains('التوالي/التوازي'));
     expect(cable.status, ProtectionResultStatus.missingData);
     expect(cable.value, isNull);

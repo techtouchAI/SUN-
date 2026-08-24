@@ -73,10 +73,10 @@ void main() {
     );
 
     const labels = [
-      'جوزات الألواح DC',
-      'جوزات البطاريات DC',
-      'جوزات التيار المتردد AC',
-      'أحجام الأسلاك DC',
+      'جوزات الألواح (DC Breakers)',
+      'جوزات البطاريات (DC Breakers)',
+      'جوزات التيار المتردد (AC Breakers)',
+      'أحجام الأسلاك (DC Wire Sizing)',
     ];
     for (final label in labels) {
       expect(find.text(label), findsOneWidget);

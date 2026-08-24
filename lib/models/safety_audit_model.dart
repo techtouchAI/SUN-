@@ -9,10 +9,12 @@ enum ProtectionResultKind {
 
 extension ProtectionResultKindLabels on ProtectionResultKind {
   String get labelAr => switch (this) {
-    ProtectionResultKind.pvArrayCurrent => 'جوزات الألواح DC',
-    ProtectionResultKind.inverterDcBusCurrent => 'جوزات البطاريات DC',
-    ProtectionResultKind.inverterAcOutputCurrent => 'جوزات التيار المتردد AC',
-    ProtectionResultKind.dcConductorSize => 'أحجام الأسلاك DC',
+    ProtectionResultKind.pvArrayCurrent => 'جوزات الألواح (DC Breakers)',
+    ProtectionResultKind.inverterDcBusCurrent =>
+      'جوزات البطاريات (DC Breakers)',
+    ProtectionResultKind.inverterAcOutputCurrent =>
+      'جوزات التيار المتردد (AC Breakers)',
+    ProtectionResultKind.dcConductorSize => 'أحجام الأسلاك (DC Wire Sizing)',
   };
 }
 

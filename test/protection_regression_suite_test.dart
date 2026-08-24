@@ -122,8 +122,8 @@ void main() {
         expect(acOutput.value, closeTo(5040 / 220, 0.0001));
         expect(dcBus.unit, 'A');
         expect(acOutput.unit, 'A');
-        expect(dcBus.kind.labelAr, 'جوزات البطاريات DC');
-        expect(acOutput.kind.labelAr, 'جوزات التيار المتردد AC');
+        expect(dcBus.kind.labelAr, 'جوزات البطاريات (DC Breakers)');
+        expect(acOutput.kind.labelAr, 'جوزات التيار المتردد (AC Breakers)');
         expect(
           dcBus.trace.map((entry) => entry.messageAr).join(' '),
           contains('ليس تيار مصفوفة PV'),
