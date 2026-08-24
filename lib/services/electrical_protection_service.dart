@@ -165,6 +165,18 @@ class ElectricalProtectionService {
     return _missing(
       ProtectionResultKind.dcConductorSize,
       'طول المسار ومادة الموصل والعزل وطريقة التمديد ودرجة الحرارة وعدد الموصلات الحاملة للتيار غير محفوظة في SUN؛ لا يمكن إخراج mm² موثوق.',
+      trace: const [
+        SafetyAuditTraceEntry(
+          stageAr: 'Source Input',
+          messageAr:
+              'بيانات مسار موصل DC والتركيب المطلوبة لتقييم المقطع غير محفوظة في SUN.',
+        ),
+        SafetyAuditTraceEntry(
+          stageAr: 'Validation',
+          messageAr:
+              'تم حجب مقطع موصل DC؛ لا يمكن إخراج mm² موثوق من تيار ناقل DC وحده.',
+        ),
+      ],
     );
   }
 
