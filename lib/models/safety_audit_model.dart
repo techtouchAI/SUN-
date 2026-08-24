@@ -9,10 +9,10 @@ enum ProtectionResultKind {
 
 extension ProtectionResultKindLabels on ProtectionResultKind {
   String get labelAr => switch (this) {
-    ProtectionResultKind.pvArrayCurrent => 'تيار مصفوفة الألواح PV',
-    ProtectionResultKind.inverterDcBusCurrent => 'تيار ناقل DC للعاكس',
-    ProtectionResultKind.inverterAcOutputCurrent => 'تيار خرج العاكس AC',
-    ProtectionResultKind.dcConductorSize => 'تقييم مقطع موصل DC',
+    ProtectionResultKind.pvArrayCurrent => 'جوزات الألواح DC',
+    ProtectionResultKind.inverterDcBusCurrent => 'جوزات البطاريات DC',
+    ProtectionResultKind.inverterAcOutputCurrent => 'جوزات التيار المتردد AC',
+    ProtectionResultKind.dcConductorSize => 'أحجام الأسلاك DC',
   };
 }
 
@@ -101,6 +101,22 @@ class SafetyProtectionResult {
     final decimals = value! >= 100 ? 0 : 1;
     return '${value!.toStringAsFixed(decimals)} $unit';
   }
+
+  String get conciseStatusAr {
+    if (isCalculated) return displayValueAr;
+    return status == ProtectionResultStatus.notApplicable
+        ? 'غير منطبق'
+        : 'غير متاح';
+  }
+
+  String get conciseReasonAr => switch (kind) {
+    ProtectionResultKind.pvArrayCurrent => 'يلزم حفظ التوالي/التوازي.',
+    ProtectionResultKind.inverterDcBusCurrent =>
+      'لا توجد بطارية مطلوبة في هذا النظام.',
+    ProtectionResultKind.inverterAcOutputCurrent =>
+      'بيانات العاكس أو الجهد غير كافية.',
+    ProtectionResultKind.dcConductorSize => 'بيانات الكابل غير محفوظة.',
+  };
 }
 
 class SafetyAuditReport {
