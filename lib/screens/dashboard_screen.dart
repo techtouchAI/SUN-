@@ -7,7 +7,6 @@ import '../models/system_mode.dart';
 import '../models/system_result_model.dart';
 import 'chart_screen.dart';
 import 'settings_screen.dart';
-import 'safety_design_screen.dart';
 import '../services/pdf_export_service.dart';
 import '../widgets/reactive_text_field.dart';
 import '../widgets/safety_audit_details.dart';
@@ -278,7 +277,9 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           _buildResultCard(
                             title: AppStrings.safetyStandardsTitle,
-                            value: 'NEC Standards',
+                            value: result.safetyAudit.hasCalculatedValue
+                                ? 'حساب تلقائي'
+                                : 'غير متاح',
                             icon: Icons.health_and_safety,
                             color: Colors.redAccent,
                             onTap: () => _showSafetyAuditModal(context, result),
@@ -356,16 +357,7 @@ class DashboardScreen extends ConsumerWidget {
       ),
       builder: (sheetContext) => FractionallySizedBox(
         heightFactor: 0.88,
-        child: SafetyAuditDetails(
-          report: result.safetyAudit,
-          onCompleteDesign: () {
-            Navigator.pop(sheetContext);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SafetyDesignScreen()),
-            );
-          },
-        ),
+        child: SafetyAuditDetails(report: result.safetyAudit),
       ),
     );
   }

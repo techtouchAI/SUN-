@@ -1,5 +1,4 @@
 import 'grid_schedule_model.dart';
-import 'safety_design_model.dart';
 import 'system_mode.dart';
 
 class SystemSettingsModel {
@@ -19,7 +18,6 @@ class SystemSettingsModel {
   final double iqdExchangeRate;
   final GridScheduleModel gridSchedule;
   final String projectName;
-  final SafetyDesignModel safetyDesign;
 
   const SystemSettingsModel({
     this.panelCapacity = 540,
@@ -38,7 +36,6 @@ class SystemSettingsModel {
     this.iqdExchangeRate = 1500,
     this.gridSchedule = const GridScheduleModel(),
     this.projectName = 'مشروع الطاقة الشمسية',
-    this.safetyDesign = const SafetyDesignModel(),
   });
 
   SystemSettingsModel copyWith({
@@ -58,7 +55,6 @@ class SystemSettingsModel {
     double? iqdExchangeRate,
     GridScheduleModel? gridSchedule,
     String? projectName,
-    SafetyDesignModel? safetyDesign,
   }) {
     return SystemSettingsModel(
       panelCapacity: panelCapacity ?? this.panelCapacity,
@@ -77,7 +73,6 @@ class SystemSettingsModel {
       iqdExchangeRate: iqdExchangeRate ?? this.iqdExchangeRate,
       gridSchedule: gridSchedule ?? this.gridSchedule,
       projectName: projectName ?? this.projectName,
-      safetyDesign: safetyDesign ?? this.safetyDesign,
     );
   }
 
@@ -98,7 +93,6 @@ class SystemSettingsModel {
     'iqdExchangeRate': iqdExchangeRate,
     'gridSchedule': gridSchedule.toJson(),
     'projectName': projectName,
-    'safetyDesign': safetyDesign.toJson(),
   };
 
   factory SystemSettingsModel.fromJson(Map<String, dynamic> json) {
@@ -108,7 +102,6 @@ class SystemSettingsModel {
       orElse: () => SystemMode.hybrid,
     );
     final rawGrid = json['gridSchedule'];
-    final rawSafety = json['safetyDesign'];
     return SystemSettingsModel(
       panelCapacity: _double(json['panelCapacity'], 540),
       panelIsc: _double(json['panelIsc'], 13.8),
@@ -128,9 +121,6 @@ class SystemSettingsModel {
           ? GridScheduleModel.fromJson(Map<String, dynamic>.from(rawGrid))
           : const GridScheduleModel(),
       projectName: _string(json['projectName'], 'مشروع الطاقة الشمسية'),
-      safetyDesign: rawSafety is Map
-          ? SafetyDesignModel.fromJson(Map<String, dynamic>.from(rawSafety))
-          : const SafetyDesignModel(),
     );
   }
 }

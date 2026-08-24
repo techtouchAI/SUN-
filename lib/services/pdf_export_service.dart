@@ -4,7 +4,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/system_result_model.dart';
 import '../models/safety_audit_model.dart';
-import '../models/safety_design_model.dart';
 import '../models/load_model.dart';
 import '../models/system_mode.dart';
 import '../logic/app_strings.dart';
@@ -215,9 +214,9 @@ class PdfExportService {
               pw.SizedBox(height: 20),
             ],
 
-            // 5. Safety Engine v1 audit, intentionally without code-derived sizes.
+            // 5. Electrical protection derived only from existing SUN state.
             pw.Text(
-              'بيانات الحماية والتدقيق — Safety Engine v1',
+              'الحماية الكهربائية',
               style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
             ),
             pw.Divider(),
@@ -225,21 +224,22 @@ class PdfExportService {
               result.safetyAudit.summaryAr,
               style: const pw.TextStyle(fontSize: 14),
             ),
-            for (final audit in result.safetyAudit.circuits) ...[
+            for (final protection in result.safetyAudit.results) ...[
               pw.SizedBox(height: 6),
               pw.Text(
-                '${audit.circuit.labelAr}: ${audit.status.labelAr}',
+                '${protection.kind.labelAr}: ${protection.displayValueAr}',
                 style: pw.TextStyle(
                   fontSize: 14,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              if (audit.missingInputIds.isNotEmpty)
+              if (!protection.isCalculated &&
+                  protection.unavailableReasonAr.isNotEmpty)
                 pw.Text(
-                  'البيانات أو المصادر الناقصة: ${audit.missingInputIds.join('، ')}',
+                  protection.unavailableReasonAr,
                   style: const pw.TextStyle(fontSize: 12),
                 ),
-              for (final trace in audit.trace)
+              for (final trace in protection.trace)
                 pw.Text(
                   '${trace.stageAr}: ${trace.messageAr}',
                   style: const pw.TextStyle(fontSize: 11),

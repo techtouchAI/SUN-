@@ -5,10 +5,10 @@ import '../core/validation/input_validator.dart';
 import '../models/calculation_breakdown_model.dart';
 import '../models/grid_schedule_model.dart';
 import '../models/load_model.dart';
-import '../models/safety_design_model.dart';
+import '../models/safety_audit_model.dart';
 import '../models/system_mode.dart';
 import '../models/system_result_model.dart';
-import '../services/safety_audit_service.dart';
+import '../services/electrical_protection_service.dart';
 
 /// Domain calculation engine for preliminary solar sizing.
 ///
@@ -258,7 +258,6 @@ class SolarCalculationRepository {
     String inverterLocation = 'indoor',
     double panelCapacity = 540.0,
     double panelIsc = 0.0,
-    SafetyDesignModel safetyDesign = const SafetyDesignModel(),
     SystemMode systemMode = SystemMode.hybrid,
     GridScheduleModel gridSchedule = const GridScheduleModel(),
     double solarWattPrice = 0.16,
@@ -401,10 +400,18 @@ class SolarCalculationRepository {
     };
 
     final electricalLabel =
-        'تدقيق بيانات الحماية — لا توجد قواعد اختصاصية مفعّلة لإصدار توصية';
-    final safetyAudit = const SafetyAuditService().evaluate(
-      safetyDesign,
-      systemMode,
+        'حسابات الحماية من بيانات SUN الحالية — ليست اعتماداً معيارياً أو اختياراً لجهاز تجاري';
+    final safetyAudit = const ElectricalProtectionService().evaluate(
+      ProtectionCalculationInputs(
+        systemMode: systemMode,
+        panelIscAmps: panelIsc,
+        requiredPanels: totalPanels,
+        systemVoltageVolts: systemVoltage,
+        gridVoltageVolts: gridVoltage,
+        requiredInverterCapacityWatts: inverterCapacity,
+        requiredBatteryCapacityAh: batteryCapacityAh,
+        nighttimeConsumptionWh: nighttimeWh,
+      ),
     );
     final inverterCost = inverterCapacity / 1000.0 * estimatedInverterUsdPerKw;
     final panelsCost = totalPanels * panelCapacity * solarWattPrice;
@@ -481,10 +488,6 @@ class SolarCalculationRepository {
       energyLossPercentage: '${energyLossPercentage.toStringAsFixed(0)}%',
       recommendedInverterBrands: 'Deye, Growatt, Huawei, Victron Energy',
       recommendedPanelBrands: 'Longi, Jinko Solar, JA Solar, Trina Solar',
-      pvDcBreakerAmps: 0,
-      batteryDcBreakerAmps: 0,
-      acBreakerAmps: 0,
-      wireSizeMm2: 0,
       estimatedCostUsd: estimatedCost,
       totalBreakersCount: 0,
       suggestedChargePriority: chargePriority,

@@ -10,7 +10,6 @@ import '../models/load_list_state.dart';
 import '../models/load_model.dart';
 import '../models/system_mode.dart';
 import '../models/system_settings_model.dart';
-import '../models/safety_design_model.dart';
 import '../models/system_result_model.dart';
 import '../repositories/load_persistence_repository.dart';
 import '../repositories/settings_persistence_repository.dart';
@@ -167,7 +166,7 @@ class SystemSettingsNotifier extends StateNotifier<SystemSettingsModel> {
   void updateFromLegacySettings() {
     if (_syncingLegacySettings) return;
     try {
-      update(_readLegacySettings().copyWith(safetyDesign: state.safetyDesign));
+      update(_readLegacySettings());
     } catch (error) {
       _reportError(error.toString());
       _syncingLegacySettings = true;
@@ -200,10 +199,6 @@ class SystemSettingsNotifier extends StateNotifier<SystemSettingsModel> {
     state = value;
     _reportError(null);
     _persist(value);
-  }
-
-  void updateSafetyDesign(SafetyDesignModel value) {
-    update(state.copyWith(safetyDesign: value));
   }
 
   Future<void> _persist(SystemSettingsModel value) async {
@@ -330,7 +325,6 @@ final calculationStateProvider = Provider<CalculationState>((ref) {
       inverterLocation: settings.inverterLocation,
       panelCapacity: settings.panelCapacity,
       panelIsc: settings.panelIsc,
-      safetyDesign: settings.safetyDesign,
       systemMode: settings.systemMode,
       gridSchedule: settings.gridSchedule,
       solarWattPrice: settings.solarWattPrice,

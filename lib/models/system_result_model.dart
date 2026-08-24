@@ -30,10 +30,6 @@ class SystemResultModel {
   final String energyLossPercentage;
   final String recommendedInverterBrands;
   final String recommendedPanelBrands;
-  final double pvDcBreakerAmps;
-  final double batteryDcBreakerAmps;
-  final double acBreakerAmps;
-  final int wireSizeMm2;
   final double estimatedCostUsd;
   final int totalBreakersCount;
   final String suggestedChargePriority;
@@ -73,10 +69,6 @@ class SystemResultModel {
     this.energyLossPercentage = '',
     this.recommendedInverterBrands = '',
     this.recommendedPanelBrands = '',
-    this.pvDcBreakerAmps = 0,
-    this.batteryDcBreakerAmps = 0,
-    this.acBreakerAmps = 0,
-    this.wireSizeMm2 = 0,
     this.estimatedCostUsd = 0,
     this.totalBreakersCount = 0,
     this.suggestedChargePriority = '',

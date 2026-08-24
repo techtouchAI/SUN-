@@ -43,8 +43,8 @@ class SettingsPersistenceRepository {
   }
 
   SystemSettingsModel _migrate(Map<String, dynamic> old) {
-    // Previous schemas have no safetyDesign field. The model supplies an empty,
-    // jurisdiction-neutral audit design so old installations remain readable.
+    // Unknown legacy fields, including former manual safety-design data, are
+    // intentionally ignored by SystemSettingsModel and removed on next save.
     return SystemSettingsModel.fromJson(old);
   }
 }

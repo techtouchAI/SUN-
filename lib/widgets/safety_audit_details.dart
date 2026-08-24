@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../models/safety_audit_model.dart';
-import '../models/safety_design_model.dart';
 
 class SafetyAuditDetails extends StatelessWidget {
   final SafetyAuditReport report;
-  final VoidCallback onCompleteDesign;
 
-  const SafetyAuditDetails({
-    super.key,
-    required this.report,
-    required this.onCompleteDesign,
-  });
+  const SafetyAuditDetails({super.key, required this.report});
 
   @override
   Widget build(BuildContext context) {
@@ -24,35 +18,20 @@ class SafetyAuditDetails extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'بيانات الحماية والتدقيق',
+                'الحماية الكهربائية',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Safety Engine v1 — بيانات وتدقيق فقط',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
-                ),
-              ),
-              const Divider(height: 28, thickness: 1.5),
               Text(
                 report.summaryAr,
-                style: const TextStyle(fontSize: 16, height: 1.45),
+                style: const TextStyle(fontSize: 15, height: 1.45),
               ),
-              const SizedBox(height: 16),
-              for (final audit in report.circuits)
-                _CircuitAuditCard(audit: audit),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: onCompleteDesign,
-                icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('استكمال بيانات التصميم ومصادرها'),
-              ),
-              const SizedBox(height: 8),
+              const Divider(height: 28, thickness: 1.5),
+              for (final kind in ProtectionResultKind.values)
+                _ProtectionResultRow(result: report.resultFor(kind)),
+              const SizedBox(height: 12),
               const Text(
-                'لا يعرض هذا الإصدار قاطعاً أو مقطع موصل أو ادعاء امتثال؛ ستضاف قواعد الحساب فقط بعد اختيار اختصاص ومعيار وإصدار وRuleset معتمد.',
+                'النتائج المحسوبة هي تيارات تصميم مشتقة من إعدادات SUN الحالية. اختيار جهاز الحماية أو مقطع موصل للتنفيذ يحتاج بيانات معدات وتركيب وقواعد اختصاصية غير موجودة في SUN حالياً.',
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.black54,
@@ -75,20 +54,22 @@ class SafetyAuditDetails extends StatelessWidget {
   }
 }
 
-class _CircuitAuditCard extends StatelessWidget {
-  final SafetyCircuitAudit audit;
+class _ProtectionResultRow extends StatelessWidget {
+  final SafetyProtectionResult result;
 
-  const _CircuitAuditCard({required this.audit});
+  const _ProtectionResultRow({required this.result});
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (audit.status) {
-      SafetyAuditStatus.notApplicable => Colors.grey,
-      SafetyAuditStatus.incompleteData => Colors.deepOrange,
-      SafetyAuditStatus.rulesetRequired => Colors.blue,
+    final color = switch (result.status) {
+      ProtectionResultStatus.calculated => Colors.green.shade700,
+      ProtectionResultStatus.notApplicable => Colors.grey.shade700,
+      ProtectionResultStatus.missingData ||
+      ProtectionResultStatus.invalidInput ||
+      ProtectionResultStatus.unsupportedConfiguration => Colors.deepOrange,
     };
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
@@ -98,67 +79,63 @@ class _CircuitAuditCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    audit.circuit.labelAr,
+                    result.kind.labelAr,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    audit.status.labelAr,
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                  ),
+                Text(
+                  result.displayValueAr,
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            if (audit.missingInputIds.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text(
-                'البيانات أو مصادرها الناقصة:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            if (!result.isCalculated &&
+                result.unavailableReasonAr.isNotEmpty) ...[
+              const SizedBox(height: 7),
+              Text(
+                result.unavailableReasonAr,
+                style: TextStyle(color: color, height: 1.35),
               ),
-              const SizedBox(height: 4),
-              for (final id in audit.missingInputIds)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(
-                    '• ${SafetyDesignModel.definitionFor(id)?.labelAr ?? id}',
-                    style: const TextStyle(color: Colors.deepOrange),
-                  ),
-                ),
             ],
-            const SizedBox(height: 10),
-            const Text(
-              'Calculation / Audit Trace',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            for (final entry in audit.trace)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: RichText(
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                    children: [
-                      TextSpan(
-                        text: '${entry.stageAr}: ',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(text: entry.messageAr),
-                    ],
-                  ),
+            if (result.trace.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text(
+                  'تفاصيل فنية',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
+                children: [
+                  for (final entry in result.trace)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.black87,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: '${entry.stageAr}: ',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextSpan(text: entry.messageAr),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
+            ],
           ],
         ),
       ),

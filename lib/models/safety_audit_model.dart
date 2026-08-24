@@ -1,13 +1,31 @@
-import 'safety_design_model.dart';
-import 'safety_rules_engine_contract.dart';
+import 'system_mode.dart';
 
-enum SafetyAuditStatus { notApplicable, incompleteData, rulesetRequired }
+enum ProtectionResultKind { pvDcBreaker, batteryDcBreaker, acBreaker, dcCable }
 
-extension SafetyAuditStatusLabels on SafetyAuditStatus {
+extension ProtectionResultKindLabels on ProtectionResultKind {
   String get labelAr => switch (this) {
-    SafetyAuditStatus.notApplicable => 'غير منطبق على وضع النظام',
-    SafetyAuditStatus.incompleteData => 'بيانات غير مكتملة',
-    SafetyAuditStatus.rulesetRequired => 'مرجع قواعد مطلوب',
+    ProtectionResultKind.pvDcBreaker => 'قاطع الألواح DC',
+    ProtectionResultKind.batteryDcBreaker => 'قاطع البطارية DC',
+    ProtectionResultKind.acBreaker => 'قاطع التيار المتردد AC',
+    ProtectionResultKind.dcCable => 'مقطع أسلاك DC',
+  };
+}
+
+enum ProtectionResultStatus {
+  calculated,
+  missingData,
+  invalidInput,
+  notApplicable,
+  unsupportedConfiguration,
+}
+
+extension ProtectionResultStatusLabels on ProtectionResultStatus {
+  String get labelAr => switch (this) {
+    ProtectionResultStatus.calculated => 'تم الحساب',
+    ProtectionResultStatus.missingData => 'غير متاح — بيانات غير كافية',
+    ProtectionResultStatus.invalidInput => 'غير متاح — بيانات غير صالحة',
+    ProtectionResultStatus.notApplicable => 'غير منطبق',
+    ProtectionResultStatus.unsupportedConfiguration => 'غير مدعوم',
   };
 }
 
@@ -18,48 +36,80 @@ class SafetyAuditTraceEntry {
   const SafetyAuditTraceEntry({required this.stageAr, required this.messageAr});
 }
 
-class SafetyCircuitAudit {
-  final SafetyCircuitType circuit;
-  final SafetyAuditStatus status;
-  final List<String> missingInputIds;
-  final List<SafetyAuditTraceEntry> trace;
-  final SafetyRulesEvaluation? rulesEvaluation;
+/// Immutable electrical quantities normalized from existing SUN settings and
+/// calculation results. No field is collected from a safety-specific screen.
+class ProtectionCalculationInputs {
+  final SystemMode systemMode;
+  final double panelIscAmps;
+  final int requiredPanels;
+  final double systemVoltageVolts;
+  final double gridVoltageVolts;
+  final double requiredInverterCapacityWatts;
+  final double requiredBatteryCapacityAh;
+  final double nighttimeConsumptionWh;
 
-  const SafetyCircuitAudit({
-    required this.circuit,
-    required this.status,
-    this.missingInputIds = const [],
-    this.trace = const [],
-    this.rulesEvaluation,
+  const ProtectionCalculationInputs({
+    required this.systemMode,
+    required this.panelIscAmps,
+    required this.requiredPanels,
+    required this.systemVoltageVolts,
+    required this.gridVoltageVolts,
+    required this.requiredInverterCapacityWatts,
+    required this.requiredBatteryCapacityAh,
+    required this.nighttimeConsumptionWh,
   });
 }
 
+class SafetyProtectionResult {
+  final ProtectionResultKind kind;
+  final ProtectionResultStatus status;
+  final double? value;
+  final String unit;
+  final String unavailableReasonAr;
+  final List<SafetyAuditTraceEntry> trace;
+
+  const SafetyProtectionResult({
+    required this.kind,
+    required this.status,
+    this.value,
+    this.unit = '',
+    this.unavailableReasonAr = '',
+    this.trace = const [],
+  });
+
+  bool get isCalculated =>
+      status == ProtectionResultStatus.calculated &&
+      value != null &&
+      value!.isFinite &&
+      value! > 0;
+
+  String get displayValueAr {
+    if (!isCalculated) return status.labelAr;
+    final decimals = value! >= 100 ? 0 : 1;
+    return '${value!.toStringAsFixed(decimals)} $unit';
+  }
+}
+
 class SafetyAuditReport {
-  final List<SafetyCircuitAudit> circuits;
+  final List<SafetyProtectionResult> results;
 
-  const SafetyAuditReport({this.circuits = const []});
-  const SafetyAuditReport.empty() : circuits = const [];
+  const SafetyAuditReport({this.results = const []});
+  const SafetyAuditReport.empty() : results = const [];
 
-  bool get hasIncompleteData =>
-      circuits.any((audit) => audit.status == SafetyAuditStatus.incompleteData);
-
-  bool get requiresRuleset => circuits.any(
-    (audit) => audit.status == SafetyAuditStatus.rulesetRequired,
-  );
-
-  String get cardValueAr {
-    if (hasIncompleteData) return 'بيانات غير مكتملة';
-    if (requiresRuleset) return 'مرجع قواعد مطلوب';
-    return 'بيانات التصميم';
+  SafetyProtectionResult resultFor(ProtectionResultKind kind) {
+    return results.firstWhere(
+      (result) => result.kind == kind,
+      orElse: () => SafetyProtectionResult(
+        kind: kind,
+        status: ProtectionResultStatus.missingData,
+        unavailableReasonAr: 'لم تُنشأ نتيجة الحماية بعد.',
+      ),
+    );
   }
 
-  String get summaryAr {
-    if (hasIncompleteData) {
-      return 'لا يمكن إصدار توصية معيارية حالياً. أكمل بيانات المعدات والتركيب ومصدر كل قيمة.';
-    }
-    if (requiresRuleset) {
-      return 'تم استكمال بيانات التصميم للدوائر النشطة، لكن لم يتم تحديد ملف قواعد معتمد للحساب.';
-    }
-    return 'بيانات تدقيق الحماية جاهزة للمراجعة.';
-  }
+  bool get hasCalculatedValue => results.any((result) => result.isCalculated);
+
+  String get summaryAr => hasCalculatedValue
+      ? 'تم اشتقاق النتائج المتاحة تلقائياً من إعدادات SUN ونتيجة الحساب الحالية. لا تمثل هذه النتائج اعتماداً معيارياً أو اختيار جهاز تجاري.'
+      : 'لا توجد بيانات كافية في إعدادات SUN الحالية لإصدار نتائج حماية موثوقة.';
 }
