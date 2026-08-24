@@ -278,7 +278,7 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           _buildResultCard(
                             title: AppStrings.safetyStandardsTitle,
-                            value: 'Safety Engine v1',
+                            value: 'NEC Standards',
                             icon: Icons.health_and_safety,
                             color: Colors.redAccent,
                             onTap: () => _showSafetyAuditModal(context, result),
