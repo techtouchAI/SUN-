@@ -1,13 +1,18 @@
 import 'system_mode.dart';
 
-enum ProtectionResultKind { pvDcBreaker, batteryDcBreaker, acBreaker, dcCable }
+enum ProtectionResultKind {
+  pvArrayCurrent,
+  inverterDcBusCurrent,
+  inverterAcOutputCurrent,
+  dcConductorSize,
+}
 
 extension ProtectionResultKindLabels on ProtectionResultKind {
   String get labelAr => switch (this) {
-    ProtectionResultKind.pvDcBreaker => 'قاطع الألواح DC',
-    ProtectionResultKind.batteryDcBreaker => 'قاطع البطارية DC',
-    ProtectionResultKind.acBreaker => 'قاطع التيار المتردد AC',
-    ProtectionResultKind.dcCable => 'مقطع أسلاك DC',
+    ProtectionResultKind.pvArrayCurrent => 'تيار مصفوفة الألواح PV',
+    ProtectionResultKind.inverterDcBusCurrent => 'تيار ناقل DC للعاكس',
+    ProtectionResultKind.inverterAcOutputCurrent => 'تيار خرج العاكس AC',
+    ProtectionResultKind.dcConductorSize => 'تقييم مقطع موصل DC',
   };
 }
 

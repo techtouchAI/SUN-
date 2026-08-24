@@ -26,41 +26,53 @@ void main() {
     nighttimeConsumptionWh: nightWh,
   );
 
-  test('derives DC and AC design currents from SUN result inputs', () {
+  test('derives inverter DC-bus and AC-output currents from SUN inputs', () {
     final report = service.evaluate(inputs());
-    final battery = report.resultFor(ProtectionResultKind.batteryDcBreaker);
-    final ac = report.resultFor(ProtectionResultKind.acBreaker);
-
-    expect(battery.status, ProtectionResultStatus.calculated);
-    expect(battery.value, closeTo(105, 0.0001));
-    expect(battery.unit, 'A');
-    expect(ac.status, ProtectionResultStatus.calculated);
-    expect(ac.value, closeTo(5040 / 220, 0.0001));
-    expect(ac.trace.map((entry) => entry.stageAr), contains('Source Input'));
-    expect(
-      ac.trace.map((entry) => entry.stageAr),
-      contains('Calculation Rule'),
+    final dcBus = report.resultFor(ProtectionResultKind.inverterDcBusCurrent);
+    final acOutput = report.resultFor(
+      ProtectionResultKind.inverterAcOutputCurrent,
     );
-    expect(ac.trace.map((entry) => entry.stageAr), contains('Final Result'));
-    expect(ac.trace.map((entry) => entry.stageAr), contains('Validation'));
+
+    expect(dcBus.status, ProtectionResultStatus.calculated);
+    expect(dcBus.value, closeTo(105, 0.0001));
+    expect(dcBus.unit, 'A');
+    expect(dcBus.kind.labelAr, 'تيار ناقل DC للعاكس');
+    expect(
+      dcBus.trace.map((entry) => entry.messageAr).join(' '),
+      contains('ليس تيار مصفوفة PV'),
+    );
+    expect(acOutput.status, ProtectionResultStatus.calculated);
+    expect(acOutput.value, closeTo(5040 / 220, 0.0001));
+    expect(acOutput.kind.labelAr, 'تيار خرج العاكس AC');
+    expect(
+      acOutput.trace.map((entry) => entry.messageAr).join(' '),
+      contains('نموذج أحادي الطور'),
+    );
+    expect(
+      acOutput.trace.map((entry) => entry.stageAr),
+      containsAll([
+        'Source Input',
+        'Calculation Rule',
+        'Final Result',
+        'Validation',
+      ]),
+    );
   });
 
-  test(
-    'never invents PV breaker or DC cable results without topology data',
-    () {
-      final report = service.evaluate(inputs());
-      final pv = report.resultFor(ProtectionResultKind.pvDcBreaker);
-      final cable = report.resultFor(ProtectionResultKind.dcCable);
+  test('never invents PV-array current or DC conductor size without data', () {
+    final report = service.evaluate(inputs());
+    final pv = report.resultFor(ProtectionResultKind.pvArrayCurrent);
+    final cable = report.resultFor(ProtectionResultKind.dcConductorSize);
 
-      expect(pv.status, ProtectionResultStatus.missingData);
-      expect(pv.value, isNull);
-      expect(pv.displayValueAr, 'غير متاح — بيانات غير كافية');
-      expect(pv.unavailableReasonAr, contains('التوالي/التوازي'));
-      expect(cable.status, ProtectionResultStatus.missingData);
-      expect(cable.value, isNull);
-      expect(cable.unavailableReasonAr, contains('طول المسار'));
-    },
-  );
+    expect(pv.status, ProtectionResultStatus.missingData);
+    expect(pv.value, isNull);
+    expect(pv.displayValueAr, 'غير متاح — بيانات غير كافية');
+    expect(pv.kind.labelAr, 'تيار مصفوفة الألواح PV');
+    expect(pv.unavailableReasonAr, contains('التوالي/التوازي'));
+    expect(cable.status, ProtectionResultStatus.missingData);
+    expect(cable.value, isNull);
+    expect(cable.unavailableReasonAr, contains('طول المسار'));
+  });
 
   test('changes computed currents whenever existing source values change', () {
     final original = service.evaluate(inputs());
@@ -68,19 +80,21 @@ void main() {
     final changedVoltage = service.evaluate(inputs(systemVoltage: 60));
 
     expect(
-      changedLoad.resultFor(ProtectionResultKind.acBreaker).value,
-      greaterThan(original.resultFor(ProtectionResultKind.acBreaker).value!),
-    );
-    expect(
-      changedLoad.resultFor(ProtectionResultKind.batteryDcBreaker).value,
+      changedLoad.resultFor(ProtectionResultKind.inverterAcOutputCurrent).value,
       greaterThan(
-        original.resultFor(ProtectionResultKind.batteryDcBreaker).value!,
+        original.resultFor(ProtectionResultKind.inverterAcOutputCurrent).value!,
       ),
     );
     expect(
-      changedVoltage.resultFor(ProtectionResultKind.batteryDcBreaker).value,
+      changedLoad.resultFor(ProtectionResultKind.inverterDcBusCurrent).value,
+      greaterThan(
+        original.resultFor(ProtectionResultKind.inverterDcBusCurrent).value!,
+      ),
+    );
+    expect(
+      changedVoltage.resultFor(ProtectionResultKind.inverterDcBusCurrent).value,
       lessThan(
-        original.resultFor(ProtectionResultKind.batteryDcBreaker).value!,
+        original.resultFor(ProtectionResultKind.inverterDcBusCurrent).value!,
       ),
     );
   });
@@ -94,15 +108,17 @@ void main() {
       );
 
       expect(
-        invalid.resultFor(ProtectionResultKind.batteryDcBreaker).status,
+        invalid.resultFor(ProtectionResultKind.inverterDcBusCurrent).status,
         ProtectionResultStatus.invalidInput,
       );
       expect(
-        directOnGrid.resultFor(ProtectionResultKind.batteryDcBreaker).status,
+        directOnGrid
+            .resultFor(ProtectionResultKind.inverterDcBusCurrent)
+            .status,
         ProtectionResultStatus.notApplicable,
       );
       expect(
-        directOnGrid.resultFor(ProtectionResultKind.dcCable).status,
+        directOnGrid.resultFor(ProtectionResultKind.dcConductorSize).status,
         ProtectionResultStatus.notApplicable,
       );
     },

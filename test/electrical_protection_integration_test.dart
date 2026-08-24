@@ -17,7 +17,13 @@ void main() {
     nighttimeHours: 4,
   );
 
-  test('connects existing SUN settings and results to protection outputs', () {
+  GridScheduleModel offGridSchedule() => const GridScheduleModel(
+    gridOnHours: 0,
+    gridOffHours: 24,
+    gridChargeDependencyPercent: 0,
+  );
+
+  test('connects existing SUN settings to correctly named current results', () {
     final result = repository.calculateSystem(
       [load(1000)],
       gridVoltage: 220,
@@ -25,32 +31,35 @@ void main() {
       panelCapacity: 540,
       panelIsc: 13.8,
       systemMode: SystemMode.offGrid,
-      gridSchedule: const GridScheduleModel(
-        gridOnHours: 0,
-        gridOffHours: 24,
-        gridChargeDependencyPercent: 0,
-      ),
+      gridSchedule: offGridSchedule(),
     );
 
-    final battery = result.safetyAudit.resultFor(
-      ProtectionResultKind.batteryDcBreaker,
+    final dcBus = result.safetyAudit.resultFor(
+      ProtectionResultKind.inverterDcBusCurrent,
     );
-    final ac = result.safetyAudit.resultFor(ProtectionResultKind.acBreaker);
-    final pv = result.safetyAudit.resultFor(ProtectionResultKind.pvDcBreaker);
+    final acOutput = result.safetyAudit.resultFor(
+      ProtectionResultKind.inverterAcOutputCurrent,
+    );
+    final pv = result.safetyAudit.resultFor(
+      ProtectionResultKind.pvArrayCurrent,
+    );
 
-    expect(battery.status, ProtectionResultStatus.calculated);
+    expect(dcBus.status, ProtectionResultStatus.calculated);
     expect(
-      battery.value,
+      dcBus.value,
       closeTo(result.requiredInverterCapacityW / result.systemVoltage, 0.0001),
     );
-    expect(ac.status, ProtectionResultStatus.calculated);
-    expect(ac.value, closeTo(result.requiredInverterCapacityW / 220, 0.0001));
+    expect(acOutput.status, ProtectionResultStatus.calculated);
+    expect(
+      acOutput.value,
+      closeTo(result.requiredInverterCapacityW / 220, 0.0001),
+    );
     expect(pv.status, ProtectionResultStatus.missingData);
     expect(pv.value, isNull);
   });
 
   test(
-    'does not retain stale protection values when load and panel inputs change',
+    'does not retain stale current values when load and panel inputs change',
     () {
       final first = repository.calculateSystem(
         [load(500)],
@@ -59,11 +68,7 @@ void main() {
         panelCapacity: 540,
         panelIsc: 13.8,
         systemMode: SystemMode.offGrid,
-        gridSchedule: const GridScheduleModel(
-          gridOnHours: 0,
-          gridOffHours: 24,
-          gridChargeDependencyPercent: 0,
-        ),
+        gridSchedule: offGridSchedule(),
       );
       final second = repository.calculateSystem(
         [load(1200)],
@@ -72,32 +77,32 @@ void main() {
         panelCapacity: 600,
         panelIsc: 18.5,
         systemMode: SystemMode.offGrid,
-        gridSchedule: const GridScheduleModel(
-          gridOnHours: 0,
-          gridOffHours: 24,
-          gridChargeDependencyPercent: 0,
-        ),
+        gridSchedule: offGridSchedule(),
       );
 
       expect(
         second.safetyAudit
-            .resultFor(ProtectionResultKind.batteryDcBreaker)
+            .resultFor(ProtectionResultKind.inverterDcBusCurrent)
             .value,
         greaterThan(
           first.safetyAudit
-              .resultFor(ProtectionResultKind.batteryDcBreaker)
+              .resultFor(ProtectionResultKind.inverterDcBusCurrent)
               .value!,
         ),
       );
       expect(
-        second.safetyAudit.resultFor(ProtectionResultKind.acBreaker).value,
+        second.safetyAudit
+            .resultFor(ProtectionResultKind.inverterAcOutputCurrent)
+            .value,
         greaterThan(
-          first.safetyAudit.resultFor(ProtectionResultKind.acBreaker).value!,
+          first.safetyAudit
+              .resultFor(ProtectionResultKind.inverterAcOutputCurrent)
+              .value!,
         ),
       );
       expect(
         second.safetyAudit
-            .resultFor(ProtectionResultKind.pvDcBreaker)
+            .resultFor(ProtectionResultKind.pvArrayCurrent)
             .trace
             .first
             .messageAr,

@@ -31,7 +31,7 @@ class SafetyAuditDetails extends StatelessWidget {
                 _ProtectionResultRow(result: report.resultFor(kind)),
               const SizedBox(height: 12),
               const Text(
-                'النتائج المحسوبة هي تيارات تصميم مشتقة من إعدادات SUN الحالية. اختيار جهاز الحماية أو مقطع موصل للتنفيذ يحتاج بيانات معدات وتركيب وقواعد اختصاصية غير موجودة في SUN حالياً.',
+                'القيم المحسوبة هنا هي تيار ناقل DC للعاكس أو تيار خرج العاكس AC فقط؛ لا تمثل تيار مصفوفة PV أو اختيار جهاز حماية أو مقطع موصل للتنفيذ.',
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.black54,
