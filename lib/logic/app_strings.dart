@@ -102,7 +102,7 @@ class AppStrings {
   static const String energyLossSoiling =
       'الغبار والأوساخ (Soiling Losses): انخفاض امتصاص الضوء بسبب تراكم الأتربة على سطح الألواح.';
 
-  static const String safetyStandardsTitle = 'معايير السلامة العالمية (NEC)';
+  static const String safetyStandardsTitle = 'بيانات الحماية والتدقيق';
   static const String pvBreaker = 'جوزات الألواح (DC Breakers)';
   static const String batteryBreaker = 'جوزات البطاريات (DC Breakers)';
   static const String acBreaker = 'جوزات التيار المتردد (AC Breakers)';

@@ -1,4 +1,5 @@
 import 'calculation_breakdown_model.dart';
+import 'safety_audit_model.dart';
 
 class SystemResultModel {
   final double totalDailyConsumptionWh;
@@ -41,6 +42,7 @@ class SystemResultModel {
   final String electricalEstimateLabel;
   final String? calculationError;
   final CalculationBreakdownModel breakdown;
+  final SafetyAuditReport safetyAudit;
 
   const SystemResultModel({
     required this.totalDailyConsumptionWh,
@@ -92,6 +94,7 @@ class SystemResultModel {
       batteryExplanationAr: '',
       batteryExplanationEn: '',
     ),
+    this.safetyAudit = const SafetyAuditReport.empty(),
   });
 
   static SystemResultModel failure(String message) {

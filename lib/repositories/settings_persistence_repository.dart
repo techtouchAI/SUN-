@@ -7,7 +7,7 @@ import '../models/system_settings_model.dart';
 
 class SettingsPersistenceRepository {
   static const _settingsKey = 'system_settings_v1';
-  static const _schemaVersion = 1;
+  static const _schemaVersion = 2;
 
   Future<SystemSettingsModel> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,7 +43,8 @@ class SettingsPersistenceRepository {
   }
 
   SystemSettingsModel _migrate(Map<String, dynamic> old) {
-    // Version 0 used the same field names without an explicit schema marker.
+    // Previous schemas have no safetyDesign field. The model supplies an empty,
+    // jurisdiction-neutral audit design so old installations remain readable.
     return SystemSettingsModel.fromJson(old);
   }
 }

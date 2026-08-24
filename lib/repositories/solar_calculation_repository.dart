@@ -5,8 +5,10 @@ import '../core/validation/input_validator.dart';
 import '../models/calculation_breakdown_model.dart';
 import '../models/grid_schedule_model.dart';
 import '../models/load_model.dart';
+import '../models/safety_design_model.dart';
 import '../models/system_mode.dart';
 import '../models/system_result_model.dart';
+import '../services/safety_audit_service.dart';
 
 /// Domain calculation engine for preliminary solar sizing.
 ///
@@ -256,6 +258,7 @@ class SolarCalculationRepository {
     String inverterLocation = 'indoor',
     double panelCapacity = 540.0,
     double panelIsc = 0.0,
+    SafetyDesignModel safetyDesign = const SafetyDesignModel(),
     SystemMode systemMode = SystemMode.hybrid,
     GridScheduleModel gridSchedule = const GridScheduleModel(),
     double solarWattPrice = 0.16,
@@ -398,7 +401,11 @@ class SolarCalculationRepository {
     };
 
     final electricalLabel =
-        'تقدير كهربائي أولي غير تنفيذي — بيانات السلاسل والكابلات غير كافية لمقاس NEC';
+        'تدقيق بيانات الحماية — لا توجد قواعد اختصاصية مفعّلة لإصدار توصية';
+    final safetyAudit = const SafetyAuditService().evaluate(
+      safetyDesign,
+      systemMode,
+    );
     final inverterCost = inverterCapacity / 1000.0 * estimatedInverterUsdPerKw;
     final panelsCost = totalPanels * panelCapacity * solarWattPrice;
     final batteriesCost = batteryCapacityAh * batteryAmperePrice;
@@ -486,6 +493,7 @@ class SolarCalculationRepository {
           ? 'IP65 (تقديري)'
           : 'IP20 (تقديري)',
       electricalEstimateLabel: electricalLabel,
+      safetyAudit: safetyAudit,
       breakdown: breakdown,
     );
   }

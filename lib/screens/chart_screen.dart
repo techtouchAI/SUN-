@@ -18,13 +18,11 @@ class ChartScreen extends ConsumerWidget {
       AppStrings.morning,
       AppStrings.noon,
       AppStrings.afternoon,
-      AppStrings.evening
+      AppStrings.evening,
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.dailyProductionCurve),
-      ),
+      appBar: AppBar(title: const Text(AppStrings.dailyProductionCurve)),
       body: result.requiredPanels == 0
           ? const Center(child: Text(AppStrings.noSolarProductionData))
           : Padding(
@@ -40,7 +38,11 @@ class ChartScreen extends ConsumerWidget {
                     child: BarChart(
                       BarChartData(
                         alignment: BarChartAlignment.spaceAround,
-                        maxY: curve.reduce((curr, next) => curr > next ? curr : next) * 1.2, // dynamic max height
+                        maxY:
+                            curve.reduce(
+                              (curr, next) => curr > next ? curr : next,
+                            ) *
+                            1.2, // dynamic max height
                         barTouchData: BarTouchData(enabled: true),
                         titlesData: FlTitlesData(
                           show: true,
@@ -64,12 +66,18 @@ class ChartScreen extends ConsumerWidget {
                               reservedSize: 40,
                               getTitlesWidget: (double value, TitleMeta meta) {
                                 if (value == 0) return const Text('0');
-                                return Text('${(value / 1000).toStringAsFixed(1)}k');
+                                return Text(
+                                  '${(value / 1000).toStringAsFixed(1)}k',
+                                );
                               },
                             ),
                           ),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                         ),
                         borderData: FlBorderData(show: false),
                         barGroups: [

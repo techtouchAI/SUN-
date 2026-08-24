@@ -4,10 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import '../models/system_mode.dart';
+import '../models/system_result_model.dart';
 import 'chart_screen.dart';
 import 'settings_screen.dart';
+import 'safety_design_screen.dart';
 import '../services/pdf_export_service.dart';
 import '../widgets/reactive_text_field.dart';
+import '../widgets/safety_audit_details.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -275,24 +278,10 @@ class DashboardScreen extends ConsumerWidget {
                           ),
                           _buildResultCard(
                             title: AppStrings.safetyStandardsTitle,
-                            value: 'NEC Standards',
+                            value: 'Safety Engine v1',
                             icon: Icons.health_and_safety,
                             color: Colors.redAccent,
-                            onTap: () => _showExplanationModal(
-                              context,
-                              AppStrings.safetyStandardsTitle,
-                              [
-                                if (result.pvDcBreakerAmps > 0)
-                                  '${AppStrings.pvBreaker}: ${result.pvDcBreakerAmps.toStringAsFixed(1)} A',
-                                if (result.batteryDcBreakerAmps > 0)
-                                  '${AppStrings.batteryBreaker}: ${result.batteryDcBreakerAmps.toStringAsFixed(1)} A',
-                                if (result.acBreakerAmps > 0)
-                                  '${AppStrings.acBreaker}: ${result.acBreakerAmps.toStringAsFixed(1)} A',
-                                if (result.wireSizeMm2 > 0)
-                                  '${AppStrings.dcWireSize}: ${result.wireSizeMm2} ${AppStrings.wireMm2}',
-                              ],
-                              headerValue: 'NEC Standards',
-                            ),
+                            onTap: () => _showSafetyAuditModal(context, result),
                           ),
                           _buildResultCard(
                             title: AppStrings.estimatedSystemCost,
@@ -355,6 +344,29 @@ class DashboardScreen extends ConsumerWidget {
                 ],
               ),
             ),
+    );
+  }
+
+  void _showSafetyAuditModal(BuildContext context, SystemResultModel result) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: 0.88,
+        child: SafetyAuditDetails(
+          report: result.safetyAudit,
+          onCompleteDesign: () {
+            Navigator.pop(sheetContext);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SafetyDesignScreen()),
+            );
+          },
+        ),
+      ),
     );
   }
 

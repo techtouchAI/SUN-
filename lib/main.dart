@@ -10,9 +10,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     // Wrap the app with ProviderScope for Riverpod
-    const ProviderScope(
-      child: MyApp(),
-    ),
+    const ProviderScope(child: MyApp()),
   );
 }
 
@@ -27,9 +25,7 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       title: AppStrings.appTitle,
       locale: const Locale('ar', 'AE'),
-      supportedLocales: const [
-        Locale('ar', 'AE'),
-      ],
+      supportedLocales: const [Locale('ar', 'AE')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -37,7 +33,10 @@ class MyApp extends ConsumerWidget {
       ],
       themeMode: themeMode,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber, brightness: Brightness.light),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.amber,
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
         textTheme: GoogleFonts.amiriTextTheme(
           ThemeData(brightness: Brightness.light).textTheme,

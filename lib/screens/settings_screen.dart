@@ -14,9 +14,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppStrings.settingsTitle),
-      ),
+      appBar: AppBar(title: const Text(AppStrings.settingsTitle)),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -27,8 +25,9 @@ class SettingsScreen extends ConsumerWidget {
                 title: const Text(AppStrings.darkModeToggle),
                 value: themeMode == ThemeMode.dark,
                 onChanged: (value) {
-                  ref.read(themeModeProvider.notifier).state =
-                      value ? ThemeMode.dark : ThemeMode.light;
+                  ref.read(themeModeProvider.notifier).state = value
+                      ? ThemeMode.dark
+                      : ThemeMode.light;
                 },
               ),
               const Divider(),
@@ -135,9 +134,14 @@ class SettingsScreen extends ConsumerWidget {
                   provider: panelCapacityProvider,
                   suffix: ' W',
                   onChangedCallback: (parsedValue) {
-                    final interpolatedIsc = SolarCalculationRepository.getInterpolatedIsc(parsedValue);
+                    final interpolatedIsc =
+                        SolarCalculationRepository.getInterpolatedIsc(
+                          parsedValue,
+                        );
                     Future.microtask(() {
-                      ref.read(panelIscProvider.notifier).state = double.parse(interpolatedIsc.toStringAsFixed(2));
+                      ref.read(panelIscProvider.notifier).state = double.parse(
+                        interpolatedIsc.toStringAsFixed(2),
+                      );
                     });
                   },
                 ),
@@ -159,8 +163,14 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 initialValue: ref.watch(inverterLocationProvider),
                 items: const [
-                  DropdownMenuItem(value: 'indoor', child: Text('داخلي (Indoor)')),
-                  DropdownMenuItem(value: 'outdoor', child: Text('خارجي (Outdoor)')),
+                  DropdownMenuItem(
+                    value: 'indoor',
+                    child: Text('داخلي (Indoor)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'outdoor',
+                    child: Text('خارجي (Outdoor)'),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) {
