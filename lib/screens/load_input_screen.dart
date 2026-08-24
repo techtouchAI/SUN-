@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/load_model.dart';
-import '../core/validation/load_form_validation.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import '../models/system_mode.dart';
@@ -41,19 +40,12 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   void _addDetailedLoad() {
     if (_detailedFormKey.currentState!.validate()) {
-      final powerValue = LoadFormValidation.positiveValue(
-        _powerValueController.text,
-      );
-      final dailyHours = LoadFormValidation.hoursValue(
-        _dailyHoursController.text,
-      );
-      if (powerValue == null || dailyHours == null) return;
       final newLoad = LoadModel(
         id: const Uuid().v4(),
         name: _nameController.text,
-        powerValue: powerValue,
+        powerValue: double.parse(_powerValueController.text),
         unit: _selectedUnit,
-        dailyUsageHours: dailyHours,
+        dailyUsageHours: double.parse(_dailyHoursController.text),
         isInverterDevice: _isInverter,
       );
 
@@ -64,19 +56,12 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   void _addQuickLoad() {
     if (_quickFormKey.currentState!.validate()) {
-      final powerValue = LoadFormValidation.positiveValue(
-        _quickPowerController.text,
-      );
-      final dailyHours = LoadFormValidation.hoursValue(
-        _quickHoursController.text,
-      );
-      if (powerValue == null || dailyHours == null) return;
       final newLoad = LoadModel(
         id: const Uuid().v4(),
         name: AppStrings.quickLoadTitle,
-        powerValue: powerValue,
+        powerValue: double.parse(_quickPowerController.text),
         unit: PowerUnit.ampere,
-        dailyUsageHours: dailyHours,
+        dailyUsageHours: double.parse(_quickHoursController.text),
         isInverterDevice: false,
       );
 
@@ -101,12 +86,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
   }
 
   void _showEditDialog(LoadModel load) {
-    final editFormKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController(text: load.name);
     final powerCtrl = TextEditingController(text: load.powerValue.toString());
-    final hoursCtrl = TextEditingController(
-      text: load.dailyUsageHours.toString(),
-    );
+    final hoursCtrl = TextEditingController(text: load.dailyUsageHours.toString());
     PowerUnit editUnit = load.unit;
     bool editInverter = load.isInverterDevice;
 
@@ -118,80 +100,61 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
             return AlertDialog(
               title: const Text(AppStrings.editLoad),
               content: SingleChildScrollView(
-                child: Form(
-                  key: editFormKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: AppStrings.deviceName,
-                        ),
-                        validator: LoadFormValidation.deviceName,
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: powerCtrl,
-                              decoration: const InputDecoration(
-                                labelText: AppStrings.powerCapacity,
-                              ),
-                              keyboardType: TextInputType.number,
-                              validator: LoadFormValidation.powerValue,
-                            ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: AppStrings.deviceName),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: powerCtrl,
+                            decoration: const InputDecoration(labelText: AppStrings.powerCapacity),
+                            keyboardType: TextInputType.number,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: DropdownButtonFormField<PowerUnit>(
-                              initialValue: editUnit,
-                              isExpanded: true,
-                              items: PowerUnit.values.map((unit) {
-                                String localizedName = '';
-                                switch (unit) {
-                                  case PowerUnit.ampere:
-                                    localizedName = AppStrings.unitAmpere;
-                                    break;
-                                  case PowerUnit.watt:
-                                    localizedName = AppStrings.unitWatt;
-                                    break;
-                                  case PowerUnit.ton:
-                                    localizedName = AppStrings.unitTon;
-                                    break;
-                                }
-                                return DropdownMenuItem(
-                                  value: unit,
-                                  child: Text(localizedName),
-                                );
-                              }).toList(),
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  editUnit = value!;
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      TextFormField(
-                        controller: hoursCtrl,
-                        decoration: const InputDecoration(
-                          labelText: AppStrings.dailyUsageHours,
                         ),
-                        keyboardType: TextInputType.number,
-                        validator: LoadFormValidation.dailyHours,
-                      ),
-                      SwitchListTile(
-                        title: const Text(AppStrings.isInverterAC),
-                        value: editInverter,
-                        onChanged: editUnit == PowerUnit.ton
-                            ? (value) =>
-                                  setDialogState(() => editInverter = value)
-                            : null,
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButtonFormField<PowerUnit>(
+                            initialValue: editUnit,
+                            isExpanded: true,
+                            items: PowerUnit.values.map((unit) {
+                              String localizedName = '';
+                              switch (unit) {
+                                case PowerUnit.ampere: localizedName = AppStrings.unitAmpere; break;
+                                case PowerUnit.watt: localizedName = AppStrings.unitWatt; break;
+                                case PowerUnit.ton: localizedName = AppStrings.unitTon; break;
+                              }
+                              return DropdownMenuItem(
+                                value: unit,
+                                child: Text(localizedName),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setDialogState(() {
+                                editUnit = value!;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    TextFormField(
+                      controller: hoursCtrl,
+                      decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
+                      keyboardType: TextInputType.number,
+                    ),
+                    SwitchListTile(
+                      title: const Text(AppStrings.isInverterAC),
+                      value: editInverter,
+                      onChanged: editUnit == PowerUnit.ton
+                          ? (value) => setDialogState(() => editInverter = value)
+                          : null,
+                    ),
+                  ],
                 ),
               ),
               actions: [
@@ -201,21 +164,11 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    if (!(editFormKey.currentState?.validate() ?? false)) {
-                      return;
-                    }
-                    final powerValue = LoadFormValidation.positiveValue(
-                      powerCtrl.text,
-                    );
-                    final dailyHours = LoadFormValidation.hoursValue(
-                      hoursCtrl.text,
-                    );
-                    if (powerValue == null || dailyHours == null) return;
                     final updatedLoad = load.copyWith(
                       name: nameCtrl.text,
-                      powerValue: powerValue,
+                      powerValue: double.parse(powerCtrl.text),
                       unit: editUnit,
-                      dailyUsageHours: dailyHours,
+                      dailyUsageHours: double.parse(hoursCtrl.text),
                       isInverterDevice: editInverter,
                     );
                     ref.read(loadListProvider.notifier).updateLoad(updatedLoad);
@@ -256,27 +209,17 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   labelText: AppStrings.batteryType,
                   border: OutlineInputBorder(),
                   isDense: true,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 initialValue: gridSchedule.batteryType,
                 isExpanded: true,
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Lead-Acid/Gel',
-                    child: Text(AppStrings.batteryGel),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Lithium',
-                    child: Text(AppStrings.batteryLithium),
-                  ),
+                  DropdownMenuItem(value: 'Lead-Acid/Gel', child: Text(AppStrings.batteryGel)),
+                  DropdownMenuItem(value: 'Lithium', child: Text(AppStrings.batteryLithium)),
                 ],
                 onChanged: (value) {
                   if (value != null) {
-                    ref.read(gridScheduleProvider.notifier).state = gridSchedule
-                        .copyWith(batteryType: value);
+                    ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(batteryType: value);
                   }
                 },
               ),
@@ -285,15 +228,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
               title: const Text(AppStrings.isOffGridSystem),
               value: systemMode == SystemMode.offGrid,
-              onChanged:
-                  systemMode == SystemMode.directOnGrid ||
-                      systemMode == SystemMode.ups
-                  ? null
-                  : (value) {
-                      ref.read(systemModeProvider.notifier).state = value
-                          ? SystemMode.offGrid
-                          : SystemMode.hybrid;
-                    },
+              onChanged: systemMode == SystemMode.directOnGrid || systemMode == SystemMode.ups ? null : (value) {
+                ref.read(systemModeProvider.notifier).state = value ? SystemMode.offGrid : SystemMode.hybrid;
+              },
             ),
             if (systemMode != SystemMode.offGrid) ...[
               SwitchListTile(
@@ -301,28 +238,21 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
                 title: const Text(AppStrings.upsMode),
                 value: systemMode == SystemMode.ups,
-                onChanged: systemMode == SystemMode.directOnGrid
-                    ? null
-                    : (value) {
-                        ref.read(systemModeProvider.notifier).state = value
-                            ? SystemMode.ups
-                            : SystemMode.hybrid;
-                      },
+                onChanged: systemMode == SystemMode.directOnGrid ? null : (value) {
+                  ref.read(systemModeProvider.notifier).state = value ? SystemMode.ups : SystemMode.hybrid;
+                },
               ),
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       initialValue: gridSchedule.gridOnHours.toString(),
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.gridOnHours,
-                      ),
+                      decoration: const InputDecoration(labelText: AppStrings.gridOnHours),
                       keyboardType: TextInputType.number,
                       onChanged: (value) {
                         final val = double.tryParse(value);
                         if (val != null) {
-                          ref.read(gridScheduleProvider.notifier).state =
-                              gridSchedule.copyWith(gridOnHours: val);
+                          ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(gridOnHours: val);
                         }
                       },
                     ),
@@ -331,15 +261,12 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   Expanded(
                     child: TextFormField(
                       initialValue: gridSchedule.gridOffHours.toString(),
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.gridOffHours,
-                      ),
+                      decoration: const InputDecoration(labelText: AppStrings.gridOffHours),
                       keyboardType: TextInputType.number,
                       onChanged: (value) {
                         final val = double.tryParse(value);
                         if (val != null) {
-                          ref.read(gridScheduleProvider.notifier).state =
-                              gridSchedule.copyWith(gridOffHours: val);
+                          ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(gridOffHours: val);
                         }
                       },
                     ),
@@ -347,33 +274,19 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (gridSchedule.gridOnHours > 0 &&
-                  systemMode != SystemMode.directOnGrid) ...[
-                Text(
-                  systemMode == SystemMode.ups
-                      ? 'نسبة الاعتماد على الوطنية لشحن البطاريات: 100%'
-                      : 'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
-                ),
+              if (gridSchedule.gridOnHours > 0 && systemMode != SystemMode.directOnGrid) ...[
+                Text(systemMode == SystemMode.ups
+                  ? 'نسبة الاعتماد على الوطنية لشحن البطاريات: 100%'
+                  : 'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%'),
                 Slider(
-                  value: systemMode == SystemMode.ups
-                      ? 100.0
-                      : gridSchedule.gridChargeDependencyPercent,
+                  value: systemMode == SystemMode.ups ? 100.0 : gridSchedule.gridChargeDependencyPercent,
                   min: 0,
                   max: 100,
                   divisions: 20,
-                  label: systemMode == SystemMode.ups
-                      ? '100'
-                      : gridSchedule.gridChargeDependencyPercent
-                            .toStringAsFixed(0),
-                  onChanged: systemMode == SystemMode.ups
-                      ? null
-                      : (value) {
-                          ref
-                              .read(gridScheduleProvider.notifier)
-                              .state = gridSchedule.copyWith(
-                            gridChargeDependencyPercent: value,
-                          );
-                        },
+                  label: systemMode == SystemMode.ups ? '100' : gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0),
+                  onChanged: systemMode == SystemMode.ups ? null : (value) {
+                    ref.read(gridScheduleProvider.notifier).state = gridSchedule.copyWith(gridChargeDependencyPercent: value);
+                  },
                 ),
                 if (systemMode == SystemMode.ups)
                   const Text(
@@ -410,18 +323,19 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
                 );
               },
             ),
+
           ],
         ),
         body: SafeArea(
           child: CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(child: _buildGridSettings()),
+              SliverToBoxAdapter(
+                child: _buildGridSettings(),
+              ),
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: 350,
@@ -438,15 +352,12 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                               child: Form(
                                 key: _detailedFormKey,
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
                                     TextFormField(
                                       controller: _nameController,
-                                      decoration: const InputDecoration(
-                                        labelText: AppStrings.deviceName,
-                                      ),
-                                      validator: LoadFormValidation.deviceName,
+                                      decoration: const InputDecoration(labelText: AppStrings.deviceName),
+                                      validator: (value) => value!.isEmpty ? AppStrings.pleaseEnterName : null,
                                     ),
                                     Row(
                                       children: [
@@ -454,86 +365,58 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                           flex: 2,
                                           child: TextFormField(
                                             controller: _powerValueController,
-                                            decoration: const InputDecoration(
-                                              labelText:
-                                                  AppStrings.powerCapacity,
-                                            ),
+                                            decoration: const InputDecoration(labelText: AppStrings.powerCapacity),
                                             keyboardType: TextInputType.number,
-                                            validator:
-                                                LoadFormValidation.powerValue,
+                                            validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
                                           ),
                                         ),
                                         const SizedBox(width: 16),
                                         Expanded(
                                           flex: 1,
-                                          child:
-                                              DropdownButtonFormField<
-                                                PowerUnit
-                                              >(
-                                                initialValue: _selectedUnit,
-                                                isExpanded: true,
-                                                items: PowerUnit.values.map((
-                                                  unit,
-                                                ) {
-                                                  String localizedName = '';
-                                                  switch (unit) {
-                                                    case PowerUnit.ampere:
-                                                      localizedName =
-                                                          AppStrings.unitAmpere;
-                                                      break;
-                                                    case PowerUnit.watt:
-                                                      localizedName =
-                                                          AppStrings.unitWatt;
-                                                      break;
-                                                    case PowerUnit.ton:
-                                                      localizedName =
-                                                          AppStrings.unitTon;
-                                                      break;
-                                                  }
-                                                  return DropdownMenuItem(
-                                                    value: unit,
-                                                    child: FittedBox(
-                                                      fit: BoxFit.scaleDown,
-                                                      child: Text(
-                                                        localizedName,
-                                                      ),
-                                                    ),
-                                                  );
-                                                }).toList(),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    _selectedUnit = value!;
-                                                  });
-                                                },
-                                              ),
+                                          child: DropdownButtonFormField<PowerUnit>(
+                                            initialValue: _selectedUnit,
+                                            isExpanded: true,
+                                            items: PowerUnit.values.map((unit) {
+                                              String localizedName = '';
+                                              switch (unit) {
+                                                case PowerUnit.ampere: localizedName = AppStrings.unitAmpere; break;
+                                                case PowerUnit.watt: localizedName = AppStrings.unitWatt; break;
+                                                case PowerUnit.ton: localizedName = AppStrings.unitTon; break;
+                                              }
+                                              return DropdownMenuItem(
+                                                value: unit,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  child: Text(localizedName),
+                                                ),
+                                              );
+                                            }).toList(),
+                                            onChanged: (value) {
+                                              setState(() {
+                                                _selectedUnit = value!;
+                                              });
+                                            },
+                                          ),
                                         ),
                                       ],
                                     ),
                                     TextFormField(
                                       controller: _dailyHoursController,
-                                      decoration: const InputDecoration(
-                                        labelText: AppStrings.dailyUsageHours,
-                                      ),
+                                      decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
                                       keyboardType: TextInputType.number,
-                                      validator: LoadFormValidation.dailyHours,
+                                      validator: (value) => value!.isEmpty ? AppStrings.enterHours : null,
                                     ),
                                     SwitchListTile(
-                                      title: const Text(
-                                        AppStrings.isInverterAC,
-                                      ),
+                                      title: const Text(AppStrings.isInverterAC),
                                       value: _isInverter,
                                       onChanged: _selectedUnit == PowerUnit.ton
-                                          ? (value) => setState(
-                                              () => _isInverter = value,
-                                            )
-                                          : null,
+                                        ? (value) => setState(() => _isInverter = value)
+                                        : null,
                                     ),
                                     const SizedBox(height: 16),
                                     ElevatedButton(
                                       onPressed: _addDetailedLoad,
-                                      child: const Text(
-                                        AppStrings.addLoadButton,
-                                      ),
+                                      child: const Text(AppStrings.addLoadButton),
                                     ),
                                   ],
                                 ),
@@ -553,32 +436,24 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                               child: Form(
                                 key: _quickFormKey,
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
                                     TextFormField(
                                       controller: _quickPowerController,
-                                      decoration: const InputDecoration(
-                                        labelText:
-                                            '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})',
-                                      ),
+                                      decoration: const InputDecoration(labelText: '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})'),
                                       keyboardType: TextInputType.number,
-                                      validator: LoadFormValidation.powerValue,
+                                      validator: (value) => value!.isEmpty ? AppStrings.enterValue : null,
                                     ),
                                     TextFormField(
                                       controller: _quickHoursController,
-                                      decoration: const InputDecoration(
-                                        labelText: AppStrings.dailyUsageHours,
-                                      ),
+                                      decoration: const InputDecoration(labelText: AppStrings.dailyUsageHours),
                                       keyboardType: TextInputType.number,
-                                      validator: LoadFormValidation.dailyHours,
+                                      validator: (value) => value!.isEmpty ? AppStrings.enterHours : null,
                                     ),
                                     const SizedBox(height: 16),
                                     ElevatedButton(
                                       onPressed: _addQuickLoad,
-                                      child: const Text(
-                                        AppStrings.addLoadButton,
-                                      ),
+                                      child: const Text(AppStrings.addLoadButton),
                                     ),
                                   ],
                                 ),
@@ -597,24 +472,18 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   margin: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: SwitchListTile(
                     dense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
                     title: const Text(AppStrings.daytimeOnlyMode),
                     value: systemMode == SystemMode.directOnGrid,
-                    onChanged:
-                        systemMode == SystemMode.ups ||
-                            systemMode == SystemMode.offGrid
-                        ? null
-                        : (value) {
-                            ref.read(systemModeProvider.notifier).state = value
-                                ? SystemMode.directOnGrid
-                                : SystemMode.hybrid;
-                          },
+                    onChanged: systemMode == SystemMode.ups || systemMode == SystemMode.offGrid ? null : (value) {
+                      ref.read(systemModeProvider.notifier).state = value ? SystemMode.directOnGrid : SystemMode.hybrid;
+                    },
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(child: Divider()),
+              const SliverToBoxAdapter(
+                child: Divider(),
+              ),
               if (loads.isEmpty)
                 const SliverToBoxAdapter(
                   child: Padding(
@@ -624,32 +493,31 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 )
               else
                 SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final load = loads[index];
-                    return ListTile(
-                      title: Text(load.name),
-                      subtitle: Text(
-                        '${load.powerValue} ${load.unit.name.toUpperCase()} - ${load.dailyUsageHours} ${AppStrings.hrsDay}',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () => _showEditDialog(load),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              ref
-                                  .read(loadListProvider.notifier)
-                                  .removeLoad(load.id);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }, childCount: loads.length),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final load = loads[index];
+                      return ListTile(
+                        title: Text(load.name),
+                        subtitle: Text('${load.powerValue} ${load.unit.name.toUpperCase()} - ${load.dailyUsageHours} ${AppStrings.hrsDay}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showEditDialog(load),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {
+                                ref.read(loadListProvider.notifier).removeLoad(load.id);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    childCount: loads.length,
+                  ),
                 ),
               SliverToBoxAdapter(
                 child: Padding(
@@ -665,9 +533,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const DashboardScreen(),
-                        ),
+                        MaterialPageRoute(builder: (context) => const DashboardScreen()),
                       );
                     },
                   ),
