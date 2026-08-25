@@ -9,6 +9,7 @@ void main() {
 
     expect(find.text(AppStrings.addElectricalLoads), findsOneWidget);
     expect(find.text(AppStrings.unitWatt), findsOneWidget);
+    expect(find.text(AppStrings.unitAmpere), findsNothing);
     expect(find.text(AppStrings.daytimeUsageHours), findsOneWidget);
     expect(find.text(AppStrings.nighttimeUsageHours), findsOneWidget);
   });

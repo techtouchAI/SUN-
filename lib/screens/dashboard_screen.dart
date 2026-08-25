@@ -159,177 +159,175 @@ class DashboardScreen extends ConsumerWidget {
                 textAlign: TextAlign.center,
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
-                  childAspectRatio: 0.65,
-                  children: [
-                    _buildResultCard(
-                      title: AppStrings.totalConsumption,
-                      value:
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 16.0,
+                mainAxisSpacing: 16.0,
+                childAspectRatio: 0.65,
+                children: [
+                  _buildResultCard(
+                    title: AppStrings.totalConsumption,
+                    value:
+                        '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
+                    icon: Icons.electrical_services,
+                    color: Colors.blue,
+                    onTap: () => _showExplanationModal(
+                      context,
+                      AppStrings.consumptionExplanationTitle,
+                      [
+                        '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} Wh',
+                        '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} Wh',
+                        if (systemMode != SystemMode.directOnGrid)
+                          '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
+                      ],
+                      headerValue:
                           '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
-                      icon: Icons.electrical_services,
-                      color: Colors.blue,
-                      onTap: () => _showExplanationModal(
-                        context,
-                        AppStrings.consumptionExplanationTitle,
-                        [
-                          '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} Wh',
-                          '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} Wh',
-                          if (systemMode != SystemMode.directOnGrid)
-                            '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
-                        ],
-                        headerValue:
-                            '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
-                      ),
                     ),
-                    _buildResultCard(
-                      title: AppStrings.requiredInverter,
-                      value:
+                  ),
+                  _buildResultCard(
+                    title: AppStrings.requiredInverter,
+                    value:
+                        '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
+                    icon: Icons.power,
+                    color: Colors.orange,
+                    onTap: () => _showExplanationModal(
+                      context,
+                      AppStrings.inverterExplanationTitle,
+                      [
+                        'النوع المقترح: ${result.suggestedInverterType}',
+                        AppStrings.recommendedInverterBrands,
+                        result.breakdown.inverterExplanationAr,
+                        if (result.suggestedIpRating.isNotEmpty)
+                          'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
+                      ],
+                      headerValue:
                           '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
-                      icon: Icons.power,
-                      color: Colors.orange,
+                    ),
+                  ),
+                  if (systemMode != SystemMode.directOnGrid)
+                    _buildResultCard(
+                      title: AppStrings.batteryBank,
+                      value: result.requiredBatteryCapacityAh > 0
+                          ? '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V'
+                          : 'غير مطلوب — لا يوجد استهلاك ليلي',
+                      icon: Icons.battery_charging_full,
+                      color: Colors.green,
                       onTap: () => _showExplanationModal(
                         context,
-                        AppStrings.inverterExplanationTitle,
-                        [
-                          'النوع المقترح: ${result.suggestedInverterType}',
-                          AppStrings.recommendedInverterBrands,
-                          result.breakdown.inverterExplanationAr,
-                          if (result.suggestedIpRating.isNotEmpty)
-                            'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
-                        ],
-                        headerValue:
-                            '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
+                        AppStrings.batteryExplanationTitle,
+                        result.requiredBatteryCapacityAh > 0
+                            ? [
+                                AppStrings.batteryExplanationBody,
+                                result.breakdown.batteryExplanationAr,
+                                if (result.requiredGridChargingAmps > 0)
+                                  '⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
+                                if (result.requiredGridChargingAcAmps > 0)
+                                  '🔌 السحب الفعلي من الشبكة (AC): ${result.requiredGridChargingAcAmps.toStringAsFixed(1)} A',
+                                if (result.timeToFullHours > 0)
+                                  '⏳ الوقت المقدر لشحن البطاريات بالكامل: ${result.timeToFullHours.toStringAsFixed(1)} ساعات',
+                                if (result.suggestedChargePriority.isNotEmpty)
+                                  'أولوية الشحن المقترحة: ${result.suggestedChargePriority}',
+                                if (result.gelBatteryWarning.isNotEmpty)
+                                  result.gelBatteryWarning,
+                              ]
+                            : [
+                                'لم تُدخل ساعات تشغيل ليلية للأحمال؛ لذلك لا توجد طاقة ليلية تتطلب بطاريات في هذه النتيجة.',
+                              ],
+                        headerValue: result.requiredBatteryCapacityAh > 0
+                            ? '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh)'
+                            : 'غير مطلوب',
+                        headerSubtitle: result.requiredBatteryCapacityAh > 0
+                            ? 'بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V'
+                            : null,
                       ),
                     ),
-                    if (systemMode != SystemMode.directOnGrid)
-                      _buildResultCard(
-                        title: AppStrings.batteryBank,
-                        value: result.requiredBatteryCapacityAh > 0
-                            ? '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V'
-                            : 'غير مطلوب — لا يوجد استهلاك ليلي',
-                        icon: Icons.battery_charging_full,
-                        color: Colors.green,
-                        onTap: () => _showExplanationModal(
-                          context,
-                          AppStrings.batteryExplanationTitle,
-                          result.requiredBatteryCapacityAh > 0
-                              ? [
-                                  AppStrings.batteryExplanationBody,
-                                  result.breakdown.batteryExplanationAr,
-                                  if (result.requiredGridChargingAmps > 0)
-                                    '⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
-                                  if (result.requiredGridChargingAcAmps > 0)
-                                    '🔌 السحب الفعلي من الشبكة (AC): ${result.requiredGridChargingAcAmps.toStringAsFixed(1)} A',
-                                  if (result.timeToFullHours > 0)
-                                    '⏳ الوقت المقدر لشحن البطاريات بالكامل: ${result.timeToFullHours.toStringAsFixed(1)} ساعات',
-                                  if (result.suggestedChargePriority.isNotEmpty)
-                                    'أولوية الشحن المقترحة: ${result.suggestedChargePriority}',
-                                  if (result.gelBatteryWarning.isNotEmpty)
-                                    result.gelBatteryWarning,
-                                ]
-                              : [
-                                  'لم تُدخل ساعات تشغيل ليلية للأحمال؛ لذلك لا توجد طاقة ليلية تتطلب بطاريات في هذه النتيجة.',
-                                ],
-                          headerValue: result.requiredBatteryCapacityAh > 0
-                              ? '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh)'
-                              : 'غير مطلوب',
-                          headerSubtitle: result.requiredBatteryCapacityAh > 0
-                              ? 'بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V'
-                              : null,
-                        ),
-                      ),
-                    if (systemMode != SystemMode.ups)
-                      _buildResultCard(
-                        title: AppStrings.solarPanels,
-                        value:
-                            '${result.requiredPanels} ${AppStrings.panelsUnit} (تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W)',
-                        icon: Icons.solar_power,
-                        color: Colors.amber,
-                        onTap: () => _showExplanationModal(
-                          context,
-                          AppStrings.panelsExplanationTitle,
-                          [
-                            AppStrings.recommendedPanelBrands,
-                            '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
-                            result.breakdown.daytimePanelsExplanationAr,
-                            if (systemMode != SystemMode.directOnGrid) ...[
-                              '\n${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
-                              result.breakdown.batteryPanelsExplanationAr,
-                              if (result
-                                  .breakdown
-                                  .mpptRecommendationAr
-                                  .isNotEmpty)
-                                '\n${result.breakdown.mpptRecommendationAr}',
-                            ],
-                            '\nالمجموع الكلي: ${result.requiredPanels} لوح',
-                            if (systemMode != SystemMode.directOnGrid)
-                              '\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.',
+                  if (systemMode != SystemMode.ups)
+                    _buildResultCard(
+                      title: AppStrings.solarPanels,
+                      value:
+                          '${result.requiredPanels} ${AppStrings.panelsUnit} (تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W)',
+                      icon: Icons.solar_power,
+                      color: Colors.amber,
+                      onTap: () => _showExplanationModal(
+                        context,
+                        AppStrings.panelsExplanationTitle,
+                        [
+                          AppStrings.recommendedPanelBrands,
+                          '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
+                          result.breakdown.daytimePanelsExplanationAr,
+                          if (systemMode != SystemMode.directOnGrid) ...[
+                            '\n${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
+                            result.breakdown.batteryPanelsExplanationAr,
                             if (result
                                 .breakdown
-                                .floatPreservationRecommendationAr
+                                .mpptRecommendationAr
                                 .isNotEmpty)
-                              '\n${result.breakdown.floatPreservationRecommendationAr}',
+                              '\n${result.breakdown.mpptRecommendationAr}',
                           ],
-                          headerValue:
-                              '${result.requiredPanels} ${AppStrings.panelsUnit}',
-                          headerSubtitle:
-                              'تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W',
-                        ),
-                      ),
-                    _buildResultCard(
-                      title: AppStrings.energyLossTitle,
-                      value: result.energyLossPercentage,
-                      icon: Icons.warning_amber_rounded,
-                      color: Colors.deepOrange,
-                      onTap: () => _showExplanationModal(
-                        context,
-                        AppStrings.energyLossExplanationTitle,
-                        [
-                          AppStrings.energyLossTemp,
-                          AppStrings.energyLossInverter,
-                          AppStrings.energyLossWiring,
-                          AppStrings.energyLossSoiling,
-                        ],
-                        headerValue: result.energyLossPercentage,
-                      ),
-                    ),
-                    _buildResultCard(
-                      title: AppStrings.safetyStandardsTitle,
-                      value: result.safetyAudit.hasCalculatedValue
-                          ? 'حساب تلقائي'
-                          : 'غير متاح',
-                      icon: Icons.health_and_safety,
-                      color: Colors.redAccent,
-                      onTap: () => _showSafetyAuditModal(context, result),
-                    ),
-                    _buildResultCard(
-                      title: AppStrings.estimatedSystemCost,
-                      value: '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
-                      icon: Icons.attach_money,
-                      color: Colors.green.shade700,
-                      onTap: () => _showExplanationModal(
-                        context,
-                        AppStrings.estimatedSystemCost,
-                        [
-                          '${result.estimatedCostUsd.toStringAsFixed(2)} ${AppStrings.costInUsd}',
-                          '${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ${AppStrings.costInWarqa}',
-                          '${(result.estimatedCostUsd * ref.watch(iqdExchangeRateProvider)).toStringAsFixed(0)} ${AppStrings.costInIqd}',
-                          '\n${AppStrings.pricingDisclaimer}',
+                          '\nالمجموع الكلي: ${result.requiredPanels} لوح',
+                          if (systemMode != SystemMode.directOnGrid)
+                            '\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.',
+                          if (result
+                              .breakdown
+                              .floatPreservationRecommendationAr
+                              .isNotEmpty)
+                            '\n${result.breakdown.floatPreservationRecommendationAr}',
                         ],
                         headerValue:
-                            '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
+                            '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                        headerSubtitle:
+                            'تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W',
                       ),
                     ),
-                  ],
-                ),
+                  _buildResultCard(
+                    title: AppStrings.energyLossTitle,
+                    value: result.energyLossPercentage,
+                    icon: Icons.warning_amber_rounded,
+                    color: Colors.deepOrange,
+                    onTap: () => _showExplanationModal(
+                      context,
+                      AppStrings.energyLossExplanationTitle,
+                      [
+                        AppStrings.energyLossTemp,
+                        AppStrings.energyLossInverter,
+                        AppStrings.energyLossWiring,
+                        AppStrings.energyLossSoiling,
+                      ],
+                      headerValue: result.energyLossPercentage,
+                    ),
+                  ),
+                  _buildResultCard(
+                    title: AppStrings.safetyStandardsTitle,
+                    value: result.safetyAudit.hasCalculatedValue
+                        ? 'حساب تلقائي'
+                        : 'غير متاح',
+                    icon: Icons.health_and_safety,
+                    color: Colors.redAccent,
+                    onTap: () => _showSafetyAuditModal(context, result),
+                  ),
+                  _buildResultCard(
+                    title: AppStrings.estimatedSystemCost,
+                    value: '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
+                    icon: Icons.attach_money,
+                    color: Colors.green.shade700,
+                    onTap: () => _showExplanationModal(
+                      context,
+                      AppStrings.estimatedSystemCost,
+                      [
+                        '${result.estimatedCostUsd.toStringAsFixed(2)} ${AppStrings.costInUsd}',
+                        '${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ${AppStrings.costInWarqa}',
+                        '${(result.estimatedCostUsd * ref.watch(iqdExchangeRateProvider)).toStringAsFixed(0)} ${AppStrings.costInIqd}',
+                        '\n${AppStrings.pricingDisclaimer}',
+                      ],
+                      headerValue:
+                          '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
