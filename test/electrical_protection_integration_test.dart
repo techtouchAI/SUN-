@@ -110,4 +110,44 @@ void main() {
       );
     },
   );
+
+  test('passes saved topology and cable data into the protection report', () {
+    final baseline = repository.calculateSystem(
+      [load(1000)],
+      gridVoltage: 220,
+      systemVoltage: 48,
+      panelCapacity: 540,
+      panelIsc: 13.8,
+      systemMode: SystemMode.offGrid,
+      gridSchedule: offGridSchedule(),
+    );
+    final result = repository.calculateSystem(
+      [load(1000)],
+      gridVoltage: 220,
+      systemVoltage: 48,
+      panelCapacity: 540,
+      panelIsc: 13.8,
+      systemMode: SystemMode.offGrid,
+      gridSchedule: offGridSchedule(),
+      pvModulesPerString: 1,
+      pvParallelStrings: baseline.requiredPanels,
+      dcCableOneWayLengthMeters: 20,
+      dcCableMaterial: 'copper',
+      dcCableInsulation: '90C',
+      dcCableInstallationMethod: 'conduit',
+      dcCableAmbientTemperatureCelsius: 35,
+      dcCableLoadedConductors: 2,
+    );
+
+    final pv = result.safetyAudit.resultFor(
+      ProtectionResultKind.pvArrayCurrent,
+    );
+    final cable = result.safetyAudit.resultFor(
+      ProtectionResultKind.dcConductorSize,
+    );
+
+    expect(pv.status, ProtectionResultStatus.calculated);
+    expect(pv.value, closeTo(13.8 * baseline.requiredPanels, 0.0001));
+    expect(cable.status, ProtectionResultStatus.unsupportedConfiguration);
+  });
 }

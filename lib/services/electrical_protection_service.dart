@@ -34,19 +34,60 @@ class ElectricalProtectionService {
         'يتطلب تيار مصفوفة PV قيمة Isc موجبة وعدد ألواح محسوباً أكبر من صفر.',
       );
     }
-    return _missing(
-      ProtectionResultKind.pvArrayCurrent,
-      'تكوين الألواح على التوالي/التوازي غير محفوظ في SUN؛ لا يمكن اشتقاق تيار مصفوفة PV أو اختيار حماية PV من Isc وعدد الألواح فقط.',
+    final modulesPerString = input.pvModulesPerString;
+    final parallelStrings = input.pvParallelStrings;
+    if (modulesPerString == null ||
+        modulesPerString <= 0 ||
+        parallelStrings == null ||
+        parallelStrings <= 0) {
+      return _missing(
+        ProtectionResultKind.pvArrayCurrent,
+        'تكوين الألواح على التوالي/التوازي غير محفوظ في SUN؛ لا يمكن اشتقاق تيار مصفوفة PV أو اختيار حماية PV من Isc وعدد الألواح فقط.',
+        trace: [
+          SafetyAuditTraceEntry(
+            stageAr: 'Source Input',
+            messageAr:
+                'Isc اللوح = ${input.panelIscAmps.toStringAsFixed(2)} A؛ عدد الألواح = ${input.requiredPanels}.',
+          ),
+          const SafetyAuditTraceEntry(
+            stageAr: 'Validation',
+            messageAr:
+                'تكوين strings غير متاح؛ تم حجب تيار مصفوفة PV بدلاً من افتراض التوصيل.',
+          ),
+        ],
+      );
+    }
+    if (modulesPerString * parallelStrings != input.requiredPanels) {
+      return _invalid(
+        ProtectionResultKind.pvArrayCurrent,
+        'تكوين التوالي/التوازي المحفوظ لا يطابق عدد الألواح المحسوب في SUN.',
+      );
+    }
+    final current = input.panelIscAmps * parallelStrings;
+    if (!_positiveFinite(current)) {
+      return _invalid(
+        ProtectionResultKind.pvArrayCurrent,
+        'تيار مصفوفة PV غير صالح بعد تطبيق التوازي المحفوظ.',
+      );
+    }
+    return SafetyProtectionResult(
+      kind: ProtectionResultKind.pvArrayCurrent,
+      status: ProtectionResultStatus.calculated,
+      value: current,
+      unit: 'A',
       trace: [
         SafetyAuditTraceEntry(
           stageAr: 'Source Input',
           messageAr:
-              'Isc اللوح = ${input.panelIscAmps.toStringAsFixed(2)} A؛ عدد الألواح = ${input.requiredPanels}.',
+              'Isc اللوح = ${input.panelIscAmps.toStringAsFixed(2)} A؛ $parallelStrings مسارات متوازية، وكل مسار $modulesPerString ألواح على التوالي.',
         ),
         const SafetyAuditTraceEntry(
-          stageAr: 'Validation',
-          messageAr:
-              'تكوين strings غير متاح؛ تم حجب تيار مصفوفة PV بدلاً من افتراض التوصيل.',
+          stageAr: 'Calculation Rule',
+          messageAr: 'تيار مصفوفة PV = Isc اللوح × عدد المسارات المتوازية.',
+        ),
+        SafetyAuditTraceEntry(
+          stageAr: 'Final Result',
+          messageAr: 'تيار مصفوفة PV = ${current.toStringAsFixed(2)} A.',
         ),
       ],
     );
@@ -162,25 +203,57 @@ class ElectricalProtectionService {
         'لا يوجد مسار بطارية DC مطلوب في نتيجة SUN الحالية.',
       );
     }
-    return _missing(
-      ProtectionResultKind.dcConductorSize,
-      'طول المسار ومادة الموصل والعزل وطريقة التمديد ودرجة الحرارة وعدد الموصلات الحاملة للتيار غير محفوظة في SUN؛ لا يمكن إخراج mm² موثوق.',
+    final cableDataComplete =
+        input.dcCableOneWayLengthMeters != null &&
+        input.dcCableOneWayLengthMeters! > 0 &&
+        _hasText(input.dcCableMaterial) &&
+        _hasText(input.dcCableInsulation) &&
+        _hasText(input.dcCableInstallationMethod) &&
+        input.dcCableAmbientTemperatureCelsius != null &&
+        input.dcCableAmbientTemperatureCelsius!.isFinite &&
+        input.dcCableLoadedConductors != null &&
+        input.dcCableLoadedConductors! > 0;
+    if (!cableDataComplete) {
+      return _missing(
+        ProtectionResultKind.dcConductorSize,
+        'طول المسار ومادة الموصل والعزل وطريقة التمديد ودرجة الحرارة وعدد الموصلات الحاملة للتيار غير محفوظة في SUN؛ لا يمكن إخراج mm² موثوق.',
+        trace: const [
+          SafetyAuditTraceEntry(
+            stageAr: 'Source Input',
+            messageAr:
+                'بيانات مسار موصل DC والتركيب المطلوبة لتقييم المقطع غير محفوظة في SUN.',
+          ),
+          SafetyAuditTraceEntry(
+            stageAr: 'Validation',
+            messageAr:
+                'تم حجب مقطع موصل DC؛ لا يمكن إخراج mm² موثوق من تيار ناقل DC وحده.',
+          ),
+        ],
+      );
+    }
+    return SafetyProtectionResult(
+      kind: ProtectionResultKind.dcConductorSize,
+      status: ProtectionResultStatus.unsupportedConfiguration,
+      unavailableReasonAr:
+          'بيانات الكابل محفوظة، لكن SUN لا يملك قاعدة معيارية محلية لاختيار مقطع mm² أو تصنيف حماية.',
       trace: const [
         SafetyAuditTraceEntry(
           stageAr: 'Source Input',
           messageAr:
-              'بيانات مسار موصل DC والتركيب المطلوبة لتقييم المقطع غير محفوظة في SUN.',
+              'تم حفظ طول المسار ومادة الموصل والعزل وطريقة التمديد ودرجة الحرارة وعدد الموصلات.',
         ),
         SafetyAuditTraceEntry(
           stageAr: 'Validation',
           messageAr:
-              'تم حجب مقطع موصل DC؛ لا يمكن إخراج mm² موثوق من تيار ناقل DC وحده.',
+              'لا توجد مجموعة قواعد معيارية في SUN لاختيار mm²؛ تم حجب المقطع بدلاً من اختيار قيمة عامة.',
         ),
       ],
     );
   }
 
   bool _positiveFinite(double value) => value.isFinite && value > 0;
+
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
   SafetyProtectionResult _notApplicable(
     ProtectionResultKind kind,

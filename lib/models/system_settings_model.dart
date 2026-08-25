@@ -1,4 +1,6 @@
+import 'dc_cable_installation_model.dart';
 import 'grid_schedule_model.dart';
+import 'pv_array_topology_model.dart';
 import 'system_mode.dart';
 
 class SystemSettingsModel {
@@ -18,6 +20,8 @@ class SystemSettingsModel {
   final double iqdExchangeRate;
   final GridScheduleModel gridSchedule;
   final String projectName;
+  final PvArrayTopologyModel pvTopology;
+  final DcCableInstallationModel dcCableInstallation;
 
   const SystemSettingsModel({
     this.panelCapacity = 540,
@@ -36,6 +40,8 @@ class SystemSettingsModel {
     this.iqdExchangeRate = 1500,
     this.gridSchedule = const GridScheduleModel(),
     this.projectName = 'مشروع الطاقة الشمسية',
+    this.pvTopology = const PvArrayTopologyModel(),
+    this.dcCableInstallation = const DcCableInstallationModel(),
   });
 
   SystemSettingsModel copyWith({
@@ -55,6 +61,8 @@ class SystemSettingsModel {
     double? iqdExchangeRate,
     GridScheduleModel? gridSchedule,
     String? projectName,
+    PvArrayTopologyModel? pvTopology,
+    DcCableInstallationModel? dcCableInstallation,
   }) {
     return SystemSettingsModel(
       panelCapacity: panelCapacity ?? this.panelCapacity,
@@ -73,6 +81,8 @@ class SystemSettingsModel {
       iqdExchangeRate: iqdExchangeRate ?? this.iqdExchangeRate,
       gridSchedule: gridSchedule ?? this.gridSchedule,
       projectName: projectName ?? this.projectName,
+      pvTopology: pvTopology ?? this.pvTopology,
+      dcCableInstallation: dcCableInstallation ?? this.dcCableInstallation,
     );
   }
 
@@ -93,6 +103,8 @@ class SystemSettingsModel {
     'iqdExchangeRate': iqdExchangeRate,
     'gridSchedule': gridSchedule.toJson(),
     'projectName': projectName,
+    'pvTopology': pvTopology.toJson(),
+    'dcCableInstallation': dcCableInstallation.toJson(),
   };
 
   factory SystemSettingsModel.fromJson(Map<String, dynamic> json) {
@@ -102,6 +114,8 @@ class SystemSettingsModel {
       orElse: () => SystemMode.hybrid,
     );
     final rawGrid = json['gridSchedule'];
+    final rawPvTopology = json['pvTopology'];
+    final rawDcCableInstallation = json['dcCableInstallation'];
     return SystemSettingsModel(
       panelCapacity: _double(json['panelCapacity'], 540),
       panelIsc: _double(json['panelIsc'], 13.8),
@@ -121,6 +135,16 @@ class SystemSettingsModel {
           ? GridScheduleModel.fromJson(Map<String, dynamic>.from(rawGrid))
           : const GridScheduleModel(),
       projectName: _string(json['projectName'], 'مشروع الطاقة الشمسية'),
+      pvTopology: rawPvTopology is Map
+          ? PvArrayTopologyModel.fromJson(
+              Map<String, dynamic>.from(rawPvTopology),
+            )
+          : const PvArrayTopologyModel(),
+      dcCableInstallation: rawDcCableInstallation is Map
+          ? DcCableInstallationModel.fromJson(
+              Map<String, dynamic>.from(rawDcCableInstallation),
+            )
+          : const DcCableInstallationModel(),
     );
   }
 }

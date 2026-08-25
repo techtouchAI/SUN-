@@ -62,6 +62,14 @@ class ProtectionCalculationInputs {
   final double requiredInverterCapacityWatts;
   final double requiredBatteryCapacityAh;
   final double nighttimeConsumptionWh;
+  final int? pvModulesPerString;
+  final int? pvParallelStrings;
+  final double? dcCableOneWayLengthMeters;
+  final String? dcCableMaterial;
+  final String? dcCableInsulation;
+  final String? dcCableInstallationMethod;
+  final double? dcCableAmbientTemperatureCelsius;
+  final int? dcCableLoadedConductors;
 
   const ProtectionCalculationInputs({
     required this.systemMode,
@@ -72,6 +80,14 @@ class ProtectionCalculationInputs {
     required this.requiredInverterCapacityWatts,
     required this.requiredBatteryCapacityAh,
     required this.nighttimeConsumptionWh,
+    this.pvModulesPerString,
+    this.pvParallelStrings,
+    this.dcCableOneWayLengthMeters,
+    this.dcCableMaterial,
+    this.dcCableInsulation,
+    this.dcCableInstallationMethod,
+    this.dcCableAmbientTemperatureCelsius,
+    this.dcCableLoadedConductors,
   });
 }
 
@@ -112,12 +128,18 @@ class SafetyProtectionResult {
   }
 
   String get conciseReasonAr => switch (kind) {
-    ProtectionResultKind.pvArrayCurrent => 'يلزم حفظ التوالي/التوازي.',
+    ProtectionResultKind.pvArrayCurrent =>
+      unavailableReasonAr.contains('لا يطابق')
+          ? 'التوالي/التوازي لا يطابق عدد الألواح.'
+          : 'يلزم حفظ التوالي/التوازي.',
     ProtectionResultKind.inverterDcBusCurrent =>
       'لا توجد بطارية مطلوبة في هذا النظام.',
     ProtectionResultKind.inverterAcOutputCurrent =>
       'بيانات العاكس أو الجهد غير كافية.',
-    ProtectionResultKind.dcConductorSize => 'بيانات الكابل غير محفوظة.',
+    ProtectionResultKind.dcConductorSize =>
+      status == ProtectionResultStatus.unsupportedConfiguration
+          ? 'يلزم معيار لاختيار مقطع السلك.'
+          : 'بيانات الكابل غير محفوظة.',
   };
 }
 

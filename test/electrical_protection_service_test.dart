@@ -15,6 +15,14 @@ void main() {
     double inverterWatts = 5040,
     double batteryAh = 250,
     double nightWh = 2400,
+    int? modulesPerString,
+    int? parallelStrings,
+    double? cableLengthMeters,
+    String? cableMaterial,
+    String? cableInsulation,
+    String? cableInstallationMethod,
+    double? cableAmbientTemperatureCelsius,
+    int? cableLoadedConductors,
   }) => ProtectionCalculationInputs(
     systemMode: mode,
     panelIscAmps: panelIsc,
@@ -24,6 +32,14 @@ void main() {
     requiredInverterCapacityWatts: inverterWatts,
     requiredBatteryCapacityAh: batteryAh,
     nighttimeConsumptionWh: nightWh,
+    pvModulesPerString: modulesPerString,
+    pvParallelStrings: parallelStrings,
+    dcCableOneWayLengthMeters: cableLengthMeters,
+    dcCableMaterial: cableMaterial,
+    dcCableInsulation: cableInsulation,
+    dcCableInstallationMethod: cableInstallationMethod,
+    dcCableAmbientTemperatureCelsius: cableAmbientTemperatureCelsius,
+    dcCableLoadedConductors: cableLoadedConductors,
   );
 
   test('derives inverter DC-bus and AC-output currents from SUN inputs', () {
@@ -72,6 +88,45 @@ void main() {
     expect(cable.status, ProtectionResultStatus.missingData);
     expect(cable.value, isNull);
     expect(cable.unavailableReasonAr, contains('طول المسار'));
+  });
+
+  test('derives PV-array current only from matching saved topology', () {
+    final report = service.evaluate(
+      inputs(modulesPerString: 5, parallelStrings: 3),
+    );
+    final pv = report.resultFor(ProtectionResultKind.pvArrayCurrent);
+
+    expect(pv.status, ProtectionResultStatus.calculated);
+    expect(pv.value, closeTo(41.4, 0.0001));
+    expect(pv.unit, 'A');
+  });
+
+  test('rejects topology that does not match SUN panel count', () {
+    final report = service.evaluate(
+      inputs(modulesPerString: 4, parallelStrings: 3),
+    );
+    final pv = report.resultFor(ProtectionResultKind.pvArrayCurrent);
+
+    expect(pv.status, ProtectionResultStatus.invalidInput);
+    expect(pv.value, isNull);
+  });
+
+  test('recognizes complete cable data without inventing a conductor size', () {
+    final report = service.evaluate(
+      inputs(
+        cableLengthMeters: 18,
+        cableMaterial: 'copper',
+        cableInsulation: '90C',
+        cableInstallationMethod: 'conduit',
+        cableAmbientTemperatureCelsius: 40,
+        cableLoadedConductors: 2,
+      ),
+    );
+    final cable = report.resultFor(ProtectionResultKind.dcConductorSize);
+
+    expect(cable.status, ProtectionResultStatus.unsupportedConfiguration);
+    expect(cable.value, isNull);
+    expect(cable.unavailableReasonAr, contains('بيانات الكابل محفوظة'));
   });
 
   test('changes computed currents whenever existing source values change', () {

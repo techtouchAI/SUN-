@@ -268,6 +268,14 @@ class SolarCalculationRepository {
     double peakSunHours = 4.5,
     double energyLossPercentage = 30.0,
     double daysOfAutonomy = 1.0,
+    int? pvModulesPerString,
+    int? pvParallelStrings,
+    double? dcCableOneWayLengthMeters,
+    String? dcCableMaterial,
+    String? dcCableInsulation,
+    String? dcCableInstallationMethod,
+    double? dcCableAmbientTemperatureCelsius,
+    int? dcCableLoadedConductors,
   }) {
     if (loads.isEmpty) {
       throw const InvalidLoadInput('لا توجد أحمال لإجراء الحساب.');
@@ -411,6 +419,14 @@ class SolarCalculationRepository {
         requiredInverterCapacityWatts: inverterCapacity,
         requiredBatteryCapacityAh: batteryCapacityAh,
         nighttimeConsumptionWh: nighttimeWh,
+        pvModulesPerString: pvModulesPerString,
+        pvParallelStrings: pvParallelStrings,
+        dcCableOneWayLengthMeters: dcCableOneWayLengthMeters,
+        dcCableMaterial: dcCableMaterial,
+        dcCableInsulation: dcCableInsulation,
+        dcCableInstallationMethod: dcCableInstallationMethod,
+        dcCableAmbientTemperatureCelsius: dcCableAmbientTemperatureCelsius,
+        dcCableLoadedConductors: dcCableLoadedConductors,
       ),
     );
     final inverterCost = inverterCapacity / 1000.0 * estimatedInverterUsdPerKw;

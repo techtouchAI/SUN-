@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/errors/app_exceptions.dart';
 import '../core/validation/input_validator.dart';
 import '../models/calculation_state.dart';
+import '../models/dc_cable_installation_model.dart';
 import '../models/final_calculation_dto.dart';
 import '../models/grid_schedule_model.dart';
 import '../models/load_list_state.dart';
 import '../models/load_model.dart';
+import '../models/pv_array_topology_model.dart';
 import '../models/system_mode.dart';
 import '../models/system_settings_model.dart';
 import '../models/system_result_model.dart';
@@ -54,6 +56,14 @@ final gridScheduleProvider = StateProvider<GridScheduleModel>(
 );
 final gridVoltageProvider = StateProvider<double>((ref) => 220.0);
 final iqdExchangeRateProvider = StateProvider<double>((ref) => 1500.0);
+final pvModulesPerStringProvider = StateProvider<int?>((ref) => null);
+final pvParallelStringsProvider = StateProvider<int?>((ref) => null);
+final dcCableLengthMetersProvider = StateProvider<double?>((ref) => null);
+final dcCableMaterialProvider = StateProvider<String?>((ref) => null);
+final dcCableInsulationProvider = StateProvider<String?>((ref) => null);
+final dcCableInstallationMethodProvider = StateProvider<String?>((ref) => null);
+final dcCableAmbientTemperatureProvider = StateProvider<double?>((ref) => null);
+final dcCableLoadedConductorsProvider = StateProvider<int?>((ref) => null);
 
 class LoadListNotifier extends StateNotifier<LoadListState> {
   final LoadPersistenceRepository _repository;
@@ -228,6 +238,20 @@ final systemSettingsProvider =
         daysOfAutonomy: ref.read(daysOfAutonomyProvider),
         iqdExchangeRate: ref.read(iqdExchangeRateProvider),
         gridSchedule: ref.read(gridScheduleProvider),
+        pvTopology: PvArrayTopologyModel(
+          modulesPerString: ref.read(pvModulesPerStringProvider),
+          parallelStrings: ref.read(pvParallelStringsProvider),
+        ),
+        dcCableInstallation: DcCableInstallationModel(
+          oneWayLengthMeters: ref.read(dcCableLengthMetersProvider),
+          conductorMaterial: ref.read(dcCableMaterialProvider),
+          insulationRating: ref.read(dcCableInsulationProvider),
+          installationMethod: ref.read(dcCableInstallationMethodProvider),
+          ambientTemperatureCelsius: ref.read(
+            dcCableAmbientTemperatureProvider,
+          ),
+          loadedConductors: ref.read(dcCableLoadedConductorsProvider),
+        ),
       );
 
       void applyLegacySettings(SystemSettingsModel value) {
@@ -250,6 +274,22 @@ final systemSettingsProvider =
         ref.read(iqdExchangeRateProvider.notifier).state =
             value.iqdExchangeRate;
         ref.read(gridScheduleProvider.notifier).state = value.gridSchedule;
+        ref.read(pvModulesPerStringProvider.notifier).state =
+            value.pvTopology.modulesPerString;
+        ref.read(pvParallelStringsProvider.notifier).state =
+            value.pvTopology.parallelStrings;
+        ref.read(dcCableLengthMetersProvider.notifier).state =
+            value.dcCableInstallation.oneWayLengthMeters;
+        ref.read(dcCableMaterialProvider.notifier).state =
+            value.dcCableInstallation.conductorMaterial;
+        ref.read(dcCableInsulationProvider.notifier).state =
+            value.dcCableInstallation.insulationRating;
+        ref.read(dcCableInstallationMethodProvider.notifier).state =
+            value.dcCableInstallation.installationMethod;
+        ref.read(dcCableAmbientTemperatureProvider.notifier).state =
+            value.dcCableInstallation.ambientTemperatureCelsius;
+        ref.read(dcCableLoadedConductorsProvider.notifier).state =
+            value.dcCableInstallation.loadedConductors;
       }
 
       final notifier = SystemSettingsNotifier(
@@ -305,6 +345,30 @@ final systemSettingsProvider =
       ref.listen<GridScheduleModel>(gridScheduleProvider, (_, _) {
         notifier.updateFromLegacySettings();
       });
+      ref.listen<int?>(pvModulesPerStringProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<int?>(pvParallelStringsProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double?>(dcCableLengthMetersProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<String?>(dcCableMaterialProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<String?>(dcCableInsulationProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<String?>(dcCableInstallationMethodProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<double?>(dcCableAmbientTemperatureProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
+      ref.listen<int?>(dcCableLoadedConductorsProvider, (_, _) {
+        notifier.updateFromLegacySettings();
+      });
       return notifier;
     });
 
@@ -335,6 +399,17 @@ final calculationStateProvider = Provider<CalculationState>((ref) {
       peakSunHours: settings.peakSunHours,
       energyLossPercentage: settings.energyLossPercentage,
       daysOfAutonomy: settings.daysOfAutonomy,
+      pvModulesPerString: settings.pvTopology.modulesPerString,
+      pvParallelStrings: settings.pvTopology.parallelStrings,
+      dcCableOneWayLengthMeters:
+          settings.dcCableInstallation.oneWayLengthMeters,
+      dcCableMaterial: settings.dcCableInstallation.conductorMaterial,
+      dcCableInsulation: settings.dcCableInstallation.insulationRating,
+      dcCableInstallationMethod:
+          settings.dcCableInstallation.installationMethod,
+      dcCableAmbientTemperatureCelsius:
+          settings.dcCableInstallation.ambientTemperatureCelsius,
+      dcCableLoadedConductors: settings.dcCableInstallation.loadedConductors,
     );
     return CalculationReady(result);
   } on AppException catch (error) {
