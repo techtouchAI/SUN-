@@ -363,6 +363,23 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 children: [
                   Expanded(
                     child: TextFormField(
+                      initialValue: gridSchedule.gridStartHour.toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'ساعة بدء التوفر',
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        final val = double.tryParse(value);
+                        if (val != null) {
+                          ref.read(gridScheduleProvider.notifier).state =
+                              gridSchedule.copyWith(gridStartHour: val);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
                       initialValue: gridSchedule.gridOnHours.toString(),
                       decoration: const InputDecoration(
                         labelText: AppStrings.gridOnHours,

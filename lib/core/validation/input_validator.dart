@@ -33,7 +33,6 @@ class InputValidator {
     required double panelIsc,
     required double solarWattPrice,
     required double batteryAmperePrice,
-    required double breakerPrice,
     required double wiringCost,
   }) {
     validateFinitePositive(panelCapacity, 'panelCapacity', 'قدرة اللوح');
@@ -70,7 +69,6 @@ class InputValidator {
       'batteryAmperePrice',
       'سعر أمبير البطارية',
     );
-    _validateNonNegativeFinite(breakerPrice, 'breakerPrice', 'سعر القاطع');
     _validateNonNegativeFinite(wiringCost, 'wiringCost', 'تكلفة الأسلاك');
   }
 

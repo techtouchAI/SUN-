@@ -54,13 +54,6 @@ class SettingsScreen extends ConsumerWidget {
               _buildPriceInput(
                 context: context,
                 ref: ref,
-                label: AppStrings.breakerPriceLabel,
-                provider: breakerPriceProvider,
-              ),
-              const SizedBox(height: 16),
-              _buildPriceInput(
-                context: context,
-                ref: ref,
                 label: AppStrings.wiringCostLabel,
                 provider: wiringCostProvider,
               ),

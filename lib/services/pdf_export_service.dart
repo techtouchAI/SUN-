@@ -9,6 +9,32 @@ import '../models/system_mode.dart';
 import '../logic/app_strings.dart';
 
 class PdfExportService {
+  static List<String> batterySummaryLines(SystemResultModel result) {
+    if (result.requiredBatteryCapacityAh <= 0) {
+      return const ['غير مطلوب — لا يوجد استهلاك ليلي.'];
+    }
+    return [
+      'السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
+      AppStrings.batteryExplanationBody,
+      result.breakdown.batteryExplanationAr,
+      if (result.requiredGridChargingAmps > 0)
+        '⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
+      if (result.requiredGridChargingAcAmps > 0)
+        '🔌 السحب الفعلي من الشبكة (AC): ${result.requiredGridChargingAcAmps.toStringAsFixed(1)} A',
+      if (result.timeToFullHours > 0)
+        '⏳ الوقت المقدر لشحن البطاريات بالكامل: ${result.timeToFullHours.toStringAsFixed(1)} ساعات',
+      if (result.suggestedChargePriority.isNotEmpty)
+        'أولوية الشحن المقترحة: ${result.suggestedChargePriority}',
+      if (result.gelBatteryWarning.isNotEmpty) result.gelBatteryWarning,
+    ];
+  }
+
+  static List<String> protectionSummaryLines(SystemResultModel result) => [
+    for (final protection in result.safetyAudit.presentationResults)
+      '${protection.kind.labelAr}: ${protection.conciseStatusAr}'
+          '${protection.isCalculated ? '' : ' — ${protection.conciseReasonAr}'}',
+  ];
+
   Future<void> exportDashboardToPdf(
     SystemResultModel result,
     List<LoadModel> loads,
@@ -80,10 +106,6 @@ class PdfExportService {
               style: const pw.TextStyle(fontSize: 14),
             ),
             pw.Text(
-              'الماركات العالمية الموصى بها للعواكس: Deye, Growatt, Huawei, Victron Energy',
-              style: const pw.TextStyle(fontSize: 14),
-            ),
-            pw.Text(
               'حجم الإنفرتر تم اختياره بناءً على أقصى حمل لحظي يمكن أن يعمل في نفس الوقت، مع إضافة هامش أمان لحماية الجهاز.',
               style: const pw.TextStyle(fontSize: 14),
             ),
@@ -121,11 +143,7 @@ class PdfExportService {
                 style: const pw.TextStyle(fontSize: 16),
               ),
               pw.Text(
-                'المصنعين من فئة (Tier 1) المعتمدة للألواح: Longi, Jinko Solar, JA Solar, Trina Solar',
-                style: const pw.TextStyle(fontSize: 14),
-              ),
-              pw.Text(
-                'ألواح للتشغيل المباشر: ${result.panelsForDaytime} لوح',
+                'ألواح أحمال النهار: ${result.panelsForDaytime} لوح',
                 style: const pw.TextStyle(fontSize: 14),
               ),
               if (systemMode != SystemMode.directOnGrid)
@@ -171,46 +189,8 @@ class PdfExportService {
                 ),
               ),
               pw.Divider(),
-              pw.Text(
-                'السعة المطلوبة: ${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
-                style: const pw.TextStyle(fontSize: 16),
-              ),
-              pw.Text(
-                AppStrings.batteryExplanationBody,
-                style: const pw.TextStyle(fontSize: 14),
-              ),
-              pw.Text(
-                result.breakdown.batteryExplanationAr,
-                style: const pw.TextStyle(
-                  fontSize: 14,
-                  color: PdfColors.grey700,
-                ),
-              ),
-              if (result.requiredGridChargingAmps > 0)
-                pw.Text(
-                  '⚡ تيار شحن البطاريات الداخلي (DC): ${result.requiredGridChargingAmps.toStringAsFixed(1)} A',
-                  style: const pw.TextStyle(fontSize: 14),
-                ),
-              if (result.requiredGridChargingAcAmps > 0)
-                pw.Text(
-                  '🔌 السحب الفعلي من الشبكة (AC): ${result.requiredGridChargingAcAmps.toStringAsFixed(1)} A',
-                  style: const pw.TextStyle(fontSize: 14),
-                ),
-              if (result.timeToFullHours > 0)
-                pw.Text(
-                  '⏳ الوقت المقدر لشحن البطاريات بالكامل: ${result.timeToFullHours.toStringAsFixed(1)} ساعات',
-                  style: const pw.TextStyle(fontSize: 14),
-                ),
-              if (result.suggestedChargePriority.isNotEmpty)
-                pw.Text(
-                  'أولوية الشحن المقترحة: ${result.suggestedChargePriority}',
-                  style: const pw.TextStyle(fontSize: 14),
-                ),
-              if (result.gelBatteryWarning.isNotEmpty)
-                pw.Text(
-                  result.gelBatteryWarning,
-                  style: const pw.TextStyle(fontSize: 14, color: PdfColors.red),
-                ),
+              for (final line in batterySummaryLines(result))
+                pw.Text(line, style: const pw.TextStyle(fontSize: 14)),
               pw.SizedBox(height: 20),
             ],
 
@@ -220,30 +200,15 @@ class PdfExportService {
               style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
             ),
             pw.Divider(),
-            pw.Text(
-              result.safetyAudit.summaryAr,
-              style: const pw.TextStyle(fontSize: 14),
-            ),
-            for (final protection in result.safetyAudit.results) ...[
+            for (final line in protectionSummaryLines(result)) ...[
               pw.SizedBox(height: 6),
               pw.Text(
-                '${protection.kind.labelAr}: ${protection.displayValueAr}',
+                line,
                 style: pw.TextStyle(
                   fontSize: 14,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              if (!protection.isCalculated &&
-                  protection.unavailableReasonAr.isNotEmpty)
-                pw.Text(
-                  protection.unavailableReasonAr,
-                  style: const pw.TextStyle(fontSize: 12),
-                ),
-              for (final trace in protection.trace)
-                pw.Text(
-                  '${trace.stageAr}: ${trace.messageAr}',
-                  style: const pw.TextStyle(fontSize: 11),
-                ),
             ],
             pw.SizedBox(height: 20),
 
@@ -290,7 +255,7 @@ class PdfExportService {
               style: const pw.TextStyle(fontSize: 16),
             ),
             pw.Text(
-              '\nملاحظة: هذا السعر تقريبي مبني على إعداداتك. لم يتم حساب أسعار الجوزات وأسلاك الربط إلا إذا قمت بإضافتها يدوياً من شاشة الإعدادات، لكونها متغيرة حسب النوع والطول.',
+              '\n${AppStrings.pricingDisclaimer}',
               style: const pw.TextStyle(fontSize: 14),
             ),
 

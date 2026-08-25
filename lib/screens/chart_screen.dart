@@ -5,6 +5,12 @@ import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import '../models/calculation_state.dart';
 
+String? productionHourLabel(double value, int pointCount) {
+  final hour = value.toInt();
+  if (hour < 0 || hour >= pointCount || hour % 3 != 0) return null;
+  return '${hour.toString().padLeft(2, '0')}:00';
+}
+
 class ChartScreen extends ConsumerWidget {
   const ChartScreen({super.key});
 
@@ -21,15 +27,6 @@ class ChartScreen extends ConsumerWidget {
     }
     final result = calculationState.result;
     final curve = result.dailyProductionCurve;
-
-    // Time labels: Dawn, Morning, Noon, Afternoon, Evening
-    final timeLabels = [
-      AppStrings.dawn,
-      AppStrings.morning,
-      AppStrings.noon,
-      AppStrings.afternoon,
-      AppStrings.evening,
-    ];
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.dailyProductionCurve)),
@@ -59,11 +56,19 @@ class ChartScreen extends ConsumerWidget {
                           bottomTitles: AxisTitles(
                             sideTitles: SideTitles(
                               showTitles: true,
+                              interval: 3,
                               getTitlesWidget: (double value, TitleMeta meta) {
+                                final label = productionHourLabel(
+                                  value,
+                                  curve.length,
+                                );
+                                if (label == null) {
+                                  return const SizedBox.shrink();
+                                }
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 8.0),
                                   child: Text(
-                                    timeLabels[value.toInt()],
+                                    label,
                                     style: const TextStyle(fontSize: 12),
                                   ),
                                 );

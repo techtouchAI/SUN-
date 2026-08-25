@@ -61,7 +61,6 @@ class AppStrings {
   static const String pricingSettingsTitle = 'إعدادات التسعير (السوق العراقي)';
   static const String solarWattPriceLabel = 'سعر الواط الشمسي (دولار)';
   static const String batteryAmperePriceLabel = 'سعر أمبير البطارية (دولار)';
-  static const String breakerPriceLabel = 'سعر قاطع الدائرة "الجوزة" (دولار)';
   static const String wiringCostLabel =
       'التكلفة الإجمالية لأسلاك الربط (دولار)';
 
@@ -71,7 +70,7 @@ class AppStrings {
   static const String costInWarqa = 'ورقة';
   static const String costInIqd = 'دينار عراقي';
   static const String pricingDisclaimer =
-      'ملاحظة: هذا السعر تقريبي مبني على إعداداتك. لم يتم حساب أسعار الجوزات وأسلاك الربط إلا إذا قمت بإضافتها يدوياً من شاشة الإعدادات، لكونها متغيرة حسب النوع والطول.';
+      'ملاحظة: هذا السعر تقريبي مبني على إعداداتك، ويشمل الألواح والبطارية والعاكس وتكلفة أسلاك الربط المدخلة فقط. لا يتضمن القواطع أو مقطع السلك لأنهما لا يُستنتجان بأمان من البيانات الحالية.';
   static const String isOffGridSystem = 'نظام بدون تيار وطني';
 
   // Explanations
@@ -85,7 +84,7 @@ class AppStrings {
   static const String peakLoad = 'الحمل الأقصى اللحظي';
   static const String daytimeConsumption = 'الاستهلاك النهاري';
   static const String nighttimeConsumption = 'الاستهلاك الليلي';
-  static const String panelsDaytime = 'ألواح للتشغيل المباشر';
+  static const String panelsDaytime = 'ألواح أحمال النهار';
   static const String panelsBattery = 'ألواح لشحن البطاريات';
 
   // Energy Loss & Brands

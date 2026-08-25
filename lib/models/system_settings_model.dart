@@ -10,7 +10,6 @@ class SystemSettingsModel {
   final SystemMode systemMode;
   final double solarWattPrice;
   final double batteryAmperePrice;
-  final double breakerPrice;
   final double wiringCost;
   final double systemVoltage;
   final double gridVoltage;
@@ -30,7 +29,6 @@ class SystemSettingsModel {
     this.systemMode = SystemMode.hybrid,
     this.solarWattPrice = 0.16,
     this.batteryAmperePrice = 0.85,
-    this.breakerPrice = 0,
     this.wiringCost = 0,
     this.systemVoltage = 48,
     this.gridVoltage = 220,
@@ -51,7 +49,6 @@ class SystemSettingsModel {
     SystemMode? systemMode,
     double? solarWattPrice,
     double? batteryAmperePrice,
-    double? breakerPrice,
     double? wiringCost,
     double? systemVoltage,
     double? gridVoltage,
@@ -71,7 +68,6 @@ class SystemSettingsModel {
       systemMode: systemMode ?? this.systemMode,
       solarWattPrice: solarWattPrice ?? this.solarWattPrice,
       batteryAmperePrice: batteryAmperePrice ?? this.batteryAmperePrice,
-      breakerPrice: breakerPrice ?? this.breakerPrice,
       wiringCost: wiringCost ?? this.wiringCost,
       systemVoltage: systemVoltage ?? this.systemVoltage,
       gridVoltage: gridVoltage ?? this.gridVoltage,
@@ -93,7 +89,6 @@ class SystemSettingsModel {
     'systemMode': systemMode.name,
     'solarWattPrice': solarWattPrice,
     'batteryAmperePrice': batteryAmperePrice,
-    'breakerPrice': breakerPrice,
     'wiringCost': wiringCost,
     'systemVoltage': systemVoltage,
     'gridVoltage': gridVoltage,
@@ -123,7 +118,6 @@ class SystemSettingsModel {
       systemMode: mode,
       solarWattPrice: _double(json['solarWattPrice'], 0.16),
       batteryAmperePrice: _double(json['batteryAmperePrice'], 0.85),
-      breakerPrice: _double(json['breakerPrice'], 0),
       wiringCost: _double(json['wiringCost'], 0),
       systemVoltage: _double(json['systemVoltage'], 48),
       gridVoltage: _double(json['gridVoltage'], 220),

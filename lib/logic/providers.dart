@@ -45,7 +45,6 @@ final systemModeProvider = StateProvider<SystemMode>(
 );
 final solarWattPriceProvider = StateProvider<double>((ref) => 0.16);
 final batteryAmperePriceProvider = StateProvider<double>((ref) => 0.85);
-final breakerPriceProvider = StateProvider<double>((ref) => 0.0);
 final wiringCostProvider = StateProvider<double>((ref) => 0.0);
 final systemVoltageProvider = StateProvider<double>((ref) => 48.0);
 final peakSunHoursProvider = StateProvider<double>((ref) => 4.5);
@@ -196,7 +195,6 @@ class SystemSettingsNotifier extends StateNotifier<SystemSettingsModel> {
       daysOfAutonomy: value.daysOfAutonomy,
       solarWattPrice: value.solarWattPrice,
       batteryAmperePrice: value.batteryAmperePrice,
-      breakerPrice: value.breakerPrice,
       wiringCost: value.wiringCost,
     );
     InputValidator.validateGridSchedule(
@@ -229,7 +227,6 @@ final systemSettingsProvider =
         systemMode: ref.read(systemModeProvider),
         solarWattPrice: ref.read(solarWattPriceProvider),
         batteryAmperePrice: ref.read(batteryAmperePriceProvider),
-        breakerPrice: ref.read(breakerPriceProvider),
         wiringCost: ref.read(wiringCostProvider),
         systemVoltage: ref.read(systemVoltageProvider),
         gridVoltage: ref.read(gridVoltageProvider),
@@ -263,7 +260,6 @@ final systemSettingsProvider =
         ref.read(solarWattPriceProvider.notifier).state = value.solarWattPrice;
         ref.read(batteryAmperePriceProvider.notifier).state =
             value.batteryAmperePrice;
-        ref.read(breakerPriceProvider.notifier).state = value.breakerPrice;
         ref.read(wiringCostProvider.notifier).state = value.wiringCost;
         ref.read(systemVoltageProvider.notifier).state = value.systemVoltage;
         ref.read(gridVoltageProvider.notifier).state = value.gridVoltage;
@@ -316,9 +312,6 @@ final systemSettingsProvider =
         notifier.updateFromLegacySettings();
       });
       ref.listen<double>(batteryAmperePriceProvider, (_, _) {
-        notifier.updateFromLegacySettings();
-      });
-      ref.listen<double>(breakerPriceProvider, (_, _) {
         notifier.updateFromLegacySettings();
       });
       ref.listen<double>(wiringCostProvider, (_, _) {
@@ -393,7 +386,6 @@ final calculationStateProvider = Provider<CalculationState>((ref) {
       gridSchedule: settings.gridSchedule,
       solarWattPrice: settings.solarWattPrice,
       batteryAmperePrice: settings.batteryAmperePrice,
-      breakerPrice: settings.breakerPrice,
       wiringCost: settings.wiringCost,
       systemVoltage: settings.systemVoltage,
       peakSunHours: settings.peakSunHours,

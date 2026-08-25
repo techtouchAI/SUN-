@@ -95,7 +95,6 @@ void main() {
         daysOfAutonomy: 1,
         solarWattPrice: 0,
         batteryAmperePrice: 0,
-        breakerPrice: 0,
         wiringCost: 0,
       ),
       throwsA(isA<InvalidEngineeringInput>()),

@@ -12,5 +12,6 @@ void main() {
     expect(find.text(AppStrings.unitAmpere), findsNothing);
     expect(find.text(AppStrings.daytimeUsageHours), findsOneWidget);
     expect(find.text(AppStrings.nighttimeUsageHours), findsOneWidget);
+    expect(find.text('ساعة بدء التوفر'), findsOneWidget);
   });
 }

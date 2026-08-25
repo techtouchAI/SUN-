@@ -75,6 +75,53 @@ void main() {
     expect(result.requiredPanels, result.panelsForDaytime);
   });
 
+  test(
+    'battery PV recharge replenishes discharged energy without DoD twice',
+    () {
+      final result = engine.calculateSystem(
+        [load(name: 'Lithium night load', day: 0, night: 1, power: 11000)],
+        gridVoltage: 220,
+        systemMode: SystemMode.offGrid,
+        gridSchedule: const GridScheduleModel(
+          gridOnHours: 0,
+          gridOffHours: 24,
+          gridChargeDependencyPercent: 0,
+          batteryType: 'Lithium',
+        ),
+        panelCapacity: 540,
+        peakSunHours: 4.5,
+        energyLossPercentage: 30,
+      );
+
+      expect(result.panelsForDaytime, 0);
+      expect(result.panelsForBatteries, 8);
+      expect(result.requiredPanels, 8);
+    },
+  );
+
+  test('combines daytime and battery PV energy before panel rounding', () {
+    final details = engine.calculatePanelsDetails(
+      daytimeWh: 765,
+      nighttimeWh: 690.4125,
+      continuousDaytimeWatts: 765,
+      panelCapacity: 540,
+      systemMode: SystemMode.offGrid,
+      gridSchedule: const GridScheduleModel(
+        gridOnHours: 0,
+        gridOffHours: 24,
+        gridChargeDependencyPercent: 0,
+        batteryType: 'Lithium',
+      ),
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+      chargeEfficiency: 0.95,
+    );
+
+    expect(details['daytimePanels'], 1);
+    expect(details['batteryPanels'], 0);
+    expect(details['totalPanels'], 1);
+  });
+
   test('applies a 50% grid fraction before battery panel rounding', () {
     final result = engine.calculateSystem(
       [load(name: 'Night load', day: 0, night: 8, power: 500)],

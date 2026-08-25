@@ -199,7 +199,6 @@ class DashboardScreen extends ConsumerWidget {
                       AppStrings.inverterExplanationTitle,
                       [
                         'النوع المقترح: ${result.suggestedInverterType}',
-                        AppStrings.recommendedInverterBrands,
                         result.breakdown.inverterExplanationAr,
                         if (result.suggestedIpRating.isNotEmpty)
                           'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
@@ -256,7 +255,6 @@ class DashboardScreen extends ConsumerWidget {
                         context,
                         AppStrings.panelsExplanationTitle,
                         [
-                          AppStrings.recommendedPanelBrands,
                           '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
                           result.breakdown.daytimePanelsExplanationAr,
                           if (systemMode != SystemMode.directOnGrid) ...[

@@ -164,12 +164,11 @@ class SolarCalculationRepository {
     _requireFinitePositive(panelDailyEnergyWh, 'الطاقة اليومية للوح');
 
     final daytimeDcEnergyWh = daytimeWh / inverterEfficiency;
-    final dod = _batteryDod(gridSchedule.batteryType);
     final batteryEfficiency = _batteryEfficiency(gridSchedule.batteryType);
     final requiredBatteryChargeWh = nighttimeWh <= 0
         ? 0.0
         : (nighttimeWh / inverterEfficiency) /
-              (dod * batteryEfficiency) /
+              batteryEfficiency /
               chargeEfficiency;
 
     final gridFraction =
@@ -186,25 +185,30 @@ class SolarCalculationRepository {
             panelCapacity * pvPerformanceFactor,
           )
         : _ceilPanelCount(daytimeDcEnergyWh, panelDailyEnergyWh);
-    final batteryPanels = systemMode == SystemMode.directOnGrid
-        ? 0
-        : _ceilPanelCount(remainingBatteryPvWh, panelDailyEnergyWh);
-
-    // Count from combined energy before rounding to avoid double rounding.
+    // Combine all PV energy before rounding so separate allocations cannot add
+    // an unnecessary extra panel at a rounding boundary.
     final combinedEnergyPanels = systemMode == SystemMode.directOnGrid
         ? daytimePanels
-        : daytimePanels + batteryPanels;
+        : _ceilPanelCount(
+            daytimeDcEnergyWh + remainingBatteryPvWh,
+            panelDailyEnergyWh,
+          );
+    final batteryPanels = systemMode == SystemMode.directOnGrid
+        ? 0
+        : math.max(0, combinedEnergyPanels - daytimePanels);
+    final fullSolarPanels = systemMode == SystemMode.directOnGrid
+        ? daytimePanels
+        : _ceilPanelCount(
+            daytimeDcEnergyWh + requiredBatteryChargeWh,
+            panelDailyEnergyWh,
+          );
 
     return {
       'daytimePanels': daytimePanels,
       'batteryPanels': batteryPanels,
       'totalPanels': combinedEnergyPanels,
       'gridContributionPercent': gridFraction * 100.0,
-      'panelsSavedByGrid': math.max(
-        0,
-        _ceilPanelCount(requiredBatteryChargeWh, panelDailyEnergyWh) -
-            batteryPanels,
-      ),
+      'panelsSavedByGrid': math.max(0, fullSolarPanels - combinedEnergyPanels),
       'daytimePanelsExplanationAr': systemMode == SystemMode.directOnGrid
           ? 'التشغيل المباشر يعتمد على القدرة اللحظية: ${continuousDaytimeWatts.toStringAsFixed(0)}W، مع كفاءة العاكس وهامش قدرة 30%.'
           : 'تم حساب ألواح النهار من الطاقة النهارية الفعلية ${daytimeWh.toStringAsFixed(0)}Wh، وسعة اللوح اليومية ${panelDailyEnergyWh.toStringAsFixed(0)}Wh.',
@@ -213,10 +217,10 @@ class SolarCalculationRepository {
           : 'Daytime panels are based on the explicit daytime energy profile and effective daily panel energy.',
       'batteryPanelsExplanationAr': systemMode == SystemMode.directOnGrid
           ? ''
-          : 'طاقة شحن البطارية المطلوبة قبل الشبكة ${requiredBatteryChargeWh.toStringAsFixed(0)}Wh، والمتبقي من الطاقة الشمسية ${remainingBatteryPvWh.toStringAsFixed(0)}Wh. تم تطبيق اعتماد الشبكة قبل التقريب.',
+          : 'طاقة شحن البطارية المطلوبة قبل الشبكة ${requiredBatteryChargeWh.toStringAsFixed(0)}Wh، والمتبقي من الطاقة الشمسية ${remainingBatteryPvWh.toStringAsFixed(0)}Wh. تم جمع طاقة النهار والشحن ثم تقريب العدد مرة واحدة.',
       'batteryPanelsExplanationEn': systemMode == SystemMode.directOnGrid
           ? ''
-          : 'Battery charging energy is reduced by the grid fraction before panel count rounding.',
+          : 'Battery charging energy is reduced by the grid fraction, then daytime and charging energy are combined before one panel-count rounding step.',
       'floatPreservationRecommendationAr': '',
       'panelDailyEnergyWh': panelDailyEnergyWh,
       'requiredBatteryChargeWh': requiredBatteryChargeWh,
@@ -262,7 +266,6 @@ class SolarCalculationRepository {
     GridScheduleModel gridSchedule = const GridScheduleModel(),
     double solarWattPrice = 0.16,
     double batteryAmperePrice = 0.85,
-    double breakerPrice = 0.0,
     double wiringCost = 0.0,
     double systemVoltage = 48.0,
     double peakSunHours = 4.5,
@@ -292,7 +295,6 @@ class SolarCalculationRepository {
       daysOfAutonomy: daysOfAutonomy,
       solarWattPrice: solarWattPrice,
       batteryAmperePrice: batteryAmperePrice,
-      breakerPrice: breakerPrice,
       wiringCost: wiringCost,
     );
     InputValidator.validateGridSchedule(
