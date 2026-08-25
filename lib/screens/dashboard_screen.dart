@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
+import '../models/calculation_state.dart';
 import '../models/system_mode.dart';
 import '../models/system_result_model.dart';
+import '../repositories/solar_calculation_repository.dart';
 import 'chart_screen.dart';
 import 'settings_screen.dart';
 import '../services/pdf_export_service.dart';
@@ -16,20 +18,44 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen<String?>(systemErrorProvider, (previous, next) {
-      if (next != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    });
-    final result = ref.watch(systemResultProvider);
+    final calculationState = ref.watch(calculationStateProvider);
     final systemMode = ref.watch(systemModeProvider);
     final loads = ref.watch(loadListProvider);
+
+    if (loads.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.systemDashboard)),
+        body: const Center(
+          child: Text(
+            'الرجاء إضافة أحمال أولاً',
+            style: TextStyle(fontSize: 18),
+          ),
+        ),
+      );
+    }
+
+    if (calculationState is! CalculationReady) {
+      final message = switch (calculationState) {
+        CalculationInvalidInput(:final error) => error.message,
+        CalculationFailed(:final error) => error.toString(),
+        _ => 'لا توجد نتيجة حساب جاهزة حالياً.',
+      };
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.systemDashboard)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              'تعذر إكمال الحساب.\n$message',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final result = calculationState.result;
 
     return Scaffold(
       appBar: AppBar(
@@ -80,126 +106,122 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: loads.isEmpty
-          ? const Center(
-              child: Text(
-                "الرجاء إضافة أحمال أولاً",
-                style: TextStyle(fontSize: 18),
-              ),
-            )
-          : SingleChildScrollView(
-              child: Column(
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: ReactiveTextField(
-                            initialValue: ref.watch(panelCapacityProvider),
-                            labelText: AppStrings.panelCapacityWatts,
-                            onChanged: (value) {
-                              final parsedValue = double.tryParse(value);
-                              if (parsedValue != null && parsedValue > 0) {
-                                ref.read(panelCapacityProvider.notifier).state =
-                                    parsedValue;
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ReactiveTextField(
-                            initialValue: ref.watch(panelIscProvider),
-                            labelText: AppStrings.panelIsc,
-                            onChanged: (value) {
-                              final parsedValue = double.tryParse(value);
-                              if (parsedValue != null && parsedValue >= 0) {
-                                ref.read(panelIscProvider.notifier).state =
-                                    parsedValue;
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: Text(
-                      AppStrings.interactiveHint,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blueAccent,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16.0,
-                        mainAxisSpacing: 16.0,
-                        childAspectRatio: 0.65,
-                        children: [
-                          _buildResultCard(
-                            title: AppStrings.totalConsumption,
-                            value:
-                                '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
-                            icon: Icons.electrical_services,
-                            color: Colors.blue,
-                            onTap: () => _showExplanationModal(
-                              context,
-                              AppStrings.consumptionExplanationTitle,
-                              [
-                                '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} Wh',
-                                '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} Wh',
-                                if (systemMode != SystemMode.directOnGrid)
-                                  '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
-                              ],
-                              headerValue:
-                                  '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
-                            ),
-                          ),
-                          _buildResultCard(
-                            title: AppStrings.requiredInverter,
-                            value:
-                                '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
-                            icon: Icons.power,
-                            color: Colors.orange,
-                            onTap: () => _showExplanationModal(
-                              context,
-                              AppStrings.inverterExplanationTitle,
-                              [
-                                'النوع المقترح: ${result.suggestedInverterType}',
-                                AppStrings.recommendedInverterBrands,
-                                result.breakdown.inverterExplanationAr,
-                                if (result.suggestedIpRating.isNotEmpty)
-                                  'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
-                              ],
-                              headerValue:
-                                  '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
-                            ),
-                          ),
+                    child: ReactiveTextField(
+                      initialValue: ref.watch(panelCapacityProvider),
+                      labelText: AppStrings.panelCapacityWatts,
+                      onChanged: (value) {
+                        final parsedValue = double.tryParse(value);
+                        if (parsedValue != null && parsedValue > 0) {
+                          ref.read(panelCapacityProvider.notifier).state =
+                              parsedValue;
+                          ref.read(panelIscProvider.notifier).state =
+                              SolarCalculationRepository.getInterpolatedIsc(
+                                parsedValue,
+                              );
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ReactiveTextField(
+                      initialValue: ref.watch(panelIscProvider),
+                      labelText: AppStrings.panelIsc,
+                      onChanged: (value) {
+                        final parsedValue = double.tryParse(value);
+                        if (parsedValue != null && parsedValue >= 0) {
+                          ref.read(panelIscProvider.notifier).state =
+                              parsedValue;
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Text(
+                AppStrings.interactiveHint,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                  childAspectRatio: 0.65,
+                  children: [
+                    _buildResultCard(
+                      title: AppStrings.totalConsumption,
+                      value:
+                          '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
+                      icon: Icons.electrical_services,
+                      color: Colors.blue,
+                      onTap: () => _showExplanationModal(
+                        context,
+                        AppStrings.consumptionExplanationTitle,
+                        [
+                          '${AppStrings.totalConsumption}: ${result.totalDailyConsumptionWh.toStringAsFixed(0)} Wh',
+                          '${AppStrings.daytimeConsumption}: ${result.daytimeConsumptionWh.toStringAsFixed(0)} Wh',
                           if (systemMode != SystemMode.directOnGrid)
-                            _buildResultCard(
-                              title: AppStrings.batteryBank,
-                              value:
-                                  '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
-                              icon: Icons.battery_charging_full,
-                              color: Colors.green,
-                              onTap: () => _showExplanationModal(
-                                context,
-                                AppStrings.batteryExplanationTitle,
-                                [
+                            '${AppStrings.nighttimeConsumption}: ${result.nighttimeConsumptionWh.toStringAsFixed(0)} Wh',
+                        ],
+                        headerValue:
+                            '${(result.totalDailyConsumptionWh / 1000).toStringAsFixed(2)} kWh',
+                      ),
+                    ),
+                    _buildResultCard(
+                      title: AppStrings.requiredInverter,
+                      value:
+                          '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
+                      icon: Icons.power,
+                      color: Colors.orange,
+                      onTap: () => _showExplanationModal(
+                        context,
+                        AppStrings.inverterExplanationTitle,
+                        [
+                          'النوع المقترح: ${result.suggestedInverterType}',
+                          AppStrings.recommendedInverterBrands,
+                          result.breakdown.inverterExplanationAr,
+                          if (result.suggestedIpRating.isNotEmpty)
+                            'تقييم الحماية المقترح (IP): ${result.suggestedIpRating}',
+                        ],
+                        headerValue:
+                            '${(result.requiredInverterCapacityW / 1000).toStringAsFixed(2)} kW',
+                      ),
+                    ),
+                    if (systemMode != SystemMode.directOnGrid)
+                      _buildResultCard(
+                        title: AppStrings.batteryBank,
+                        value: result.requiredBatteryCapacityAh > 0
+                            ? '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh) بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V'
+                            : 'غير مطلوب — لا يوجد استهلاك ليلي',
+                        icon: Icons.battery_charging_full,
+                        color: Colors.green,
+                        onTap: () => _showExplanationModal(
+                          context,
+                          AppStrings.batteryExplanationTitle,
+                          result.requiredBatteryCapacityAh > 0
+                              ? [
                                   AppStrings.batteryExplanationBody,
                                   result.breakdown.batteryExplanationAr,
                                   if (result.requiredGridChargingAmps > 0)
@@ -212,139 +234,142 @@ class DashboardScreen extends ConsumerWidget {
                                     'أولوية الشحن المقترحة: ${result.suggestedChargePriority}',
                                   if (result.gelBatteryWarning.isNotEmpty)
                                     result.gelBatteryWarning,
+                                ]
+                              : [
+                                  'لم تُدخل ساعات تشغيل ليلية للأحمال؛ لذلك لا توجد طاقة ليلية تتطلب بطاريات في هذه النتيجة.',
                                 ],
-                                headerValue:
-                                    '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh)',
-                                headerSubtitle:
-                                    'بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V',
-                              ),
-                            ),
-                          if (systemMode != SystemMode.ups)
-                            _buildResultCard(
-                              title: AppStrings.solarPanels,
-                              value:
-                                  '${result.requiredPanels} ${AppStrings.panelsUnit} (تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W)',
-                              icon: Icons.solar_power,
-                              color: Colors.amber,
-                              onTap: () => _showExplanationModal(
-                                context,
-                                AppStrings.panelsExplanationTitle,
-                                [
-                                  AppStrings.recommendedPanelBrands,
-                                  '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
-                                  result.breakdown.daytimePanelsExplanationAr,
-                                  if (systemMode !=
-                                      SystemMode.directOnGrid) ...[
-                                    '\n${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
-                                    result.breakdown.batteryPanelsExplanationAr,
-                                    if (result
-                                        .breakdown
-                                        .mpptRecommendationAr
-                                        .isNotEmpty)
-                                      '\n${result.breakdown.mpptRecommendationAr}',
-                                  ],
-                                  '\nالمجموع الكلي: ${result.requiredPanels} لوح',
-                                  if (systemMode != SystemMode.directOnGrid)
-                                    '\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.',
-                                  if (result
-                                      .breakdown
-                                      .floatPreservationRecommendationAr
-                                      .isNotEmpty)
-                                    '\n${result.breakdown.floatPreservationRecommendationAr}',
-                                ],
-                                headerValue:
-                                    '${result.requiredPanels} ${AppStrings.panelsUnit}',
-                                headerSubtitle:
-                                    'تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W',
-                              ),
-                            ),
-                          _buildResultCard(
-                            title: AppStrings.energyLossTitle,
-                            value: result.energyLossPercentage,
-                            icon: Icons.warning_amber_rounded,
-                            color: Colors.deepOrange,
-                            onTap: () => _showExplanationModal(
-                              context,
-                              AppStrings.energyLossExplanationTitle,
-                              [
-                                AppStrings.energyLossTemp,
-                                AppStrings.energyLossInverter,
-                                AppStrings.energyLossWiring,
-                                AppStrings.energyLossSoiling,
-                              ],
-                              headerValue: result.energyLossPercentage,
-                            ),
-                          ),
-                          _buildResultCard(
-                            title: AppStrings.safetyStandardsTitle,
-                            value: result.safetyAudit.hasCalculatedValue
-                                ? 'حساب تلقائي'
-                                : 'غير متاح',
-                            icon: Icons.health_and_safety,
-                            color: Colors.redAccent,
-                            onTap: () => _showSafetyAuditModal(context, result),
-                          ),
-                          _buildResultCard(
-                            title: AppStrings.estimatedSystemCost,
-                            value:
-                                '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
-                            icon: Icons.attach_money,
-                            color: Colors.green.shade700,
-                            onTap: () => _showExplanationModal(
-                              context,
-                              AppStrings.estimatedSystemCost,
-                              [
-                                '${result.estimatedCostUsd.toStringAsFixed(2)} ${AppStrings.costInUsd}',
-                                '${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ${AppStrings.costInWarqa}',
-                                '${(result.estimatedCostUsd * ref.watch(iqdExchangeRateProvider)).toStringAsFixed(0)} ${AppStrings.costInIqd}',
-                                '\n${AppStrings.pricingDisclaimer}',
-                              ],
-                              headerValue:
-                                  '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
-                            ),
-                          ),
+                          headerValue: result.requiredBatteryCapacityAh > 0
+                              ? '${result.requiredBatteryCapacityAh.toStringAsFixed(0)}Ah (${((result.requiredBatteryCapacityAh * result.systemVoltage) / 1000).toStringAsFixed(1)} kWh)'
+                              : 'غير مطلوب',
+                          headerSubtitle: result.requiredBatteryCapacityAh > 0
+                              ? 'بناءً على نظام ${result.systemVoltage.toStringAsFixed(0)}V'
+                              : null,
+                        ),
+                      ),
+                    if (systemMode != SystemMode.ups)
+                      _buildResultCard(
+                        title: AppStrings.solarPanels,
+                        value:
+                            '${result.requiredPanels} ${AppStrings.panelsUnit} (تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W)',
+                        icon: Icons.solar_power,
+                        color: Colors.amber,
+                        onTap: () => _showExplanationModal(
+                          context,
+                          AppStrings.panelsExplanationTitle,
+                          [
+                            AppStrings.recommendedPanelBrands,
+                            '${AppStrings.panelsDaytime}: ${result.panelsForDaytime} لوح',
+                            result.breakdown.daytimePanelsExplanationAr,
+                            if (systemMode != SystemMode.directOnGrid) ...[
+                              '\n${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
+                              result.breakdown.batteryPanelsExplanationAr,
+                              if (result
+                                  .breakdown
+                                  .mpptRecommendationAr
+                                  .isNotEmpty)
+                                '\n${result.breakdown.mpptRecommendationAr}',
+                            ],
+                            '\nالمجموع الكلي: ${result.requiredPanels} لوح',
+                            if (systemMode != SystemMode.directOnGrid)
+                              '\n💡 ملاحظة هندسية حول تقليل الألواح:\nيمكنك تقليل عدد الألواح المقترحة، ولكن تذكر أن الألواح هي المصدر الأساسي لتوفير الأمبير نهاراً. في حال كان إنتاج الألواح أقل من استهلاك الحمل، ستقوم المنظومة بتعويض العجز عن طريق سحب التيار من البطاريات نهاراً. هذا السحب المستمر سيمنع البطاريات من الوصول للامتلاء، ويزيد من دورات التفريغ (Cycle Life)، مما يقلل من عمرها الافتراضي.',
+                            if (result
+                                .breakdown
+                                .floatPreservationRecommendationAr
+                                .isNotEmpty)
+                              '\n${result.breakdown.floatPreservationRecommendationAr}',
+                          ],
+                          headerValue:
+                              '${result.requiredPanels} ${AppStrings.panelsUnit}',
+                          headerSubtitle:
+                              'تمت الحسابات بناءً على ألواح بقدرة ${ref.watch(panelCapacityProvider).toStringAsFixed(0)}W',
+                        ),
+                      ),
+                    _buildResultCard(
+                      title: AppStrings.energyLossTitle,
+                      value: result.energyLossPercentage,
+                      icon: Icons.warning_amber_rounded,
+                      color: Colors.deepOrange,
+                      onTap: () => _showExplanationModal(
+                        context,
+                        AppStrings.energyLossExplanationTitle,
+                        [
+                          AppStrings.energyLossTemp,
+                          AppStrings.energyLossInverter,
+                          AppStrings.energyLossWiring,
+                          AppStrings.energyLossSoiling,
                         ],
+                        headerValue: result.energyLossPercentage,
                       ),
                     ),
+                    _buildResultCard(
+                      title: AppStrings.safetyStandardsTitle,
+                      value: result.safetyAudit.hasCalculatedValue
+                          ? 'حساب تلقائي'
+                          : 'غير متاح',
+                      icon: Icons.health_and_safety,
+                      color: Colors.redAccent,
+                      onTap: () => _showSafetyAuditModal(context, result),
+                    ),
+                    _buildResultCard(
+                      title: AppStrings.estimatedSystemCost,
+                      value: '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
+                      icon: Icons.attach_money,
+                      color: Colors.green.shade700,
+                      onTap: () => _showExplanationModal(
+                        context,
+                        AppStrings.estimatedSystemCost,
+                        [
+                          '${result.estimatedCostUsd.toStringAsFixed(2)} ${AppStrings.costInUsd}',
+                          '${(result.estimatedCostUsd / 100).toStringAsFixed(2)} ${AppStrings.costInWarqa}',
+                          '${(result.estimatedCostUsd * ref.watch(iqdExchangeRateProvider)).toStringAsFixed(0)} ${AppStrings.costInIqd}',
+                          '\n${AppStrings.pricingDisclaimer}',
+                        ],
+                        headerValue:
+                            '\$${result.estimatedCostUsd.toStringAsFixed(2)}',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text(
+                    "شكل توضيحي للربط",
+                    style: GoogleFonts.amiri(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Text(
-                          "شكل توضيحي للربط",
-                          style: GoogleFonts.amiri(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.asset(
-                              'assets/photoi.png',
-                              fit: BoxFit.contain,
-                              height: 200,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                    Icons.image_not_supported,
-                                    size: 100,
-                                    color: Colors.grey,
-                                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/photoi.png',
+                        fit: BoxFit.contain,
+                        height: 200,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.image_not_supported,
+                              size: 100,
+                              color: Colors.grey,
                             ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
 

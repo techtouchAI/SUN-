@@ -2,6 +2,7 @@ import '../errors/app_exceptions.dart';
 import '../../models/load_model.dart';
 
 class InputValidator {
+  static const double _timeTolerance = 0.0001;
   static const double maxPeakSunHours = 24.0;
   static const double maxAutonomyDays = 30.0;
   static const double maxStartingCurrentMultiplier = 10.0;
@@ -150,6 +151,15 @@ class InputValidator {
           field: 'hours',
         );
       }
+      if (load.operatingPeriods.isEmpty &&
+          (load.dailyUsageHours - load.daytimeHours - load.nighttimeHours)
+                  .abs() >
+              _timeTolerance) {
+        throw InvalidLoadInput(
+          'ساعات الاستخدام اليومية يجب أن تساوي مجموع ساعات النهار والليل.',
+          field: 'hours',
+        );
+      }
       if (!load.startingCurrentMultiplier.isFinite ||
           load.startingCurrentMultiplier < 1 ||
           load.startingCurrentMultiplier > maxStartingCurrentMultiplier) {
@@ -158,7 +168,11 @@ class InputValidator {
           field: 'startingCurrentMultiplier',
         );
       }
-      for (final period in load.operatingPeriods) {
+      final periods = [...load.operatingPeriods]
+        ..sort((first, second) => first.startHour.compareTo(second.startHour));
+      var totalPeriodHours = 0.0;
+      double? previousEndHour;
+      for (final period in periods) {
         if (!period.startHour.isFinite ||
             !period.endHour.isFinite ||
             period.startHour < 0 ||
@@ -169,6 +183,22 @@ class InputValidator {
             field: 'operatingPeriods',
           );
         }
+        if (previousEndHour != null &&
+            period.startHour < previousEndHour - _timeTolerance) {
+          throw InvalidLoadInput(
+            'فترات تشغيل الحمل لا يمكن أن تتداخل؛ التداخل يكرر استهلاك الحمل.',
+            field: 'operatingPeriods',
+          );
+        }
+        totalPeriodHours += period.durationHours;
+        previousEndHour = period.endHour;
+      }
+      if (periods.isNotEmpty &&
+          (load.dailyUsageHours - totalPeriodHours).abs() > _timeTolerance) {
+        throw InvalidLoadInput(
+          'ساعات الاستخدام اليومية يجب أن تساوي مجموع فترات التشغيل المحفوظة.',
+          field: 'operatingPeriods',
+        );
       }
     }
   }

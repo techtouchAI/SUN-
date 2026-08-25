@@ -344,7 +344,7 @@ final calculationStateProvider = Provider<CalculationState>((ref) {
   }
 });
 
-final systemResultProvider = Provider<SystemResultModel>((ref) {
+final systemResultProvider = Provider<SystemResultModel?>((ref) {
   var disposed = false;
   ref.onDispose(() => disposed = true);
 
@@ -363,15 +363,15 @@ final systemResultProvider = Provider<SystemResultModel>((ref) {
   }
   if (state is CalculationInvalidInput) {
     reportError(state.error.message);
-    return SystemResultModel.failure(state.error.message);
+    return null;
   }
   if (state is CalculationFailed) {
     final message = state.error.toString();
     reportError(message);
-    return SystemResultModel.failure(message);
+    return null;
   }
   reportError(null);
-  return SystemResultModel.failure('لا توجد أحمال للحساب.');
+  return null;
 });
 
 final finalCalculationDtoProvider = Provider<FinalCalculationDto?>((ref) {

@@ -8,6 +8,8 @@ class AppStrings {
   static const String powerCapacity = 'القدرة/الاستهلاك';
   static const String enterValue = 'أدخل القيمة';
   static const String dailyUsageHours = 'الاستهلاك اليومي (ساعات)';
+  static const String daytimeUsageHours = 'ساعات التشغيل نهاراً';
+  static const String nighttimeUsageHours = 'ساعات التشغيل ليلاً';
   static const String enterHours = 'أدخل الساعات';
   static const String isInverterAC = 'هل المكيف إنفرتر؟';
   static const String addLoadButton = 'إضافة الحمل';

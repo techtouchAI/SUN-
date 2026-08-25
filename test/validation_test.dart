@@ -48,6 +48,41 @@ void main() {
     );
   });
 
+  test(
+    'requires a consistent explicit schedule without overlapping periods',
+    () {
+      final inconsistentHours = LoadModel(
+        name: 'Inconsistent schedule',
+        unit: PowerUnit.watt,
+        powerValue: 100,
+        dailyUsageHours: 6,
+        daytimeHours: 4,
+        nighttimeHours: 1,
+      );
+      final overlappingPeriods = LoadModel(
+        name: 'Overlapping periods',
+        unit: PowerUnit.watt,
+        powerValue: 100,
+        dailyUsageHours: 6,
+        daytimeHours: 0,
+        nighttimeHours: 0,
+        operatingPeriods: const [
+          LoadOperatingPeriod(startHour: 6, endHour: 10),
+          LoadOperatingPeriod(startHour: 9, endHour: 11),
+        ],
+      );
+
+      expect(
+        () => InputValidator.validateLoads([inconsistentHours]),
+        throwsA(isA<InvalidLoadInput>()),
+      );
+      expect(
+        () => InputValidator.validateLoads([overlappingPeriods]),
+        throwsA(isA<InvalidLoadInput>()),
+      );
+    },
+  );
+
   test('rejects NaN and infinite engineering values', () {
     expect(
       () => InputValidator.validateSystemParameters(

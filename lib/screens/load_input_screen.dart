@@ -22,11 +22,13 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   final _nameController = TextEditingController();
   final _powerValueController = TextEditingController();
-  final _dailyHoursController = TextEditingController();
+  final _daytimeHoursController = TextEditingController();
+  final _nighttimeHoursController = TextEditingController();
   final _quickPowerController = TextEditingController();
-  final _quickHoursController = TextEditingController();
+  final _quickDaytimeHoursController = TextEditingController();
+  final _quickNighttimeHoursController = TextEditingController();
 
-  PowerUnit _selectedUnit = PowerUnit.ampere;
+  PowerUnit _selectedUnit = PowerUnit.watt;
   bool _isInverter = false;
 
   @override
@@ -40,12 +42,17 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   void _addDetailedLoad() {
     if (_detailedFormKey.currentState!.validate()) {
+      final daytimeHours = double.parse(_daytimeHoursController.text);
+      final nighttimeHours = double.parse(_nighttimeHoursController.text);
+      if (!_validateDayNightHours(daytimeHours, nighttimeHours)) return;
       final newLoad = LoadModel(
         id: const Uuid().v4(),
         name: _nameController.text,
         powerValue: double.parse(_powerValueController.text),
         unit: _selectedUnit,
-        dailyUsageHours: double.parse(_dailyHoursController.text),
+        dailyUsageHours: daytimeHours + nighttimeHours,
+        daytimeHours: daytimeHours,
+        nighttimeHours: nighttimeHours,
         isInverterDevice: _isInverter,
       );
 
@@ -56,12 +63,17 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
 
   void _addQuickLoad() {
     if (_quickFormKey.currentState!.validate()) {
+      final daytimeHours = double.parse(_quickDaytimeHoursController.text);
+      final nighttimeHours = double.parse(_quickNighttimeHoursController.text);
+      if (!_validateDayNightHours(daytimeHours, nighttimeHours)) return;
       final newLoad = LoadModel(
         id: const Uuid().v4(),
         name: AppStrings.quickLoadTitle,
         powerValue: double.parse(_quickPowerController.text),
         unit: PowerUnit.ampere,
-        dailyUsageHours: double.parse(_quickHoursController.text),
+        dailyUsageHours: daytimeHours + nighttimeHours,
+        daytimeHours: daytimeHours,
+        nighttimeHours: nighttimeHours,
         isInverterDevice: false,
       );
 
@@ -73,23 +85,62 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
   void _clearDetailedForm() {
     _nameController.clear();
     _powerValueController.clear();
-    _dailyHoursController.clear();
+    _daytimeHoursController.clear();
+    _nighttimeHoursController.clear();
     setState(() {
-      _selectedUnit = PowerUnit.ampere;
+      _selectedUnit = PowerUnit.watt;
       _isInverter = false;
     });
   }
 
   void _clearQuickForm() {
     _quickPowerController.clear();
-    _quickHoursController.clear();
+    _quickDaytimeHoursController.clear();
+    _quickNighttimeHoursController.clear();
+  }
+
+  bool _validateDayNightHours(double daytimeHours, double nighttimeHours) {
+    if (daytimeHours < 0 ||
+        nighttimeHours < 0 ||
+        daytimeHours > 24 ||
+        nighttimeHours > 24 ||
+        daytimeHours + nighttimeHours > 24) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'يجب أن تكون ساعات النهار والليل بين 0 و24 ومجموعهما لا يتجاوز 24.',
+          ),
+        ),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  String? _hoursValidator(String? value) {
+    final hours = double.tryParse(value ?? '');
+    if (hours == null || hours < 0 || hours > 24) {
+      return 'أدخل ساعات بين 0 و24';
+    }
+    return null;
+  }
+
+  String? _powerValidator(String? value) {
+    final power = double.tryParse(value ?? '');
+    if (power == null || power <= 0) {
+      return 'أدخل قدرة أكبر من صفر';
+    }
+    return null;
   }
 
   void _showEditDialog(LoadModel load) {
     final nameCtrl = TextEditingController(text: load.name);
     final powerCtrl = TextEditingController(text: load.powerValue.toString());
-    final hoursCtrl = TextEditingController(
-      text: load.dailyUsageHours.toString(),
+    final daytimeHoursCtrl = TextEditingController(
+      text: load.daytimeHours.toString(),
+    );
+    final nighttimeHoursCtrl = TextEditingController(
+      text: load.nighttimeHours.toString(),
     );
     PowerUnit editUnit = load.unit;
     bool editInverter = load.isInverterDevice;
@@ -154,12 +205,28 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                         ),
                       ],
                     ),
-                    TextFormField(
-                      controller: hoursCtrl,
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.dailyUsageHours,
-                      ),
-                      keyboardType: TextInputType.number,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: daytimeHoursCtrl,
+                            decoration: const InputDecoration(
+                              labelText: AppStrings.daytimeUsageHours,
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: nighttimeHoursCtrl,
+                            decoration: const InputDecoration(
+                              labelText: AppStrings.nighttimeUsageHours,
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
                     ),
                     SwitchListTile(
                       title: const Text(AppStrings.isInverterAC),
@@ -179,11 +246,26 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () {
+                    final power = double.tryParse(powerCtrl.text);
+                    final daytimeHours = double.tryParse(daytimeHoursCtrl.text);
+                    final nighttimeHours = double.tryParse(
+                      nighttimeHoursCtrl.text,
+                    );
+                    if (nameCtrl.text.trim().isEmpty ||
+                        power == null ||
+                        power <= 0 ||
+                        daytimeHours == null ||
+                        nighttimeHours == null ||
+                        !_validateDayNightHours(daytimeHours, nighttimeHours)) {
+                      return;
+                    }
                     final updatedLoad = load.copyWith(
                       name: nameCtrl.text,
-                      powerValue: double.parse(powerCtrl.text),
+                      powerValue: power,
                       unit: editUnit,
-                      dailyUsageHours: double.parse(hoursCtrl.text),
+                      dailyUsageHours: daytimeHours + nighttimeHours,
+                      daytimeHours: daytimeHours,
+                      nighttimeHours: nighttimeHours,
                       isInverterDevice: editInverter,
                     );
                     ref.read(loadListProvider.notifier).updateLoad(updatedLoad);
@@ -429,9 +511,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                                   AppStrings.powerCapacity,
                                             ),
                                             keyboardType: TextInputType.number,
-                                            validator: (value) => value!.isEmpty
-                                                ? AppStrings.enterValue
-                                                : null,
+                                            validator: _powerValidator,
                                           ),
                                         ),
                                         const SizedBox(width: 16),
@@ -480,15 +560,33 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                         ),
                                       ],
                                     ),
-                                    TextFormField(
-                                      controller: _dailyHoursController,
-                                      decoration: const InputDecoration(
-                                        labelText: AppStrings.dailyUsageHours,
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      validator: (value) => value!.isEmpty
-                                          ? AppStrings.enterHours
-                                          : null,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextFormField(
+                                            controller: _daytimeHoursController,
+                                            decoration: const InputDecoration(
+                                              labelText:
+                                                  AppStrings.daytimeUsageHours,
+                                            ),
+                                            keyboardType: TextInputType.number,
+                                            validator: _hoursValidator,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: TextFormField(
+                                            controller:
+                                                _nighttimeHoursController,
+                                            decoration: const InputDecoration(
+                                              labelText: AppStrings
+                                                  .nighttimeUsageHours,
+                                            ),
+                                            keyboardType: TextInputType.number,
+                                            validator: _hoursValidator,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     SwitchListTile(
                                       title: const Text(
@@ -536,19 +634,36 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                             '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})',
                                       ),
                                       keyboardType: TextInputType.number,
-                                      validator: (value) => value!.isEmpty
-                                          ? AppStrings.enterValue
-                                          : null,
+                                      validator: _powerValidator,
                                     ),
-                                    TextFormField(
-                                      controller: _quickHoursController,
-                                      decoration: const InputDecoration(
-                                        labelText: AppStrings.dailyUsageHours,
-                                      ),
-                                      keyboardType: TextInputType.number,
-                                      validator: (value) => value!.isEmpty
-                                          ? AppStrings.enterHours
-                                          : null,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextFormField(
+                                            controller:
+                                                _quickDaytimeHoursController,
+                                            decoration: const InputDecoration(
+                                              labelText:
+                                                  AppStrings.daytimeUsageHours,
+                                            ),
+                                            keyboardType: TextInputType.number,
+                                            validator: _hoursValidator,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: TextFormField(
+                                            controller:
+                                                _quickNighttimeHoursController,
+                                            decoration: const InputDecoration(
+                                              labelText: AppStrings
+                                                  .nighttimeUsageHours,
+                                            ),
+                                            keyboardType: TextInputType.number,
+                                            validator: _hoursValidator,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 16),
                                     ElevatedButton(

@@ -49,4 +49,17 @@ void main() {
       expect(reloaded.loads.single.name, 'Integration load');
     },
   );
+
+  test('failed calculation has no zero-valued system result fallback', () {
+    final container = ProviderContainer(
+      overrides: [
+        calculationStateProvider.overrideWith(
+          (ref) => const CalculationFailed('invalid engineering input'),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(container.read(systemResultProvider), isNull);
+  });
 }

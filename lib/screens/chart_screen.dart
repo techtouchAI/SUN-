@@ -3,13 +3,23 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
+import '../models/calculation_state.dart';
 
 class ChartScreen extends ConsumerWidget {
   const ChartScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final result = ref.watch(systemResultProvider);
+    final calculationState = ref.watch(calculationStateProvider);
+    if (calculationState is! CalculationReady) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.dailyProductionCurve)),
+        body: const Center(
+          child: Text('لا يمكن عرض المخطط قبل اكتمال حساب صحيح.'),
+        ),
+      );
+    }
+    final result = calculationState.result;
     final curve = result.dailyProductionCurve;
 
     // Time labels: Dawn, Morning, Noon, Afternoon, Evening
