@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:solar_calculator/models/dc_cable_installation_model.dart';
+import 'package:solar_calculator/models/pv_array_topology_model.dart';
 import 'package:solar_calculator/models/safety_audit_model.dart';
 import 'package:solar_calculator/widgets/safety_audit_details.dart';
 
@@ -130,4 +132,50 @@ void main() {
     await tester.pump();
     expect(requestedKind, isNull);
   });
+
+  testWidgets(
+    'shows valid panel factor pairs, marks the saved topology, and explains saved cable inputs',
+    (tester) async {
+      PvArrayTopologyModel? selectedTopology;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SafetyAuditDetails(
+              report: conciseReport,
+              requiredPanels: 18,
+              panelIscAmps: 13.8,
+              savedTopology: const PvArrayTopologyModel(
+                modulesPerString: 9,
+                parallelStrings: 2,
+              ),
+              savedDcCable: const DcCableInstallationModel(
+                oneWayLengthMeters: 20,
+                conductorMaterial: 'copper',
+                insulationRating: '70C',
+                installationMethod: 'tray',
+                ambientTemperatureCelsius: 48,
+                loadedConductors: 10,
+              ),
+              onTopologySelected: (topology) => selectedTopology = topology,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(Card), findsNWidgets(4));
+      expect(find.text('خيارات ترتيب الألواح'), findsOneWidget);
+      expect(find.text('9 على التوالي × 2 بالتوازي'), findsOneWidget);
+      expect(find.text('الخيار المستخدم حالياً.'), findsOneWidget);
+      expect(find.text('3 على التوالي × 6 بالتوازي'), findsOneWidget);
+      expect(find.text('خصائص الكابل المستخدمة'), findsOneWidget);
+      expect(find.textContaining('الموصل: نحاس'), findsOneWidget);
+      expect(find.textContaining('العزل: 70C'), findsOneWidget);
+      expect(find.textContaining('التمديد: على حاملة كابلات'), findsOneWidget);
+
+      await tester.tap(find.text('3 على التوالي × 6 بالتوازي'));
+      await tester.pump();
+      expect(selectedTopology?.modulesPerString, 3);
+      expect(selectedTopology?.parallelStrings, 6);
+    },
+  );
 }

@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import '../models/calculation_state.dart';
+import '../models/dc_cable_installation_model.dart';
+import '../models/pv_array_topology_model.dart';
 import '../models/safety_audit_model.dart';
 import '../models/system_mode.dart';
 import '../models/system_result_model.dart';
@@ -306,7 +308,7 @@ class DashboardScreen extends ConsumerWidget {
                         : 'غير متاح',
                     icon: Icons.health_and_safety,
                     color: Colors.redAccent,
-                    onTap: () => _showSafetyAuditModal(context, result),
+                    onTap: () => _showSafetyAuditModal(context, ref, result),
                   ),
                   _buildResultCard(
                     title: AppStrings.estimatedSystemCost,
@@ -370,7 +372,11 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  void _showSafetyAuditModal(BuildContext context, SystemResultModel result) {
+  void _showSafetyAuditModal(
+    BuildContext context,
+    WidgetRef ref,
+    SystemResultModel result,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -381,6 +387,34 @@ class DashboardScreen extends ConsumerWidget {
         heightFactor: 0.88,
         child: SafetyAuditDetails(
           report: result.safetyAudit,
+          requiredPanels: result.requiredPanels,
+          panelIscAmps: ref.read(panelIscProvider),
+          savedTopology: PvArrayTopologyModel(
+            modulesPerString: ref.read(pvModulesPerStringProvider),
+            parallelStrings: ref.read(pvParallelStringsProvider),
+          ),
+          savedDcCable: DcCableInstallationModel(
+            oneWayLengthMeters: ref.read(dcCableLengthMetersProvider),
+            conductorMaterial: ref.read(dcCableMaterialProvider),
+            insulationRating: ref.read(dcCableInsulationProvider),
+            installationMethod: ref.read(dcCableInstallationMethodProvider),
+            ambientTemperatureCelsius: ref.read(
+              dcCableAmbientTemperatureProvider,
+            ),
+            loadedConductors: ref.read(dcCableLoadedConductorsProvider),
+          ),
+          onTopologySelected: (topology) {
+            ref.read(pvModulesPerStringProvider.notifier).state =
+                topology.modulesPerString;
+            ref.read(pvParallelStringsProvider.notifier).state =
+                topology.parallelStrings;
+            Navigator.pop(sheetContext);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم حفظ ترتيب الألواح وإعادة حساب الحماية.'),
+              ),
+            );
+          },
           onInputRequested: (kind) {
             final section = switch (kind) {
               ProtectionResultKind.pvArrayCurrent => SettingsSection.pvTopology,
