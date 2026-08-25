@@ -4,8 +4,13 @@ import '../models/safety_audit_model.dart';
 
 class SafetyAuditDetails extends StatelessWidget {
   final SafetyAuditReport report;
+  final ValueChanged<ProtectionResultKind>? onInputRequested;
 
-  const SafetyAuditDetails({super.key, required this.report});
+  const SafetyAuditDetails({
+    super.key,
+    required this.report,
+    this.onInputRequested,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +28,10 @@ class SafetyAuditDetails extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               for (final result in report.presentationResults)
-                _ProtectionResultRow(result: result),
+                _ProtectionResultRow(
+                  result: result,
+                  onInputRequested: onInputRequested,
+                ),
               const SizedBox(height: 16),
               Align(
                 alignment: Alignment.center,
@@ -42,8 +50,9 @@ class SafetyAuditDetails extends StatelessWidget {
 
 class _ProtectionResultRow extends StatelessWidget {
   final SafetyProtectionResult result;
+  final ValueChanged<ProtectionResultKind>? onInputRequested;
 
-  const _ProtectionResultRow({required this.result});
+  const _ProtectionResultRow({required this.result, this.onInputRequested});
 
   @override
   Widget build(BuildContext context) {
@@ -54,39 +63,55 @@ class _ProtectionResultRow extends StatelessWidget {
       ProtectionResultStatus.invalidInput ||
       ProtectionResultStatus.unsupportedConfiguration => Colors.deepOrange,
     };
+    final canOpenInput =
+        !result.isCalculated &&
+        (result.kind == ProtectionResultKind.pvArrayCurrent ||
+            result.kind == ProtectionResultKind.dcConductorSize) &&
+        onInputRequested != null;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    result.kind.labelAr,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+      child: InkWell(
+        onTap: canOpenInput ? () => onInputRequested!(result.kind) : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      result.kind.labelAr,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                ),
+                  Text(
+                    result.conciseStatusAr,
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              if (!result.isCalculated) ...[
+                const SizedBox(height: 5),
                 Text(
-                  result.conciseStatusAr,
-                  textDirection: TextDirection.ltr,
-                  style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                  result.conciseReasonAr,
+                  style: TextStyle(color: color, height: 1.35),
                 ),
               ],
-            ),
-            if (!result.isCalculated) ...[
-              const SizedBox(height: 5),
-              Text(
-                result.conciseReasonAr,
-                style: TextStyle(color: color, height: 1.35),
-              ),
+              if (canOpenInput) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'اضغط لإدخال البيانات',
+                  style: TextStyle(color: color, fontSize: 12),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

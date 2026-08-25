@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
 import '../models/calculation_state.dart';
+import '../models/safety_audit_model.dart';
 import '../models/system_mode.dart';
 import '../models/system_result_model.dart';
 import '../repositories/solar_calculation_repository.dart';
@@ -378,7 +379,23 @@ class DashboardScreen extends ConsumerWidget {
       ),
       builder: (sheetContext) => FractionallySizedBox(
         heightFactor: 0.88,
-        child: SafetyAuditDetails(report: result.safetyAudit),
+        child: SafetyAuditDetails(
+          report: result.safetyAudit,
+          onInputRequested: (kind) {
+            final section = switch (kind) {
+              ProtectionResultKind.pvArrayCurrent => SettingsSection.pvTopology,
+              ProtectionResultKind.dcConductorSize => SettingsSection.dcCable,
+              _ => null,
+            };
+            if (section == null) return;
+            Navigator.pop(sheetContext);
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => SettingsScreen(initialSection: section),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

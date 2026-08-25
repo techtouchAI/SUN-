@@ -6,11 +6,44 @@ import '../logic/app_strings.dart';
 import '../models/system_mode.dart';
 import '../repositories/solar_calculation_repository.dart';
 
-class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+enum SettingsSection { pvTopology, dcCable }
+
+class SettingsScreen extends ConsumerStatefulWidget {
+  final SettingsSection? initialSection;
+
+  const SettingsScreen({super.key, this.initialSection});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final _pvTopologyKey = GlobalKey();
+  final _dcCableKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = switch (widget.initialSection) {
+        SettingsSection.pvTopology => _pvTopologyKey,
+        SettingsSection.dcCable => _dcCableKey,
+        null => null,
+      };
+      final targetContext = target?.currentContext;
+      if (targetContext != null) {
+        Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOut,
+          alignment: 0.18,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
@@ -184,91 +217,109 @@ class SettingsScreen extends ConsumerWidget {
                   style: TextStyle(color: Colors.grey),
                 ),
               ),
-              if (ref.watch(systemModeProvider) != SystemMode.ups) ...[
-                const Text(
-                  'توصيل الألواح',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                _buildOptionalIntInput(
-                  ref: ref,
-                  label: 'عدد الألواح على التوالي لكل مسار',
-                  provider: pvModulesPerStringProvider,
-                ),
-                const SizedBox(height: 16),
-                _buildOptionalIntInput(
-                  ref: ref,
-                  label: 'عدد المسارات على التوازي',
-                  provider: pvParallelStringsProvider,
-                ),
-                const SizedBox(height: 20),
-              ],
-              const Text(
-                'كابل DC',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              _buildOptionalDoubleInput(
-                ref: ref,
-                label: 'طول مسار كابل DC باتجاه واحد',
-                suffix: ' m',
-                provider: dcCableLengthMetersProvider,
-                allowZero: false,
-              ),
-              const SizedBox(height: 16),
-              _buildOptionalDropdown(
-                ref: ref,
-                label: 'مادة الموصل',
-                provider: dcCableMaterialProvider,
-                items: const [
-                  DropdownMenuItem(value: 'copper', child: Text('نحاس')),
-                  DropdownMenuItem(value: 'aluminum', child: Text('ألمنيوم')),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildOptionalDropdown(
-                ref: ref,
-                label: 'تصنيف عزل الكابل',
-                provider: dcCableInsulationProvider,
-                items: const [
-                  DropdownMenuItem(value: '70C', child: Text('70°C')),
-                  DropdownMenuItem(value: '90C', child: Text('90°C')),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildOptionalDropdown(
-                ref: ref,
-                label: 'طريقة تمديد كابل DC',
-                provider: dcCableInstallationMethodProvider,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'conduit',
-                    child: Text('داخل مواسير'),
+              if (ref.watch(systemModeProvider) != SystemMode.ups)
+                KeyedSubtree(
+                  key: _pvTopologyKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'توصيل الألواح',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildOptionalIntInput(
+                        ref: ref,
+                        label: 'عدد الألواح على التوالي لكل مسار',
+                        provider: pvModulesPerStringProvider,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildOptionalIntInput(
+                        ref: ref,
+                        label: 'عدد المسارات على التوازي',
+                        provider: pvParallelStringsProvider,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
-                  DropdownMenuItem(
-                    value: 'open_air',
-                    child: Text('مكشوف بالهواء'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'tray',
-                    child: Text('على حاملة كابلات'),
-                  ),
-                  DropdownMenuItem(value: 'buried', child: Text('مدفون')),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildOptionalDoubleInput(
-                ref: ref,
-                label: 'درجة الحرارة المحيطة',
-                suffix: ' °C',
-                provider: dcCableAmbientTemperatureProvider,
-                allowZero: true,
-              ),
-              const SizedBox(height: 16),
-              _buildOptionalIntInput(
-                ref: ref,
-                label: 'عدد الموصلات الحاملة للتيار',
-                provider: dcCableLoadedConductorsProvider,
+                ),
+              KeyedSubtree(
+                key: _dcCableKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'كابل DC',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildOptionalDoubleInput(
+                      ref: ref,
+                      label: 'طول مسار كابل DC باتجاه واحد',
+                      suffix: ' m',
+                      provider: dcCableLengthMetersProvider,
+                      allowZero: false,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildOptionalDropdown(
+                      ref: ref,
+                      label: 'مادة الموصل',
+                      provider: dcCableMaterialProvider,
+                      items: const [
+                        DropdownMenuItem(value: 'copper', child: Text('نحاس')),
+                        DropdownMenuItem(
+                          value: 'aluminum',
+                          child: Text('ألمنيوم'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildOptionalDropdown(
+                      ref: ref,
+                      label: 'تصنيف عزل الكابل',
+                      provider: dcCableInsulationProvider,
+                      items: const [
+                        DropdownMenuItem(value: '70C', child: Text('70°C')),
+                        DropdownMenuItem(value: '90C', child: Text('90°C')),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildOptionalDropdown(
+                      ref: ref,
+                      label: 'طريقة تمديد كابل DC',
+                      provider: dcCableInstallationMethodProvider,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'conduit',
+                          child: Text('داخل مواسير'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'open_air',
+                          child: Text('مكشوف بالهواء'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'tray',
+                          child: Text('على حاملة كابلات'),
+                        ),
+                        DropdownMenuItem(value: 'buried', child: Text('مدفون')),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildOptionalDoubleInput(
+                      ref: ref,
+                      label: 'درجة الحرارة المحيطة',
+                      suffix: ' °C',
+                      provider: dcCableAmbientTemperatureProvider,
+                      allowZero: true,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildOptionalIntInput(
+                      ref: ref,
+                      label: 'عدد الموصلات الحاملة للتيار',
+                      provider: dcCableLoadedConductorsProvider,
+                    ),
+                  ],
+                ),
               ),
               const Divider(),
               const SizedBox(height: 16),

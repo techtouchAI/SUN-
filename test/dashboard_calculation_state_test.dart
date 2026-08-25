@@ -85,4 +85,33 @@ void main() {
     expect(container.read(panelIscProvider), 18.5);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('opens PV topology settings from unavailable PV protection', (
+    tester,
+  ) async {
+    final container = containerFor(dayOnlyResult);
+    addTearDown(container.dispose);
+    await addDayOnlyLoad(tester, container);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('الحماية الكهربائية'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('الحماية الكهربائية'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('يلزم حفظ التوالي/التوازي.'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('توصيل الألواح'), findsOneWidget);
+    expect(find.text('عدد الألواح على التوالي لكل مسار'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

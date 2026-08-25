@@ -99,4 +99,35 @@ void main() {
     expect(find.textContaining('تم اشتقاق النتائج'), findsNothing);
     expect(find.textContaining('NEC Standards'), findsNothing);
   });
+
+  testWidgets('routes only missing PV and cable results to their input kinds', (
+    tester,
+  ) async {
+    ProtectionResultKind? requestedKind;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SafetyAuditDetails(
+            report: conciseReport,
+            onInputRequested: (kind) => requestedKind = kind,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('اضغط لإدخال البيانات'), findsNWidgets(2));
+    await tester.tap(find.text('يلزم حفظ التوالي/التوازي.'));
+    await tester.pump();
+    expect(requestedKind, ProtectionResultKind.pvArrayCurrent);
+
+    requestedKind = null;
+    await tester.tap(find.text('بيانات الكابل غير محفوظة.'));
+    await tester.pump();
+    expect(requestedKind, ProtectionResultKind.dcConductorSize);
+
+    requestedKind = null;
+    await tester.tap(find.text('12.5 A'));
+    await tester.pump();
+    expect(requestedKind, isNull);
+  });
 }
