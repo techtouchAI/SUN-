@@ -266,19 +266,22 @@ void main() {
     expect(details['continuousDaytimeWatts'], closeTo(200, 0.001));
   });
 
-  test('declared daytime hours beyond 12 stay daytime with no phantom battery', () {
-    final result = engine.calculateSystem(
-      [load(name: 'Long day load', day: 14, night: 0, power: 100)],
-      gridVoltage: 220,
-      systemMode: SystemMode.offGrid,
-      gridSchedule: offGridSchedule(),
-    );
+  test(
+    'declared daytime hours beyond 12 stay daytime with no phantom battery',
+    () {
+      final result = engine.calculateSystem(
+        [load(name: 'Long day load', day: 14, night: 0, power: 100)],
+        gridVoltage: 220,
+        systemMode: SystemMode.offGrid,
+        gridSchedule: offGridSchedule(),
+      );
 
-    expect(result.daytimeConsumptionWh, closeTo(1400, 0.001));
-    expect(result.nighttimeConsumptionWh, closeTo(0, 0.001));
-    expect(result.requiredBatteryCapacityAh, 0);
-    expect(result.panelsForBatteries, 0);
-  });
+      expect(result.daytimeConsumptionWh, closeTo(1400, 0.001));
+      expect(result.nighttimeConsumptionWh, closeTo(0, 0.001));
+      expect(result.requiredBatteryCapacityAh, 0);
+      expect(result.panelsForBatteries, 0);
+    },
+  );
 
   test(
     'UPS grid charging uses daily recharge energy and not the full nominal bank',
