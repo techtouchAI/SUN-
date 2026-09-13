@@ -35,7 +35,7 @@ SUN- تطبيق Flutter عربي لتقدير أولي لمكونات منظوم
 
 ## نموذج الحساب
 
-لا توجد نسبة ثابتة 40/60. يبني المحرك ملف حمل من 24 ساعة اعتماداً على الساعات المتاحة لكل حمل، ويستخدم الملف نفسه لحساب الطاقة والقدرة المتزامنة والذروة. يدعم نموذج المجال فترات تشغيل مخصصة، لكن واجهة baseline لا تعرض محرراً لها.
+لا توجد نسبة ثابتة 40/60. يبني المحرك ملف حمل من 24 ساعة اعتماداً على الساعات المتاحة لكل حمل، ويستخدم الملف نفسه لحساب الطاقة والقدرة المتزامنة والذروة. تُشتق طاقة النهار مباشرة من ساعات النهار المصرَّح بها لكل حمل (وللفترات المخصصة من تداخلها مع نافذة 06:00–18:00) ولا تُقتطع من شريحة زمنية ثابتة في ملف 24 ساعة، حتى لا تتسرب ساعات نهار أطول من 12 ساعة إلى طاقة الليل. يدعم نموذج المجال فترات تشغيل مخصصة، لكن واجهة baseline لا تعرض محرراً لها.
 
 ```text
 load_power_W = quantity × input_power_W
@@ -50,8 +50,10 @@ inverter_capacity_W = peak_load_W × (1 + safety margin)
 battery_output_energy_Wh = night_energy_Wh × autonomy_days / inverter_efficiency
 nominal_battery_energy_Wh = battery_output_energy_Wh / (DoD × battery_efficiency)
 battery_capacity_Ah = nominal_battery_energy_Wh / system_voltage_V
-required_battery_charge_Wh = battery_output_energy_Wh / (DoD × battery_efficiency × charge_efficiency)
+required_battery_charge_Wh = (night_energy_Wh / inverter_efficiency) / (battery_efficiency × charge_efficiency)
 ```
+
+`required_battery_charge_Wh` هي طاقة الشحن اليومية (إعادة تعبئة تفريغ ليلة واحدة). عمق التفريغ `DoD` وأيام الاستقلالية يكبّران **سعة البطارية** فقط، ولا يدخلان في طاقة الشحن اليومية ولا في عدد الألواح؛ فالألواح تعيد شحن ما فُرّغ كل يوم وليس السعة الاسمية كاملة كل يوم. كفاءة العاكس تُطبَّق مرة واحدة على جهة التفريغ، وكفاءة البطارية وكفاءة الشحن تُطبَّق كلٌّ منهما مرة واحدة.
 
 تحسب طاقة اللوح قبل التقريب، ثم يطبق أثر الشبكة على الطاقة المطلوبة لا على عدد الألواح المقرب:
 
@@ -98,7 +100,7 @@ flutter build linux --release
 
 ## الاختبارات وCI
 
-تتضمن suite الحالية 28 اختباراً ناجحاً تغطي محرك الحساب وملف 24 ساعة، حدود التحقق، parser الأرقام، الحفظ والاسترداد، providers ومسار التطبيق، مقارنة الإصدارات، واختيار Universal APK، إضافة إلى اختبار إقلاع واجهة baseline. يفحص CI تنسيق backend والاختبارات، و`flutter analyze`، والاختبارات، وبناء Web وAndroid debug. يفصل Release workflow عن CI بصلاحيات أقل، ويثبت Actions على SHA وينشئ checksums.
+تتضمن suite الحالية 30 اختباراً تغطي محرك الحساب وملف 24 ساعة، حدود التحقق، parser الأرقام، الحفظ والاسترداد، providers ومسار التطبيق، مقارنة الإصدارات، واختيار Universal APK، إضافة إلى اختبار إقلاع واجهة baseline واختبارات تصنيف طاقة النهار وشحن UPS. يفحص CI تنسيق backend والاختبارات، و`flutter analyze`، والاختبارات، وبناء Web وAndroid debug. يفصل Release workflow عن CI بصلاحيات أقل، ويثبت Actions على SHA وينشئ checksums.
 
 ## ملاحظات التطوير
 

@@ -87,9 +87,12 @@ class SolarCalculationRepository {
     final energyProfile = _hourlyLoadProfile(loads, gridVoltage);
     final powerProfile = _hourlyActivePowerProfile(loads, gridVoltage);
     final totalWh = energyProfile.fold(0.0, (sum, value) => sum + value);
-    final daytimeWh = energyProfile
-        .sublist(6, 18)
-        .fold(0.0, (sum, value) => sum + value);
+    // Daytime energy is derived from the hours the user declared for each
+    // load (daytimeHours / operating periods), not from a fixed 06:00–18:00
+    // slice of the chart profile. A fixed slice would silently move energy
+    // past 18:00 (e.g. a 14-hour day load) into the night bucket and inflate
+    // the battery and panel requirements.
+    final daytimeWh = _daytimeEnergyWh(loads, gridVoltage);
     final nighttimeWh = totalWh - daytimeWh;
     final daytimePeak = powerProfile.sublist(6, 18).fold(0.0, math.max);
 
@@ -165,11 +168,11 @@ class SolarCalculationRepository {
 
     final daytimeDcEnergyWh = daytimeWh / inverterEfficiency;
     final batteryEfficiency = _batteryEfficiency(gridSchedule.batteryType);
-    final requiredBatteryChargeWh = nighttimeWh <= 0
-        ? 0.0
-        : (nighttimeWh / inverterEfficiency) /
-              batteryEfficiency /
-              chargeEfficiency;
+    final requiredBatteryChargeWh = _requiredBatteryChargeWh(
+      nighttimeWh,
+      batteryEfficiency,
+      chargeEfficiency,
+    );
 
     final gridFraction =
         systemMode == SystemMode.hybrid && gridSchedule.gridOnHours > 0
@@ -307,10 +310,11 @@ class SolarCalculationRepository {
     final profile = _hourlyLoadProfile(loads, gridVoltage);
     final powerProfile = _hourlyActivePowerProfile(loads, gridVoltage);
     final totalConsumption = profile.fold(0.0, (sum, value) => sum + value);
-    // The profile has 24 slots indexed by hour; slots 0..5 and 18..23 are night.
-    final daytimeWh = profile
-        .sublist(6, 18)
-        .fold(0.0, (sum, value) => sum + value);
+    // Daytime energy comes from the hours the user declared for each load,
+    // not from a fixed 06:00–18:00 slice of the chart profile. The fixed
+    // slice previously misclassified declared daytime hours that extend past
+    // 18:00 as night energy, which inflated batteries and panel counts.
+    final daytimeWh = _daytimeEnergyWh(loads, gridVoltage);
     final nighttimeWh = totalConsumption - daytimeWh;
     final daytimePeak = powerProfile.sublist(6, 18).fold(0.0, math.max);
 
@@ -361,11 +365,18 @@ class SolarCalculationRepository {
     );
     final totalPvEnergyWh = pvCurve.fold(0.0, (sum, value) => sum + value);
 
+    final dailyBatteryRechargeWh = _requiredBatteryChargeWh(
+      nighttimeWh,
+      batteryEfficiency,
+      chargeEfficiency,
+    );
+    // UPS recharges its daily discharge from the grid; hybrid draws from the
+    // grid only the configured fraction of that same daily recharge energy.
+    // Using the full nominal battery energy here would over-estimate grid
+    // charging amps and charge time by the autonomy/DoD factors.
     final gridChargeEnergyWh = systemMode == SystemMode.ups
-        ? requiredBatteryEnergyWh / chargeEfficiency
-        : (panelDetails['requiredBatteryChargeWh'] as double) *
-              gridContributionPercent /
-              100.0;
+        ? dailyBatteryRechargeWh
+        : dailyBatteryRechargeWh * gridContributionPercent / 100.0;
     final gridChargingAmps =
         gridSchedule.gridOnHours > 0 && gridChargeEnergyWh > 0
         ? gridChargeEnergyWh / gridSchedule.gridOnHours / systemVoltage
@@ -534,6 +545,45 @@ class SolarCalculationRepository {
     'requiredBatteryChargeWh': 0.0,
     'remainingBatteryPvWh': 0.0,
   };
+
+  /// Daytime energy (Wh) derived from the hours the user declared for each
+  /// load: `quantity × power × daytimeHours`, and for custom operating
+  /// periods the overlap with the 06:00–18:00 daytime window.
+  double _daytimeEnergyWh(List<LoadModel> loads, double gridVoltage) {
+    var daytimeWh = 0.0;
+    for (final load in loads) {
+      final watts = _convertToWatts(load, gridVoltage);
+      if (load.operatingPeriods.isNotEmpty) {
+        for (final period in load.operatingPeriods) {
+          final daytimeOverlap = math.max(
+            0.0,
+            math.min(period.endHour, daytimeEndHour) -
+                math.max(period.startHour, daytimeStartHour),
+          );
+          daytimeWh += watts * daytimeOverlap;
+        }
+      } else {
+        daytimeWh += watts * load.daytimeHours;
+      }
+    }
+    return daytimeWh;
+  }
+
+  /// Daily DC energy (Wh) required to recharge one night's discharge.
+  /// The inverter loss is on the discharge side (battery → AC); the battery
+  /// and charge efficiencies apply once each. Depth-of-discharge and autonomy
+  /// size the battery bank, not the daily recharge energy, so they do not
+  /// appear here.
+  double _requiredBatteryChargeWh(
+    double nighttimeWh,
+    double batteryEfficiency,
+    double chargeEfficiency,
+  ) {
+    if (nighttimeWh <= 0) return 0.0;
+    return (nighttimeWh / inverterEfficiency) /
+        batteryEfficiency /
+        chargeEfficiency;
+  }
 
   List<double> _hourlyLoadProfile(List<LoadModel> loads, double gridVoltage) {
     final result = List<double>.filled(24, 0);

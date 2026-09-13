@@ -265,4 +265,59 @@ void main() {
     expect(details['nighttime'], closeTo(0, 0.001));
     expect(details['continuousDaytimeWatts'], closeTo(200, 0.001));
   });
+
+  test(
+    'declared daytime hours beyond 12 stay daytime with no phantom battery',
+    () {
+      final result = engine.calculateSystem(
+        [load(name: 'Long day load', day: 14, night: 0, power: 100)],
+        gridVoltage: 220,
+        systemMode: SystemMode.offGrid,
+        gridSchedule: offGridSchedule(),
+      );
+
+      expect(result.daytimeConsumptionWh, closeTo(1400, 0.001));
+      expect(result.nighttimeConsumptionWh, closeTo(0, 0.001));
+      expect(result.requiredBatteryCapacityAh, 0);
+      expect(result.panelsForBatteries, 0);
+    },
+  );
+
+  test(
+    'UPS grid charging uses daily recharge energy and not the full nominal bank',
+    () {
+      final autonomy1 = engine.calculateSystem(
+        [load(name: 'UPS load', day: 0, night: 4, power: 1000)],
+        gridVoltage: 220,
+        systemMode: SystemMode.ups,
+        gridSchedule: const GridScheduleModel(
+          gridOnHours: 24,
+          gridOffHours: 0,
+          batteryType: 'Lithium',
+        ),
+        daysOfAutonomy: 1,
+      );
+      final autonomy2 = engine.calculateSystem(
+        [load(name: 'UPS load', day: 0, night: 4, power: 1000)],
+        gridVoltage: 220,
+        systemMode: SystemMode.ups,
+        gridSchedule: const GridScheduleModel(
+          gridOnHours: 24,
+          gridOffHours: 0,
+          batteryType: 'Lithium',
+        ),
+        daysOfAutonomy: 2,
+      );
+
+      // Autonomy grows the battery bank but not the daily grid recharge.
+      expect(
+        autonomy2.requiredBatteryCapacityAh,
+        greaterThan(autonomy1.requiredBatteryCapacityAh),
+      );
+      expect(
+        autonomy1.requiredGridChargingAmps,
+        closeTo(autonomy2.requiredGridChargingAmps, 0.0001),
+      );
+    },
+  );
 }
