@@ -336,7 +336,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ),
               ),
             if (systemMode != SystemMode.directOnGrid)
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
             ExplainedField(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
               explanation: FieldHelpContent.isOffGridSystem,
@@ -374,11 +374,11 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                         },
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               ExplainedField(
                 explanation: FieldHelpContent.gridStartHour,
                 helperText:
-                    'الوقت الذي يصل فيه التيار (0 = منتصف الليل).',
+                    'الوقت (0 = منتصف الليل).',
                 field: TextFormField(
                   initialValue: gridSchedule.gridStartHour.toString(),
                   decoration: const InputDecoration(
@@ -398,7 +398,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               ExplainedField(
                 explanation: FieldHelpContent.gridOnHours,
                 helperText:
-                    'مدة بقاء التيار الوطني يومياً (المدة وليس الوقت).',
+                    'المدة بالساعات وليس الوقت.',
                 field: TextFormField(
                   initialValue: gridSchedule.gridOnHours.toString(),
                   decoration: const InputDecoration(
@@ -418,7 +418,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               ExplainedField(
                 explanation: FieldHelpContent.gridOffHours,
                 helperText:
-                    'مدة انقطاع التيار الوطني يومياً (المدة وليس الوقت).',
+                    'المدة بالساعات وليس الوقت.',
                 field: TextFormField(
                   initialValue: gridSchedule.gridOffHours.toString(),
                   decoration: const InputDecoration(
@@ -517,7 +517,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
         ),
         body: SafeArea(
           child: CustomScrollView(
-            scrollCacheExtent: const ScrollCacheExtent.pixels(800.0),
             slivers: [
               SliverToBoxAdapter(child: _buildGridSettings()),
               SliverToBoxAdapter(
