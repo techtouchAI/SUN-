@@ -15,6 +15,8 @@ class SystemResultModel {
   final int requiredPanels;
   final int panelsForDaytime;
   final int panelsForBatteries;
+  /// Planned grid share used for battery PV sizing, not guaranteed delivery.
+  /// Charger/grid-hour shortfalls are reported in the breakdown warnings.
   final double gridContributionPercent;
   final int panelsSavedByGrid;
   final List<double> dailyProductionCurve;

@@ -198,11 +198,9 @@ class SolarCalculationRepository {
       gridSchedule,
     );
     final requestedGridChargeWh = requiredBatteryChargeWh * gridChargeFraction;
-    // A charger can only deliver its rated power during the hours the grid is
-    // actually available, so the requested fraction is capped by what the
-    // hardware can put into the battery. Without this cap the model claims a
-    // grid contribution that cannot physically happen and still reports the
-    // un-reduced solar remainder.
+    // Size PV from the user's planned split, not from charger limitations.
+    // Keep deliverable energy separate for charging estimates and warnings:
+    // insufficient grid charging must not silently override the selected split.
     final deliverableGridChargeWh = _deliverableGridChargeWh(
       requestedEnergyWh: requestedGridChargeWh,
       gridSchedule: gridSchedule,
@@ -213,12 +211,9 @@ class SolarCalculationRepository {
       requestedGridChargeWh,
       deliverableGridChargeWh,
     );
-    final effectiveGridChargeFraction = requiredBatteryChargeWh > 0
-        ? gridChargeEnergyWh / requiredBatteryChargeWh
-        : 0.0;
     final remainingBatteryPvWh = math.max(
       0.0,
-      requiredBatteryChargeWh - gridChargeEnergyWh,
+      requiredBatteryChargeWh - requestedGridChargeWh,
     );
 
     // Daytime loads that run while the national grid is available are served
@@ -265,7 +260,9 @@ class SolarCalculationRepository {
       'daytimePanels': daytimePanels,
       'batteryPanels': batteryPanels,
       'totalPanels': combinedEnergyPanels,
-      'gridContributionPercent': effectiveGridChargeFraction * 100.0,
+      'gridContributionPercent': requiredBatteryChargeWh > 0
+          ? gridChargeFraction * 100.0
+          : 0.0,
       'panelsSavedByGrid': math.max(0, fullSolarPanels - combinedEnergyPanels),
       'maximumArrayPanels': math.max(fullSolarPanels, combinedEnergyPanels),
       'daytimePanelsExplanationAr': systemMode == SystemMode.directOnGrid
@@ -280,10 +277,10 @@ class SolarCalculationRepository {
           : 'Daytime panels are based on the explicit daytime energy profile and effective daily panel energy.',
       'batteryPanelsExplanationAr': systemMode == SystemMode.directOnGrid
           ? ''
-          : 'طاقة شحن البطارية المطلوبة قبل الشبكة: ${requiredBatteryChargeWh.toStringAsFixed(0)}Wh. طاقة الشحن المغطاة من الوطنية: ${gridChargeEnergyWh.toStringAsFixed(0)}Wh. المتبقي من الطاقة الشمسية: ${remainingBatteryPvWh.toStringAsFixed(0)}Wh. ألواح لشحن البطاريات: $batteryPanels لوح. تم جمع طاقة النهار والشحن ثم تقريب العدد مرة واحدة.',
+          : 'طاقة شحن البطارية المطلوبة قبل الشبكة: ${requiredBatteryChargeWh.toStringAsFixed(0)}Wh. نسبة الاعتماد على الوطنية لشحن البطاريات: ${(gridChargeFraction * 100).toStringAsFixed(0)}%. طاقة الشحن المخصصة للوطنية: ${requestedGridChargeWh.toStringAsFixed(0)}Wh. طاقة الشحن الممكنة من الوطنية حسب قدرة الشاحن وساعات التوفر: ${gridChargeEnergyWh.toStringAsFixed(0)}Wh. المتبقي من الطاقة الشمسية: ${remainingBatteryPvWh.toStringAsFixed(0)}Wh. ألواح لشحن البطاريات: $batteryPanels لوح. تم جمع طاقة النهار والشحن ثم تقريب العدد مرة واحدة.',
       'batteryPanelsExplanationEn': systemMode == SystemMode.directOnGrid
           ? ''
-          : 'Battery charging energy is reduced by the grid-delivered charge energy (capped by charger power and grid hours), then daytime and charging energy are combined before one panel-count rounding step.',
+          : 'Battery PV energy is reduced by the selected grid charging percentage, then daytime and charging energy are combined before one panel-count rounding step. Deliverable grid charging energy is estimated separately; any shortfall is warned about, not added back to PV.',
       'floatPreservationRecommendationAr': '',
       'panelDailyEnergyWh': panelDailyEnergyWh,
       'requiredBatteryChargeWh': requiredBatteryChargeWh,
@@ -541,7 +538,7 @@ class SolarCalculationRepository {
       if (daytimeGridServedWh > 0 && panelsForDaytime == 0)
         'الوطنية تغطي كامل أحمال النهار خلال ساعات توفرها؛ لم تُحسب ألواح نهارية. إذا انقطعت الوطنية نهاراً فستحتاج ألواحاً لتغطية تلك الأحمال.',
       if (gridChargeLimitedByHardware)
-        'قدرة الشحن خلال ساعات توفر الوطنية (${gridSchedule.gridOnHours.toStringAsFixed(0)} ساعة) لا تكفي لتغطية نسبة الاعتماد المطلوبة؛ تم احتساب ${gridChargeEnergyWh.toStringAsFixed(0)}Wh فعلياً من أصل ${requestedGridChargeWh.toStringAsFixed(0)}Wh، والباقي على الألواح. زِد ساعات الوطنية أو قدرة شاحن الإنفرتر.',
+        'قدرة الشحن خلال ساعات توفر الوطنية (${gridSchedule.gridOnHours.toStringAsFixed(0)} ساعة) لا تكفي لتغطية نسبة الاعتماد المطلوبة؛ تم احتساب ${gridChargeEnergyWh.toStringAsFixed(0)}Wh فعلياً من أصل ${requestedGridChargeWh.toStringAsFixed(0)}Wh، يوجد عجز شحن قدره ${(requestedGridChargeWh - gridChargeEnergyWh).toStringAsFixed(0)}Wh لم يُضف إلى الألواح التزاماً بالنسبة المختارة. زِد ساعات الوطنية أو قدرة الشاحن، أو اخفض نسبة الاعتماد على الوطنية قبل تنفيذ المنظومة.',
     ];
 
     var gelWarning = '';
@@ -619,6 +616,7 @@ class SolarCalculationRepository {
         'PSH قيمة يومية متوسطة وليست ضماناً لإنتاج كل يوم.',
         'السعر تقديري ويستخدم سعر الواط وسعر أمبير البطارية كما أدخلهما المستخدم.',
         'الأحمال النهارية التي تعمل أثناء ساعات توفر الوطنية تُغطى منها ولا تُحسب على الألواح في وضع Hybrid.',
+        'عدد ألواح شحن البطاريات يعتمد على النسبة المختارة للوطنية، وليس ضماناً لإمكان توفير طاقة الشحن المطلوبة.',
         'شحن البطاريات من الوطنية محدود بقدرة شاحن الإنفرتر (${inverterCapacity.toStringAsFixed(0)}W) مضروبة في ساعات التوفر وكفاءة الشحن.',
       ],
       warningsAr: warnings,

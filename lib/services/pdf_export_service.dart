@@ -153,13 +153,18 @@ class PdfExportService {
                 ),
               if (result.gridContributionPercent > 0)
                 pw.Text(
-                  'بما أن الوطنية متوفرة، سيتم شحن البطاريات منها بنسبة ${result.gridContributionPercent.toStringAsFixed(0)}% مما يقلل الحاجة لألواح شحن إضافية.',
+                  'نسبة الاعتماد المخططة على الوطنية لشحن البطاريات: ${result.gridContributionPercent.toStringAsFixed(0)}%؛ خُصمت من حساب ألواح الشحن. راجع تحذيرات قدرة الشاحن وساعات التوفر.',
                   style: const pw.TextStyle(fontSize: 14),
                 ),
               if (result.panelsSavedByGrid > 0)
                 pw.Text(
                   'عدد الألواح التي تم توفيرها بسبب وجود الوطنية: ${result.panelsSavedByGrid} لوح',
                   style: const pw.TextStyle(fontSize: 14),
+                ),
+              for (final warning in result.breakdown.warningsAr)
+                pw.Text(
+                  warning,
+                  style: const pw.TextStyle(fontSize: 12),
                 ),
               if (result.breakdown.mpptRecommendationAr.isNotEmpty)
                 pw.Text(
