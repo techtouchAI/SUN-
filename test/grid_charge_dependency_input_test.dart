@@ -39,7 +39,10 @@ void main() {
 
     slider.onChanged!(37);
     await tester.pump();
-    expect(container.read(gridScheduleProvider).gridChargeDependencyPercent, 37);
+    expect(
+      container.read(gridScheduleProvider).gridChargeDependencyPercent,
+      37,
+    );
     expect(tester.widget<Slider>(find.byKey(sliderKey)).value, 37);
     expect(
       find.text('نسبة الاعتماد على الوطنية لشحن البطاريات: 37%'),
@@ -51,23 +54,26 @@ void main() {
     tester,
   ) async {
     final container = await mount(tester);
-    container.read(gridScheduleProvider.notifier).state =
-        const GridScheduleModel(
-          gridStartHour: 20,
-          gridOnHours: 2,
-          gridOffHours: 22,
-          gridChargeDependencyPercent: 0,
-        );
-    container.read(loadListProvider.notifier).addLoad(
-      LoadModel(
-        name: 'Day and night load',
-        unit: PowerUnit.watt,
-        powerValue: 500,
-        dailyUsageHours: 12,
-        daytimeHours: 4,
-        nighttimeHours: 8,
-      ),
+    container
+        .read(gridScheduleProvider.notifier)
+        .state = const GridScheduleModel(
+      gridStartHour: 20,
+      gridOnHours: 2,
+      gridOffHours: 22,
+      gridChargeDependencyPercent: 0,
     );
+    container
+        .read(loadListProvider.notifier)
+        .addLoad(
+          LoadModel(
+            name: 'Day and night load',
+            unit: PowerUnit.watt,
+            powerValue: 500,
+            dailyUsageHours: 12,
+            daytimeHours: 4,
+            nighttimeHours: 8,
+          ),
+        );
     await tester.pumpAndSettle();
     final before =
         (container.read(calculationStateProvider) as CalculationReady).result;
@@ -96,7 +102,10 @@ void main() {
     );
     upsSwitch.onChanged!(true);
     await tester.pump();
-    expect(container.read(gridScheduleProvider).gridChargeDependencyPercent, 100);
+    expect(
+      container.read(gridScheduleProvider).gridChargeDependencyPercent,
+      100,
+    );
     expect(tester.widget<Slider>(find.byKey(sliderKey)).value, 100);
     expect(tester.widget<Slider>(find.byKey(sliderKey)).onChanged, isNull);
 

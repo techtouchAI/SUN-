@@ -162,10 +162,7 @@ class PdfExportService {
                   style: const pw.TextStyle(fontSize: 14),
                 ),
               for (final warning in result.breakdown.warningsAr)
-                pw.Text(
-                  warning,
-                  style: const pw.TextStyle(fontSize: 12),
-                ),
+                pw.Text(warning, style: const pw.TextStyle(fontSize: 12)),
               if (result.breakdown.mpptRecommendationAr.isNotEmpty)
                 pw.Text(
                   '\n${result.breakdown.mpptRecommendationAr}',

@@ -50,12 +50,16 @@ class ExplainedField extends StatelessWidget {
               Expanded(child: field),
               IconButton(
                 tooltip: 'شرح الحقل: ${explanation.title}',
-                onPressed: () => showFieldExplanationSheet(context, explanation),
+                onPressed: () =>
+                    showFieldExplanationSheet(context, explanation),
                 icon: const Icon(Icons.help_outline_rounded),
                 iconSize: 20,
                 color: colorScheme.primary,
                 // Keep a comfortable touch target without a separate text row.
-                constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+                constraints: const BoxConstraints.tightFor(
+                  width: 48,
+                  height: 48,
+                ),
               ),
             ],
           ),
@@ -79,9 +83,7 @@ Future<void> showFieldExplanationSheet(
     isScrollControlled: true,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
-    builder: (sheetContext) => _FieldExplanationSheet(
-      explanation: explanation,
-    ),
+    builder: (sheetContext) => _FieldExplanationSheet(explanation: explanation),
   );
 }
 

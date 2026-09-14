@@ -516,7 +516,10 @@ void gridDeductionRules() {
     expect(result.panelsForDaytime, greaterThan(0));
     expect(result.requiredGridChargingAmps, greaterThan(0));
     expect(result.breakdown.warningsAr.join(' '), contains('عجز شحن'));
-    expect(result.breakdown.warningsAr.join(' '), contains('لم يُضف إلى الألواح'));
+    expect(
+      result.breakdown.warningsAr.join(' '),
+      contains('لم يُضف إلى الألواح'),
+    );
   });
 
   test('every grid percentage reduces charging energy before rounding', () {
@@ -566,21 +569,24 @@ void gridDeductionRules() {
     }
   });
 
-  test('stored grid percentage gives no battery PV credit without grid hours', () {
-    final result = engine.calculateSystem(
-      [load(name: 'Night', day: 0, night: 8, power: 1000)],
-      gridVoltage: 220,
-      systemMode: SystemMode.hybrid,
-      gridSchedule: const GridScheduleModel(
-        gridOnHours: 0,
-        gridOffHours: 24,
-        gridChargeDependencyPercent: 100,
-      ),
-    );
-    expect(result.gridContributionPercent, 0);
-    expect(result.panelsForBatteries, greaterThan(0));
-    expect(result.requiredGridChargingAmps, 0);
-  });
+  test(
+    'stored grid percentage gives no battery PV credit without grid hours',
+    () {
+      final result = engine.calculateSystem(
+        [load(name: 'Night', day: 0, night: 8, power: 1000)],
+        gridVoltage: 220,
+        systemMode: SystemMode.hybrid,
+        gridSchedule: const GridScheduleModel(
+          gridOnHours: 0,
+          gridOffHours: 24,
+          gridChargeDependencyPercent: 100,
+        ),
+      );
+      expect(result.gridContributionPercent, 0);
+      expect(result.panelsForBatteries, greaterThan(0));
+      expect(result.requiredGridChargingAmps, 0);
+    },
+  );
 
   test('panel details expose the un-credited array bound for protection', () {
     final details = engine.calculatePanelsDetails(
