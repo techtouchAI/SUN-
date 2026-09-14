@@ -46,12 +46,10 @@ jobs:
           set +e
           flutter test --coverage > test-output.txt 2>&1
           rc=$?
-          {
-            echo "## Flutter test exit code: $rc"
-            echo '```'
-            tail -120 test-output.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [ $rc -ne 0 ]; then
+            msg=$(tail -120 test-output.txt | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e 's/\n/%0A/g')
+            echo "::error title=Flutter test failures::${msg}"
+          fi
           exit $rc
 
   build:
