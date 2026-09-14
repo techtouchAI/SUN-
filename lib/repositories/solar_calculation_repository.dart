@@ -257,7 +257,7 @@ class SolarCalculationRepository {
       'daytimePanelsExplanationAr': systemMode == SystemMode.directOnGrid
           ? 'التشغيل المباشر يعتمد على القدرة اللحظية: ${continuousDaytimeWatts.toStringAsFixed(0)}W، مع كفاءة العاكس وهامش قدرة 30%.'
           : daytimeGridServedWh > 0
-          ? 'طاقة أحمال النهار ${daytimeWh.toStringAsFixed(0)}Wh، غطّت الوطنية منها ${daytimeGridServedWh.toStringAsFixed(0)}Wh أثناء ساعات توفرها، فتبقى على الشمس ${daytimePvEnergyWh.toStringAsFixed(0)}Wh بواقع ${daytimePanels} لوح.'
+          ? 'طاقة أحمال النهار ${daytimeWh.toStringAsFixed(0)}Wh، غطّت الوطنية منها ${daytimeGridServedWh.toStringAsFixed(0)}Wh أثناء ساعات توفرها، فتبقى على الشمس ${daytimePvEnergyWh.toStringAsFixed(0)}Wh بواقع $daytimePanels لوح.'
           : 'تم حساب ألواح النهار من الطاقة النهارية الفعلية ${daytimeWh.toStringAsFixed(0)}Wh، وسعة اللوح اليومية ${panelDailyEnergyWh.toStringAsFixed(0)}Wh.',
       'daytimePanelsExplanationEn': systemMode == SystemMode.directOnGrid
           ? 'Direct mode uses instantaneous daytime power with inverter efficiency and a 30% power margin.'
