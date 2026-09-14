@@ -517,7 +517,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
         ),
         body: SafeArea(
           child: CustomScrollView(
-            scrollCacheExtent: 800,
+            scrollCacheExtent: const ScrollCacheExtent.pixels(800.0),
             slivers: [
               SliverToBoxAdapter(child: _buildGridSettings()),
               SliverToBoxAdapter(
