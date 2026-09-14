@@ -4,7 +4,9 @@ import 'package:uuid/uuid.dart';
 import '../models/load_model.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
+import '../logic/field_help_content.dart';
 import '../models/system_mode.dart';
+import '../widgets/explained_field.dart';
 import 'dashboard_screen.dart';
 import '../services/update_service.dart';
 import 'settings_screen.dart';
@@ -301,153 +303,189 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               ),
             ),
             if (systemMode != SystemMode.directOnGrid)
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: AppStrings.batteryType,
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+              ExplainedField(
+                explanation: FieldHelpContent.batteryType,
+                field: DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: AppStrings.batteryType,
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
+                  initialValue: gridSchedule.batteryType,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'Lead-Acid/Gel',
+                      child: Text(AppStrings.batteryGel),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Lithium',
+                      child: Text(AppStrings.batteryLithium),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      ref.read(gridScheduleProvider.notifier).state =
+                          gridSchedule.copyWith(batteryType: value);
+                    }
+                  },
                 ),
-                initialValue: gridSchedule.batteryType,
-                isExpanded: true,
-                items: const [
-                  DropdownMenuItem(
-                    value: 'Lead-Acid/Gel',
-                    child: Text(AppStrings.batteryGel),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Lithium',
-                    child: Text(AppStrings.batteryLithium),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    ref.read(gridScheduleProvider.notifier).state = gridSchedule
-                        .copyWith(batteryType: value);
-                  }
-                },
               ),
-            SwitchListTile(
-              dense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-              title: const Text(AppStrings.isOffGridSystem),
-              value: systemMode == SystemMode.offGrid,
-              onChanged:
-                  systemMode == SystemMode.directOnGrid ||
-                      systemMode == SystemMode.ups
-                  ? null
-                  : (value) {
-                      ref.read(systemModeProvider.notifier).state = value
-                          ? SystemMode.offGrid
-                          : SystemMode.hybrid;
-                    },
-            ),
-            if (systemMode != SystemMode.offGrid) ...[
-              SwitchListTile(
+            if (systemMode != SystemMode.directOnGrid)
+              const SizedBox(height: 6),
+            ExplainedField(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0),
+              explanation: FieldHelpContent.isOffGridSystem,
+              field: SwitchListTile(
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-                title: const Text(AppStrings.upsMode),
-                value: systemMode == SystemMode.ups,
-                onChanged: systemMode == SystemMode.directOnGrid
+                title: const Text(AppStrings.isOffGridSystem),
+                value: systemMode == SystemMode.offGrid,
+                onChanged:
+                    systemMode == SystemMode.directOnGrid ||
+                        systemMode == SystemMode.ups
                     ? null
                     : (value) {
                         ref.read(systemModeProvider.notifier).state = value
-                            ? SystemMode.ups
+                            ? SystemMode.offGrid
                             : SystemMode.hybrid;
                       },
               ),
+            ),
+            if (systemMode != SystemMode.offGrid) ...[
+              ExplainedField(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                explanation: FieldHelpContent.upsMode,
+                field: SwitchListTile(
+                  dense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  title: const Text(AppStrings.upsMode),
+                  value: systemMode == SystemMode.ups,
+                  onChanged: systemMode == SystemMode.directOnGrid
+                      ? null
+                      : (value) {
+                          ref.read(systemModeProvider.notifier).state = value
+                              ? SystemMode.ups
+                              : SystemMode.hybrid;
+                        },
+                ),
+              ),
+              const SizedBox(height: 6),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: TextFormField(
-                      initialValue: gridSchedule.gridStartHour.toString(),
-                      decoration: const InputDecoration(
-                        labelText: 'ساعة بدء التوفر',
+                    child: ExplainedField(
+                      explanation: FieldHelpContent.gridStartHour,
+                      helperText: 'الوقت (0 = منتصف الليل).',
+                      field: TextFormField(
+                        initialValue: gridSchedule.gridStartHour.toString(),
+                        decoration: const InputDecoration(
+                          labelText: 'ساعة بدء التوفر',
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final val = double.tryParse(value);
+                          if (val != null) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(gridStartHour: val);
+                          }
+                        },
                       ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        final val = double.tryParse(value);
-                        if (val != null) {
-                          ref.read(gridScheduleProvider.notifier).state =
-                              gridSchedule.copyWith(gridStartHour: val);
-                        }
-                      },
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: TextFormField(
-                      initialValue: gridSchedule.gridOnHours.toString(),
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.gridOnHours,
+                    child: ExplainedField(
+                      explanation: FieldHelpContent.gridOnHours,
+                      helperText: 'المدة بالساعات وليس الوقت.',
+                      field: TextFormField(
+                        initialValue: gridSchedule.gridOnHours.toString(),
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.gridOnHours,
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final val = double.tryParse(value);
+                          if (val != null) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(gridOnHours: val);
+                          }
+                        },
                       ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        final val = double.tryParse(value);
-                        if (val != null) {
-                          ref.read(gridScheduleProvider.notifier).state =
-                              gridSchedule.copyWith(gridOnHours: val);
-                        }
-                      },
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: TextFormField(
-                      initialValue: gridSchedule.gridOffHours.toString(),
-                      decoration: const InputDecoration(
-                        labelText: AppStrings.gridOffHours,
+                    child: ExplainedField(
+                      explanation: FieldHelpContent.gridOffHours,
+                      helperText: 'المدة بالساعات وليس الوقت.',
+                      field: TextFormField(
+                        initialValue: gridSchedule.gridOffHours.toString(),
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.gridOffHours,
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final val = double.tryParse(value);
+                          if (val != null) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(gridOffHours: val);
+                          }
+                        },
                       ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (value) {
-                        final val = double.tryParse(value);
-                        if (val != null) {
-                          ref.read(gridScheduleProvider.notifier).state =
-                              gridSchedule.copyWith(gridOffHours: val);
-                        }
-                      },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               if (gridSchedule.gridOnHours > 0 &&
-                  systemMode != SystemMode.directOnGrid) ...[
-                Text(
-                  systemMode == SystemMode.ups
-                      ? 'نسبة الاعتماد على الوطنية لشحن البطاريات: 100%'
-                      : 'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
-                ),
-                Slider(
-                  value: systemMode == SystemMode.ups
-                      ? 100.0
-                      : gridSchedule.gridChargeDependencyPercent,
-                  min: 0,
-                  max: 100,
-                  divisions: 20,
-                  label: systemMode == SystemMode.ups
-                      ? '100'
-                      : gridSchedule.gridChargeDependencyPercent
-                            .toStringAsFixed(0),
-                  onChanged: systemMode == SystemMode.ups
-                      ? null
-                      : (value) {
-                          ref
-                              .read(gridScheduleProvider.notifier)
-                              .state = gridSchedule.copyWith(
-                            gridChargeDependencyPercent: value,
-                          );
-                        },
-                ),
-                if (systemMode == SystemMode.ups)
-                  const Text(
-                    "🔒 تم تثبيت الشحن من الوطنية بنسبة 100% نظراً لعدم توفر ألواح شمسية كبديل.",
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
+                  systemMode != SystemMode.directOnGrid)
+                ExplainedField(
+                  explanation: FieldHelpContent.gridChargeDependencyPercent,
+                  helperText:
+                      'نسبة شحن البطاريات القادمة من الكهرباء الوطنية.',
+                  field: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        systemMode == SystemMode.ups
+                            ? 'نسبة الاعتماد على الوطنية لشحن البطاريات: 100%'
+                            : 'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
+                      ),
+                      Slider(
+                        value: systemMode == SystemMode.ups
+                            ? 100.0
+                            : gridSchedule.gridChargeDependencyPercent,
+                        min: 0,
+                        max: 100,
+                        divisions: 20,
+                        label: systemMode == SystemMode.ups
+                            ? '100'
+                            : gridSchedule.gridChargeDependencyPercent
+                                  .toStringAsFixed(0),
+                        onChanged: systemMode == SystemMode.ups
+                            ? null
+                            : (value) {
+                                ref
+                                    .read(gridScheduleProvider.notifier)
+                                    .state = gridSchedule.copyWith(
+                                  gridChargeDependencyPercent: value,
+                                );
+                              },
+                      ),
+                      if (systemMode == SystemMode.ups)
+                        const Text(
+                          "🔒 تم تثبيت الشحن من الوطنية بنسبة 100% نظراً لعدم توفر ألواح شمسية كبديل.",
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                    ],
                   ),
-              ],
+                ),
             ],
           ],
         ),
@@ -517,104 +555,137 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                           ? AppStrings.pleaseEnterName
                                           : null,
                                     ),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          flex: 2,
-                                          child: TextFormField(
-                                            controller: _powerValueController,
-                                            decoration: const InputDecoration(
-                                              labelText:
-                                                  AppStrings.powerCapacity,
+                                    ExplainedField(
+                                      explanation:
+                                          FieldHelpContent.powerCapacity,
+                                      helperText:
+                                          'اكتب قدرة الجهاز كما هي في ملصقه، واختر وحدتها من القائمة المجاورة.',
+                                      field: Row(
+                                        children: [
+                                          Expanded(
+                                            flex: 2,
+                                            child: TextFormField(
+                                              controller:
+                                                  _powerValueController,
+                                              decoration:
+                                                  const InputDecoration(
+                                                    labelText: AppStrings
+                                                        .powerCapacity,
+                                                  ),
+                                              keyboardType:
+                                                  TextInputType.number,
+                                              validator: _powerValidator,
                                             ),
-                                            keyboardType: TextInputType.number,
-                                            validator: _powerValidator,
                                           ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          flex: 1,
-                                          child:
-                                              DropdownButtonFormField<
-                                                PowerUnit
-                                              >(
-                                                initialValue: _selectedUnit,
-                                                isExpanded: true,
-                                                items: PowerUnit.values.map((
-                                                  unit,
-                                                ) {
-                                                  String localizedName = '';
-                                                  switch (unit) {
-                                                    case PowerUnit.ampere:
-                                                      localizedName =
-                                                          AppStrings.unitAmpere;
-                                                      break;
-                                                    case PowerUnit.watt:
-                                                      localizedName =
-                                                          AppStrings.unitWatt;
-                                                      break;
-                                                    case PowerUnit.ton:
-                                                      localizedName =
-                                                          AppStrings.unitTon;
-                                                      break;
-                                                  }
-                                                  return DropdownMenuItem(
-                                                    value: unit,
-                                                    child: FittedBox(
-                                                      fit: BoxFit.scaleDown,
-                                                      child: Text(
-                                                        localizedName,
-                                                      ),
-                                                    ),
-                                                  );
-                                                }).toList(),
-                                                onChanged: (value) {
-                                                  setState(() {
-                                                    _selectedUnit = value!;
-                                                  });
-                                                },
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextFormField(
-                                            controller: _daytimeHoursController,
-                                            decoration: const InputDecoration(
-                                              labelText:
-                                                  AppStrings.daytimeUsageHours,
-                                            ),
-                                            keyboardType: TextInputType.number,
-                                            validator: _hoursValidator,
+                                          const SizedBox(width: 16),
+                                          Expanded(
+                                            flex: 1,
+                                            child:
+                                                DropdownButtonFormField<
+                                                  PowerUnit
+                                                >(
+                                                  initialValue: _selectedUnit,
+                                                  isExpanded: true,
+                                                  items: PowerUnit.values
+                                                      .map((unit) {
+                                                        String localizedName =
+                                                            '';
+                                                        switch (unit) {
+                                                          case PowerUnit
+                                                                .ampere:
+                                                            localizedName =
+                                                                AppStrings
+                                                                    .unitAmpere;
+                                                            break;
+                                                          case PowerUnit.watt:
+                                                            localizedName =
+                                                                AppStrings
+                                                                    .unitWatt;
+                                                            break;
+                                                          case PowerUnit.ton:
+                                                            localizedName =
+                                                                AppStrings
+                                                                    .unitTon;
+                                                            break;
+                                                        }
+                                                        return DropdownMenuItem(
+                                                          value: unit,
+                                                          child: FittedBox(
+                                                            fit: BoxFit
+                                                                .scaleDown,
+                                                            child: Text(
+                                                              localizedName,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      })
+                                                      .toList(),
+                                                  onChanged: (value) {
+                                                    setState(() {
+                                                      _selectedUnit = value!;
+                                                    });
+                                                  },
+                                                ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: TextFormField(
-                                            controller:
-                                                _nighttimeHoursController,
-                                            decoration: const InputDecoration(
-                                              labelText: AppStrings
-                                                  .nighttimeUsageHours,
-                                            ),
-                                            keyboardType: TextInputType.number,
-                                            validator: _hoursValidator,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SwitchListTile(
-                                      title: const Text(
-                                        AppStrings.isInverterAC,
+                                        ],
                                       ),
-                                      value: _isInverter,
-                                      onChanged: _selectedUnit == PowerUnit.ton
-                                          ? (value) => setState(
-                                              () => _isInverter = value,
-                                            )
-                                          : null,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ExplainedField(
+                                      explanation:
+                                          FieldHelpContent.daytimeUsageHours,
+                                      helperText:
+                                          'عدد ساعات عمل هذا الجهاز نهاراً (المدة وليس وقت التشغيل).',
+                                      field: TextFormField(
+                                        controller:
+                                            _daytimeHoursController,
+                                        decoration: const InputDecoration(
+                                          labelText:
+                                              AppStrings.daytimeUsageHours,
+                                        ),
+                                        keyboardType: TextInputType.number,
+                                        validator: _hoursValidator,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ExplainedField(
+                                      explanation:
+                                          FieldHelpContent
+                                              .nighttimeUsageHours,
+                                      helperText:
+                                          'عدد ساعات عمل هذا الجهاز ليلاً (المدة وليس وقت التشغيل).',
+                                      field: TextFormField(
+                                        controller:
+                                            _nighttimeHoursController,
+                                        decoration: const InputDecoration(
+                                          labelText: AppStrings
+                                              .nighttimeUsageHours,
+                                        ),
+                                        keyboardType: TextInputType.number,
+                                        validator: _hoursValidator,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    ExplainedField(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4.0,
+                                      ),
+                                      explanation:
+                                          FieldHelpContent.isInverterAc,
+                                      helperText:
+                                          'يظهر هذا الخيار عند اختيار وحدة (طن)؛ يؤثر على هامش تيار البدء.',
+                                      field: SwitchListTile(
+                                        title: const Text(
+                                          AppStrings.isInverterAC,
+                                        ),
+                                        value: _isInverter,
+                                        onChanged:
+                                            _selectedUnit == PowerUnit.ton
+                                            ? (value) => setState(
+                                                () => _isInverter = value,
+                                              )
+                                            : null,
+                                      ),
                                     ),
                                     const SizedBox(height: 16),
                                     ElevatedButton(
@@ -644,43 +715,55 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    TextFormField(
-                                      controller: _quickPowerController,
-                                      decoration: const InputDecoration(
-                                        labelText:
-                                            '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})',
+                                    ExplainedField(
+                                      explanation:
+                                          FieldHelpContent.quickPowerAmpere,
+                                      helperText:
+                                          'الاستهلاك الكلي للمنزل بالأمبير وقت ذروة التشغيل.',
+                                      field: TextFormField(
+                                        controller: _quickPowerController,
+                                        decoration: const InputDecoration(
+                                          labelText:
+                                              '${AppStrings.powerCapacity} (${AppStrings.unitAmpere})',
+                                        ),
+                                        keyboardType: TextInputType.number,
+                                        validator: _powerValidator,
                                       ),
-                                      keyboardType: TextInputType.number,
-                                      validator: _powerValidator,
                                     ),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextFormField(
-                                            controller:
-                                                _quickDaytimeHoursController,
-                                            decoration: const InputDecoration(
-                                              labelText:
-                                                  AppStrings.daytimeUsageHours,
-                                            ),
-                                            keyboardType: TextInputType.number,
-                                            validator: _hoursValidator,
-                                          ),
+                                    const SizedBox(height: 16),
+                                    ExplainedField(
+                                      explanation:
+                                          FieldHelpContent.daytimeUsageHours,
+                                      helperText:
+                                          'عدد ساعات عمل الأحمال نهاراً (المدة وليس وقت التشغيل).',
+                                      field: TextFormField(
+                                        controller:
+                                            _quickDaytimeHoursController,
+                                        decoration: const InputDecoration(
+                                          labelText:
+                                              AppStrings.daytimeUsageHours,
                                         ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: TextFormField(
-                                            controller:
-                                                _quickNighttimeHoursController,
-                                            decoration: const InputDecoration(
-                                              labelText: AppStrings
-                                                  .nighttimeUsageHours,
-                                            ),
-                                            keyboardType: TextInputType.number,
-                                            validator: _hoursValidator,
-                                          ),
+                                        keyboardType: TextInputType.number,
+                                        validator: _hoursValidator,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ExplainedField(
+                                      explanation:
+                                          FieldHelpContent
+                                              .nighttimeUsageHours,
+                                      helperText:
+                                          'عدد ساعات عمل الأحمال ليلاً (المدة وليس وقت التشغيل).',
+                                      field: TextFormField(
+                                        controller:
+                                            _quickNighttimeHoursController,
+                                        decoration: const InputDecoration(
+                                          labelText: AppStrings
+                                              .nighttimeUsageHours,
                                         ),
-                                      ],
+                                        keyboardType: TextInputType.number,
+                                        validator: _hoursValidator,
+                                      ),
                                     ),
                                     const SizedBox(height: 16),
                                     ElevatedButton(
@@ -704,22 +787,27 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 child: Card(
                   elevation: 2,
                   margin: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: SwitchListTile(
-                    dense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
+                  child: ExplainedField(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    explanation: FieldHelpContent.daytimeOnlyMode,
+                    helperText:
+                        'فعّله إذا كانت جميع أحمالك تعمل نهاراً فقط ولا تحتاج بطاريات.',
+                    field: SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text(AppStrings.daytimeOnlyMode),
+                      value: systemMode == SystemMode.directOnGrid,
+                      onChanged:
+                          systemMode == SystemMode.ups ||
+                              systemMode == SystemMode.offGrid
+                          ? null
+                          : (value) {
+                              ref.read(systemModeProvider.notifier).state =
+                                  value
+                                  ? SystemMode.directOnGrid
+                                  : SystemMode.hybrid;
+                            },
                     ),
-                    title: const Text(AppStrings.daytimeOnlyMode),
-                    value: systemMode == SystemMode.directOnGrid,
-                    onChanged:
-                        systemMode == SystemMode.ups ||
-                            systemMode == SystemMode.offGrid
-                        ? null
-                        : (value) {
-                            ref.read(systemModeProvider.notifier).state = value
-                                ? SystemMode.directOnGrid
-                                : SystemMode.hybrid;
-                          },
                   ),
                 ),
               ),
