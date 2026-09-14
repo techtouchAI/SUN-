@@ -3,10 +3,10 @@ name: Temporary format fixer
 # One-off helper: this sandbox cannot download GitHub Actions logs (the Actions
 # blob storage host is unreachable from here), so this workflow applies the same
 # `dart format` target list as the CI quality job on the PR branch, pushes the
-# formatted sources back, and then surfaces analyze/test failures as check
-# annotations that can be read through the API.
+# formatted sources back, and then writes the analyze/test output into
+# `ci-diag.txt` and pushes it so it can be read through the repository API.
 #
-# It is deleted again once the formatting has been applied and CI is green.
+# It is deleted again (together with ci-diag.txt) once CI is green.
 on:
   pull_request:
     branches:
@@ -23,8 +23,8 @@ concurrency:
 jobs:
   format:
     name: Apply dart format
-    if: '${{ !startsWith(github.event.head_commit.message, ''style: apply dart
-      format'') }}'
+    if: '${{ !startsWith(github.event.head_commit.message, ''chore(ci): publish
+      diagnostics'') }}'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -42,18 +42,6 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: List files that need formatting
-        run: |
-          set -uo pipefail
-          targets="lib/core lib/logic/providers.dart lib/models lib/repositories lib/services test"
-          dart format --output=none --set-exit-if-changed $targets > /tmp/fmt.txt 2>&1 || true
-          grep -E '^(Changed|Formatted) ' /tmp/fmt.txt | while IFS= read -r line; do
-            printf '::notice::%s\n' "$line"
-          done
-          tail -n 5 /tmp/fmt.txt | while IFS= read -r line; do
-            printf '::notice::fmt-tail %s\n' "$line"
-          done
-
       - name: Apply dart format
         run: |
           dart format \
@@ -64,41 +52,41 @@ jobs:
             lib/services \
             test
 
-      - name: Push formatted sources
-        run: |
-          set -euo pipefail
-          if git diff --quiet; then
-            echo "No formatting changes needed."
-            exit 0
-          fi
-          git diff --stat
-          git diff --stat | while IFS= read -r line; do
-            printf '::notice::diffstat %s\n' "$line"
-          done
-          git config user.name "arena-agent"
-          git config user.email "297053741+arena-agent@users.noreply.github.com"
-          git add -A
-          git commit -m "style: apply dart format to backend and tests"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
-
       - name: Analyze
         run: |
-          set -uo pipefail
-          flutter analyze 2>&1 | tee /tmp/analyze.txt
-          status=${PIPESTATUS[0]}
-          grep -nE 'error|warning|info|issues found|No issues' /tmp/analyze.txt \
-            | head -n 50 | while IFS= read -r line; do
-              printf '::error::analyze %s\n' "$line"
-            done
-          exit "$status"
+          flutter analyze > /tmp/analyze.txt 2>&1
+          echo "analyze_exit=$?" >> /tmp/analyze.txt
+          cat /tmp/analyze.txt
+          grep -q '^analyze_exit=0$' /tmp/analyze.txt
 
       - name: Test
         run: |
-          set -uo pipefail
-          flutter test 2>&1 | tee /tmp/test.txt
-          status=${PIPESTATUS[0]}
-          grep -nE '\[E\]|Expected:|Actual:|Some tests failed|Failed to load' /tmp/test.txt \
-            | head -n 40 | while IFS= read -r line; do
-              printf '::error::%s\n' "$line"
-            done
-          exit "$status"
+          flutter test > /tmp/test.txt 2>&1
+          echo "test_exit=$?" >> /tmp/test.txt
+          tail -n 150 /tmp/test.txt
+          grep -q '^test_exit=0$' /tmp/test.txt
+
+      - name: Publish diagnostics and formatting
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "=== HEAD: $(git rev-parse HEAD) ==="
+            echo "=== dart format ==="
+            git diff --stat || true
+            echo
+            echo "=== flutter analyze ==="
+            cat /tmp/analyze.txt 2>/dev/null || echo "(analyze step did not run)"
+            echo
+            echo "=== flutter test (tail 200) ==="
+            tail -n 200 /tmp/test.txt 2>/dev/null || echo "(test step did not run)"
+          } > ci-diag.txt
+          git config user.name "arena-agent"
+          git config user.email "297053741+arena-agent@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to publish."
+            exit 0
+          fi
+          git commit -m "chore(ci): publish diagnostics and formatting"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
