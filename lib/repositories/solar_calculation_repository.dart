@@ -195,17 +195,22 @@ class SolarCalculationRepository {
       chargerPowerLimitW: chargerPowerLimitW,
       chargeEfficiency: chargeEfficiency,
     );
-    final gridChargeEnergyWh =
-        math.min(requestedGridChargeWh, deliverableGridChargeWh);
+    final gridChargeEnergyWh = math.min(
+      requestedGridChargeWh,
+      deliverableGridChargeWh,
+    );
     final effectiveGridChargeFraction = requiredBatteryChargeWh > 0
         ? gridChargeEnergyWh / requiredBatteryChargeWh
         : 0.0;
-    final remainingBatteryPvWh =
-        math.max(0.0, requiredBatteryChargeWh - gridChargeEnergyWh);
+    final remainingBatteryPvWh = math.max(
+      0.0,
+      requiredBatteryChargeWh - gridChargeEnergyWh,
+    );
 
     // Daytime loads that run while the national grid is available are served
     // by the grid, so they must not be sized as solar panels.
-    final daytimeGridServedWh = (systemMode == SystemMode.hybrid &&
+    final daytimeGridServedWh =
+        (systemMode == SystemMode.hybrid &&
             gridSchedule.gridOnHours > 0 &&
             hourlyLoadProfile != null)
         ? _daytimeEnergyServedByGrid(hourlyLoadProfile, gridSchedule)
@@ -331,9 +336,11 @@ class SolarCalculationRepository {
     final start = gridSchedule.gridStartHour;
     final end = start + onHours;
     var served = 0.0;
-    for (var hour = daytimeStartHour.toInt();
-        hour < daytimeEndHour.toInt();
-        hour++) {
+    for (
+      var hour = daytimeStartHour.toInt();
+      hour < daytimeEndHour.toInt();
+      hour++
+    ) {
       if (hour < 0 || hour >= hourlyLoadProfile.length) continue;
       final hourStart = hour.toDouble();
       final hourEnd = hourStart + 1;

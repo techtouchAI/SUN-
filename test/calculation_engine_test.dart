@@ -423,47 +423,50 @@ void gridDeductionRules() {
     expect(result.suggestedChargePriority, contains('Utility First'));
   });
 
-  test('daytime loads inside the grid window are not sized as solar panels', () {
-    final loads = [load(name: 'Day', day: 12, night: 0, power: 500)];
-    final withGrid = engine.calculateSystem(
-      loads,
-      gridVoltage: 220,
-      systemMode: SystemMode.hybrid,
-      gridSchedule: const GridScheduleModel(
-        gridStartHour: 12,
-        gridOnHours: 10,
-        gridOffHours: 14,
-        gridChargeDependencyPercent: 100,
-      ),
-      panelCapacity: 540,
-      peakSunHours: 4.5,
-      energyLossPercentage: 30,
-    );
-    final withoutGrid = engine.calculateSystem(
-      loads,
-      gridVoltage: 220,
-      systemMode: SystemMode.hybrid,
-      gridSchedule: const GridScheduleModel(
-        gridOnHours: 0,
-        gridOffHours: 24,
-        gridChargeDependencyPercent: 100,
-      ),
-      panelCapacity: 540,
-      peakSunHours: 4.5,
-      energyLossPercentage: 30,
-    );
+  test(
+    'daytime loads inside the grid window are not sized as solar panels',
+    () {
+      final loads = [load(name: 'Day', day: 12, night: 0, power: 500)];
+      final withGrid = engine.calculateSystem(
+        loads,
+        gridVoltage: 220,
+        systemMode: SystemMode.hybrid,
+        gridSchedule: const GridScheduleModel(
+          gridStartHour: 12,
+          gridOnHours: 10,
+          gridOffHours: 14,
+          gridChargeDependencyPercent: 100,
+        ),
+        panelCapacity: 540,
+        peakSunHours: 4.5,
+        energyLossPercentage: 30,
+      );
+      final withoutGrid = engine.calculateSystem(
+        loads,
+        gridVoltage: 220,
+        systemMode: SystemMode.hybrid,
+        gridSchedule: const GridScheduleModel(
+          gridOnHours: 0,
+          gridOffHours: 24,
+          gridChargeDependencyPercent: 100,
+        ),
+        panelCapacity: 540,
+        peakSunHours: 4.5,
+        energyLossPercentage: 30,
+      );
 
-    // 6000Wh of declared daytime energy; the grid window 12:00-22:00 covers
-    // the 12:00-18:00 part of it, so 3000Wh stays on the solar side.
-    expect(withGrid.daytimeConsumptionWh, closeTo(6000, 0.001));
-    expect(withoutGrid.panelsForDaytime, 4);
-    expect(withGrid.panelsForDaytime, 2);
-    expect(withGrid.requiredPanels, 2);
-    expect(
-      withGrid.breakdown.daytimePanelsExplanationAr,
-      contains('غطّت الوطنية منها 3000Wh'),
-    );
-  });
+      // 6000Wh of declared daytime energy; the grid window 12:00-22:00 covers
+      // the 12:00-18:00 part of it, so 3000Wh stays on the solar side.
+      expect(withGrid.daytimeConsumptionWh, closeTo(6000, 0.001));
+      expect(withoutGrid.panelsForDaytime, 4);
+      expect(withGrid.panelsForDaytime, 2);
+      expect(withGrid.requiredPanels, 2);
+      expect(
+        withGrid.breakdown.daytimePanelsExplanationAr,
+        contains('غطّت الوطنية منها 3000Wh'),
+      );
+    },
+  );
 
   test('partial daytime grid overlap deducts only the overlapping hours', () {
     final result = engine.calculateSystem(
