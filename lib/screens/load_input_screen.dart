@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/load_model.dart';
@@ -376,64 +375,72 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ),
               ),
               const SizedBox(height: 6),
-              ExplainedField(
-                explanation: FieldHelpContent.gridStartHour,
-                helperText:
-                    'الوقت (0 = منتصف الليل).',
-                field: TextFormField(
-                  initialValue: gridSchedule.gridStartHour.toString(),
-                  decoration: const InputDecoration(
-                    labelText: 'ساعة بدء التوفر',
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: ExplainedField(
+                      explanation: FieldHelpContent.gridStartHour,
+                      helperText: 'الوقت (0 = منتصف الليل).',
+                      field: TextFormField(
+                        initialValue: gridSchedule.gridStartHour.toString(),
+                        decoration: const InputDecoration(
+                          labelText: 'ساعة بدء التوفر',
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final val = double.tryParse(value);
+                          if (val != null) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(gridStartHour: val);
+                          }
+                        },
+                      ),
+                    ),
                   ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    final val = double.tryParse(value);
-                    if (val != null) {
-                      ref.read(gridScheduleProvider.notifier).state =
-                          gridSchedule.copyWith(gridStartHour: val);
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(height: 10),
-              ExplainedField(
-                explanation: FieldHelpContent.gridOnHours,
-                helperText:
-                    'المدة بالساعات وليس الوقت.',
-                field: TextFormField(
-                  initialValue: gridSchedule.gridOnHours.toString(),
-                  decoration: const InputDecoration(
-                    labelText: AppStrings.gridOnHours,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ExplainedField(
+                      explanation: FieldHelpContent.gridOnHours,
+                      helperText: 'المدة بالساعات وليس الوقت.',
+                      field: TextFormField(
+                        initialValue: gridSchedule.gridOnHours.toString(),
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.gridOnHours,
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final val = double.tryParse(value);
+                          if (val != null) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(gridOnHours: val);
+                          }
+                        },
+                      ),
+                    ),
                   ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    final val = double.tryParse(value);
-                    if (val != null) {
-                      ref.read(gridScheduleProvider.notifier).state =
-                          gridSchedule.copyWith(gridOnHours: val);
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(height: 10),
-              ExplainedField(
-                explanation: FieldHelpContent.gridOffHours,
-                helperText:
-                    'المدة بالساعات وليس الوقت.',
-                field: TextFormField(
-                  initialValue: gridSchedule.gridOffHours.toString(),
-                  decoration: const InputDecoration(
-                    labelText: AppStrings.gridOffHours,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ExplainedField(
+                      explanation: FieldHelpContent.gridOffHours,
+                      helperText: 'المدة بالساعات وليس الوقت.',
+                      field: TextFormField(
+                        initialValue: gridSchedule.gridOffHours.toString(),
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.gridOffHours,
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          final val = double.tryParse(value);
+                          if (val != null) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(gridOffHours: val);
+                          }
+                        },
+                      ),
+                    ),
                   ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    final val = double.tryParse(value);
-                    if (val != null) {
-                      ref.read(gridScheduleProvider.notifier).state =
-                          gridSchedule.copyWith(gridOffHours: val);
-                    }
-                  },
-                ),
+                ],
               ),
               const SizedBox(height: 16),
               if (gridSchedule.gridOnHours > 0 &&
@@ -518,9 +525,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
         ),
         body: SafeArea(
           child: CustomScrollView(
-            // Keep the tabs laid out even while the grid settings card above
-            // is tall, so their state is preserved when the user scrolls.
-            scrollCacheExtent: const ScrollCacheExtent.pixels(800.0),
             slivers: [
               SliverToBoxAdapter(child: _buildGridSettings()),
               SliverToBoxAdapter(
