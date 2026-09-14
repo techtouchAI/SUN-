@@ -42,7 +42,17 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test --coverage
+        run: |
+          set +e
+          flutter test --coverage > test-output.txt 2>&1
+          rc=$?
+          {
+            echo "## Flutter test exit code: $rc"
+            echo '```'
+            tail -120 test-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
 
   build:
     name: Build ${{ matrix.target }}
