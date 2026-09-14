@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/load_model.dart';
@@ -517,6 +518,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
         ),
         body: SafeArea(
           child: CustomScrollView(
+            // Keep the tabs laid out even while the grid settings card above
+            // is tall, so their state is preserved when the user scrolls.
+            scrollCacheExtent: const ScrollCacheExtent.pixels(800.0),
             slivers: [
               SliverToBoxAdapter(child: _buildGridSettings()),
               SliverToBoxAdapter(
