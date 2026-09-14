@@ -59,11 +59,25 @@ required_battery_charge_Wh = (night_energy_Wh / inverter_efficiency) / (battery_
 
 ```text
 panel_daily_energy_Wh = panel_power_W × PSH × (1 − PV_loss_fraction)
-remaining_battery_pv_Wh = required_battery_charge_Wh × (1 − grid_charge_fraction)
-panel_count = ceil(required_energy_Wh / panel_daily_energy_Wh)
+
+grid_charge_fraction       = UPS: 1.0 | Off-grid/Direct: 0.0 | Hybrid: نسبة المستخدم عند grid_on_hours > 0
+requested_grid_charge_Wh   = required_battery_charge_Wh × grid_charge_fraction
+deliverable_grid_charge_Wh = charger_power_W × inverter_efficiency × grid_on_hours × charge_efficiency
+grid_charge_energy_Wh      = min(requested_grid_charge_Wh, deliverable_grid_charge_Wh)
+remaining_battery_pv_Wh    = max(0, required_battery_charge_Wh − grid_charge_energy_Wh)
+
+daytime_grid_served_Wh = Σ ساعة في [06:00–18:00) من (حمل الساعة × تقاطع الساعة مع نافذة الوطنية)   [Hybrid]
+daytime_pv_Wh          = max(0, daytime_energy_Wh − daytime_grid_served_Wh)
+daytime_dc_Wh          = daytime_pv_Wh / inverter_efficiency
+
+panel_count = ceil((daytime_dc_Wh + remaining_battery_pv_Wh) / panel_daily_energy_Wh)
 ```
 
-في Hybrid يمكن لمساهمة الشبكة تقليل ألواح شحن البطارية ضمن نافذة الجدول. في Off-grid لا تُحسب مساهمة الشبكة. في Direct-on-grid لا تُظهر النتائج بطارية أو ألواح شحن بطارية. في UPS لا يعتمد النموذج الحالي على إنتاج PV.
+`charger_power_W` هو قدرة الإنفرتر المطلوبة (ذروة الحمل مع هامش الأمان)، لأن الشاحن مدمج في الإنفرتر؛ فهو سقف ما يمكن تسليمه للبطارية فعلياً خلال ساعات توفر الوطنية. عند 100% اعتماد على الوطنية يصبح `remaining_battery_pv_Wh = 0` و`ألواح لشحن البطاريات = 0`. إذا كانت قدرة الشاحن أو ساعات التوفر لا تكفي لتغطية النسبة المطلوبة يظهر تحذير صريح وتبقى الطاقة الناقصة على الألواح، وتكون `gridContributionPercent` المعروضة هي النسبة **الفعّالة** بعد هذا الحد.
+
+أحمال النهار التي تعمل أثناء نافذة توفر الوطنية تُغطى منها ولا تُحسب على ألواح النهار في وضع Hybrid، مع احترام الكسور الزمنية (نافذة تبدأ 12:30 تخصم نصف الساعة 12). الاستهلاك النهاري المعروض يبقى إجماليّاً، ويظهر الخصم في عدد الألواح وفي شرح ألواح النهار. تُشتق الحماية الكهربائية من سقف المصفوفة دون خصم الوطنية حتى لا يُصغَّر تيار مصفوفة PV بسبب خصم قد يزول عند انقطاع الوطنية نهاراً.
+
+في Off-grid لا تُحسب مساهمة الشبكة، وأي جدول وطنية محفوظ يُتجاهل مع تحذير صريح في النتائج. في Direct-on-grid لا تُظهر النتائج بطارية أو ألواح شحن بطارية. في UPS تُثبَّت نسبة الاعتماد على 100% ولا يعتمد النموذج الحالي على إنتاج PV.
 
 ## الخسائر والحدود الهندسية
 
@@ -100,7 +114,7 @@ flutter build linux --release
 
 ## الاختبارات وCI
 
-تتضمن suite الحالية 30 اختباراً تغطي محرك الحساب وملف 24 ساعة، حدود التحقق، parser الأرقام، الحفظ والاسترداد، providers ومسار التطبيق، مقارنة الإصدارات، واختيار Universal APK، إضافة إلى اختبار إقلاع واجهة baseline واختبارات تصنيف طاقة النهار وشحن UPS. يفحص CI تنسيق backend والاختبارات، و`flutter analyze`، والاختبارات، وبناء Web وAndroid debug. يفصل Release workflow عن CI بصلاحيات أقل، ويثبت Actions على SHA وينشئ checksums.
+تتضمن suite الحالية أكثر من 35 اختباراً تغطي محرك الحساب وملف 24 ساعة، حدود التحقق، parser الأرقام، الحفظ والاسترداد، providers ومسار التطبيق، مقارنة الإصدارات، واختيار Universal APK، إضافة إلى اختبار إقلاع واجهة baseline واختبارات تصنيف طاقة النهار وشحن UPS وقواعد خصم الوطنية (100% شحن وطني، حد قدرة الشاحن، وتقاطع أحمال النهار مع نافذة الوطنية). يفحص CI تنسيق backend والاختبارات، و`flutter analyze`، والاختبارات، وبناء Web وAndroid debug. يفصل Release workflow عن CI بصلاحيات أقل، ويثبت Actions على SHA وينشئ checksums.
 
 ## ملاحظات التطوير
 

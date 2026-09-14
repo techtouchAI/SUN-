@@ -147,6 +147,8 @@ class SolarCalculationRepository {
     required double peakSunHours,
     required double energyLossPercentage,
     required double chargeEfficiency,
+    List<double>? hourlyLoadProfile,
+    double? chargerPowerLimitW,
   }) {
     _requireFinitePositive(panelCapacity, 'قدرة اللوح');
     _requireFinitePositive(peakSunHours, 'ساعات الذروة');
@@ -157,8 +159,28 @@ class SolarCalculationRepository {
         'نسبة الفقد يجب أن تكون بين 0% و100% حصراً.',
       );
     }
+    final batteryEfficiency = _batteryEfficiency(gridSchedule.batteryType);
+    final requiredBatteryChargeWh = _requiredBatteryChargeWh(
+      nighttimeWh,
+      batteryEfficiency,
+      chargeEfficiency,
+    );
+    // UPS has no PV array, but the grid still recharges the daily discharge,
+    // so its grid charge energy must be reported even though no panel is
+    // sized. Everything else with no energy to serve needs no panels at all.
+    final upsGridChargeEnergyWh = systemMode == SystemMode.ups
+        ? math.min(
+            requiredBatteryChargeWh,
+            _deliverableGridChargeWh(
+              requestedEnergyWh: requiredBatteryChargeWh,
+              gridSchedule: gridSchedule,
+              chargerPowerLimitW: chargerPowerLimitW,
+              chargeEfficiency: chargeEfficiency,
+            ),
+          )
+        : 0.0;
     if (systemMode == SystemMode.ups || (daytimeWh <= 0 && nighttimeWh <= 0)) {
-      return _emptyPanelsResult();
+      return _emptyPanelsResult(systemMode, upsGridChargeEnergyWh);
     }
 
     final pvPerformanceFactor = 1.0 - energyLossPercentage / 100.0;
@@ -167,18 +189,48 @@ class SolarCalculationRepository {
     _requireFinitePositive(panelDailyEnergyWh, 'الطاقة اليومية للوح');
 
     final daytimeDcEnergyWh = daytimeWh / inverterEfficiency;
-    final batteryEfficiency = _batteryEfficiency(gridSchedule.batteryType);
-    final requiredBatteryChargeWh = _requiredBatteryChargeWh(
-      nighttimeWh,
-      batteryEfficiency,
-      chargeEfficiency,
+
+    // The fraction of the daily battery recharge that the national grid is
+    // asked to cover. UPS is always 100% grid-charged, off-grid and
+    // direct-on-grid never charge from the grid.
+    final gridChargeFraction = _effectiveGridChargeFraction(
+      systemMode,
+      gridSchedule,
+    );
+    final requestedGridChargeWh = requiredBatteryChargeWh * gridChargeFraction;
+    // A charger can only deliver its rated power during the hours the grid is
+    // actually available, so the requested fraction is capped by what the
+    // hardware can put into the battery. Without this cap the model claims a
+    // grid contribution that cannot physically happen and still reports the
+    // un-reduced solar remainder.
+    final deliverableGridChargeWh = _deliverableGridChargeWh(
+      requestedEnergyWh: requestedGridChargeWh,
+      gridSchedule: gridSchedule,
+      chargerPowerLimitW: chargerPowerLimitW,
+      chargeEfficiency: chargeEfficiency,
+    );
+    final gridChargeEnergyWh = math.min(
+      requestedGridChargeWh,
+      deliverableGridChargeWh,
+    );
+    final effectiveGridChargeFraction = requiredBatteryChargeWh > 0
+        ? gridChargeEnergyWh / requiredBatteryChargeWh
+        : 0.0;
+    final remainingBatteryPvWh = math.max(
+      0.0,
+      requiredBatteryChargeWh - gridChargeEnergyWh,
     );
 
-    final gridFraction =
-        systemMode == SystemMode.hybrid && gridSchedule.gridOnHours > 0
-        ? (gridSchedule.gridChargeDependencyPercent / 100.0).clamp(0.0, 1.0)
+    // Daytime loads that run while the national grid is available are served
+    // by the grid, so they must not be sized as solar panels.
+    final daytimeGridServedWh =
+        (systemMode == SystemMode.hybrid &&
+            gridSchedule.gridOnHours > 0 &&
+            hourlyLoadProfile != null)
+        ? _daytimeEnergyServedByGrid(hourlyLoadProfile, gridSchedule)
         : 0.0;
-    final remainingBatteryPvWh = requiredBatteryChargeWh * (1.0 - gridFraction);
+    final daytimePvEnergyWh = math.max(0.0, daytimeWh - daytimeGridServedWh);
+    final daytimePvDcEnergyWh = daytimePvEnergyWh / inverterEfficiency;
 
     final daytimePowerPathW =
         (continuousDaytimeWatts / inverterEfficiency) * directModePowerMargin;
@@ -187,18 +239,21 @@ class SolarCalculationRepository {
             daytimePowerPathW,
             panelCapacity * pvPerformanceFactor,
           )
-        : _ceilPanelCount(daytimeDcEnergyWh, panelDailyEnergyWh);
+        : _ceilPanelCount(daytimePvDcEnergyWh, panelDailyEnergyWh);
     // Combine all PV energy before rounding so separate allocations cannot add
     // an unnecessary extra panel at a rounding boundary.
     final combinedEnergyPanels = systemMode == SystemMode.directOnGrid
         ? daytimePanels
         : _ceilPanelCount(
-            daytimeDcEnergyWh + remainingBatteryPvWh,
+            daytimePvDcEnergyWh + remainingBatteryPvWh,
             panelDailyEnergyWh,
           );
     final batteryPanels = systemMode == SystemMode.directOnGrid
         ? 0
         : math.max(0, combinedEnergyPanels - daytimePanels);
+    // Array size with no grid credit at all. It bounds the PV string current
+    // the installation could reach, so electrical protection is derived from
+    // it rather than from the grid-reduced recommendation.
     final fullSolarPanels = systemMode == SystemMode.directOnGrid
         ? daytimePanels
         : _ceilPanelCount(
@@ -210,25 +265,108 @@ class SolarCalculationRepository {
       'daytimePanels': daytimePanels,
       'batteryPanels': batteryPanels,
       'totalPanels': combinedEnergyPanels,
-      'gridContributionPercent': gridFraction * 100.0,
+      'gridContributionPercent': effectiveGridChargeFraction * 100.0,
       'panelsSavedByGrid': math.max(0, fullSolarPanels - combinedEnergyPanels),
+      'maximumArrayPanels': math.max(fullSolarPanels, combinedEnergyPanels),
       'daytimePanelsExplanationAr': systemMode == SystemMode.directOnGrid
           ? 'التشغيل المباشر يعتمد على القدرة اللحظية: ${continuousDaytimeWatts.toStringAsFixed(0)}W، مع كفاءة العاكس وهامش قدرة 30%.'
+          : daytimeGridServedWh > 0
+          ? 'طاقة أحمال النهار ${daytimeWh.toStringAsFixed(0)}Wh، غطّت الوطنية منها ${daytimeGridServedWh.toStringAsFixed(0)}Wh أثناء ساعات توفرها، فتبقى على الشمس ${daytimePvEnergyWh.toStringAsFixed(0)}Wh بواقع $daytimePanels لوح.'
           : 'تم حساب ألواح النهار من الطاقة النهارية الفعلية ${daytimeWh.toStringAsFixed(0)}Wh، وسعة اللوح اليومية ${panelDailyEnergyWh.toStringAsFixed(0)}Wh.',
       'daytimePanelsExplanationEn': systemMode == SystemMode.directOnGrid
           ? 'Direct mode uses instantaneous daytime power with inverter efficiency and a 30% power margin.'
+          : daytimeGridServedWh > 0
+          ? 'Daytime loads overlapping the grid window are served by the grid; only the remaining daytime energy is sized as solar panels.'
           : 'Daytime panels are based on the explicit daytime energy profile and effective daily panel energy.',
       'batteryPanelsExplanationAr': systemMode == SystemMode.directOnGrid
           ? ''
-          : 'طاقة شحن البطارية المطلوبة قبل الشبكة ${requiredBatteryChargeWh.toStringAsFixed(0)}Wh، والمتبقي من الطاقة الشمسية ${remainingBatteryPvWh.toStringAsFixed(0)}Wh. تم جمع طاقة النهار والشحن ثم تقريب العدد مرة واحدة.',
+          : 'طاقة شحن البطارية المطلوبة قبل الشبكة: ${requiredBatteryChargeWh.toStringAsFixed(0)}Wh. طاقة الشحن المغطاة من الوطنية: ${gridChargeEnergyWh.toStringAsFixed(0)}Wh. المتبقي من الطاقة الشمسية: ${remainingBatteryPvWh.toStringAsFixed(0)}Wh. ألواح لشحن البطاريات: $batteryPanels لوح. تم جمع طاقة النهار والشحن ثم تقريب العدد مرة واحدة.',
       'batteryPanelsExplanationEn': systemMode == SystemMode.directOnGrid
           ? ''
-          : 'Battery charging energy is reduced by the grid fraction, then daytime and charging energy are combined before one panel-count rounding step.',
+          : 'Battery charging energy is reduced by the grid-delivered charge energy (capped by charger power and grid hours), then daytime and charging energy are combined before one panel-count rounding step.',
       'floatPreservationRecommendationAr': '',
       'panelDailyEnergyWh': panelDailyEnergyWh,
       'requiredBatteryChargeWh': requiredBatteryChargeWh,
+      'requestedGridChargeWh': requestedGridChargeWh,
+      'gridChargeEnergyWh': gridChargeEnergyWh,
       'remainingBatteryPvWh': remainingBatteryPvWh,
+      'daytimeGridServedWh': daytimeGridServedWh,
+      'daytimePvEnergyWh': daytimePvEnergyWh,
     };
+  }
+
+  /// Fraction of the daily battery recharge the grid is asked to cover.
+  ///
+  /// UPS locks this to 100% because it has no PV array to charge from,
+  /// off-grid and direct-on-grid never charge the battery from the grid, and
+  /// hybrid uses the user-selected dependency only while the grid is
+  /// actually available.
+  double _effectiveGridChargeFraction(
+    SystemMode systemMode,
+    GridScheduleModel gridSchedule,
+  ) {
+    switch (systemMode) {
+      case SystemMode.ups:
+        return 1.0;
+      case SystemMode.offGrid:
+      case SystemMode.directOnGrid:
+        return 0.0;
+      case SystemMode.hybrid:
+        if (gridSchedule.gridOnHours <= 0) return 0.0;
+        final percent = gridSchedule.gridChargeDependencyPercent;
+        return (percent / 100.0).clamp(0.0, 1.0);
+    }
+  }
+
+  /// Energy the charger can actually put into the battery while the grid is
+  /// available: `charger power × grid hours × charge efficiency`, converted to
+  /// the AC side of the charger. Falls back to the requested energy when no
+  /// charger limit or grid window is known.
+  double _deliverableGridChargeWh({
+    required double requestedEnergyWh,
+    required GridScheduleModel gridSchedule,
+    required double? chargerPowerLimitW,
+    required double chargeEfficiency,
+  }) {
+    if (requestedEnergyWh <= 0) return 0.0;
+    final limit = chargerPowerLimitW;
+    if (limit == null || !limit.isFinite || limit <= 0) {
+      return requestedEnergyWh;
+    }
+    final onHours = gridSchedule.gridOnHours;
+    if (!onHours.isFinite || onHours <= 0) return requestedEnergyWh;
+    final acPowerW = limit * inverterEfficiency;
+    return acPowerW * onHours * chargeEfficiency;
+  }
+
+  /// Load energy inside 06:00–18:00 that falls within the grid availability
+  /// window, hour by hour, so partial hours at the window edges are honored.
+  double _daytimeEnergyServedByGrid(
+    List<double> hourlyLoadProfile,
+    GridScheduleModel gridSchedule,
+  ) {
+    final onHours = math.min(gridSchedule.gridOnHours, 24.0);
+    if (onHours <= 0) return 0.0;
+    final start = gridSchedule.gridStartHour;
+    final end = start + onHours;
+    var served = 0.0;
+    for (
+      var hour = daytimeStartHour.toInt();
+      hour < daytimeEndHour.toInt();
+      hour++
+    ) {
+      if (hour < 0 || hour >= hourlyLoadProfile.length) continue;
+      final hourStart = hour.toDouble();
+      final hourEnd = hourStart + 1;
+      var overlap = math.min(hourEnd, end) - math.max(hourStart, start);
+      if (end > 24.0) {
+        overlap +=
+            math.min(hourEnd, end - 24.0) - math.max(hourStart, start - 24.0);
+      }
+      if (overlap <= 0) continue;
+      served += hourlyLoadProfile[hour] * math.min(overlap, 1.0);
+    }
+    return math.max(0.0, served);
   }
 
   List<double> calculateDailyProductionCurve(
@@ -349,6 +487,8 @@ class SolarCalculationRepository {
       peakSunHours: peakSunHours,
       energyLossPercentage: energyLossPercentage,
       chargeEfficiency: chargeEfficiency,
+      hourlyLoadProfile: profile,
+      chargerPowerLimitW: inverterCapacity,
     );
     final panelsForDaytime = panelDetails['daytimePanels'] as int;
     final panelsForBatteries = panelDetails['batteryPanels'] as int;
@@ -356,6 +496,10 @@ class SolarCalculationRepository {
     final gridContributionPercent =
         panelDetails['gridContributionPercent'] as double;
     final panelsSavedByGrid = panelDetails['panelsSavedByGrid'] as int;
+    final maximumArrayPanels = panelDetails['maximumArrayPanels'] as int;
+    final requestedGridChargeWh =
+        panelDetails['requestedGridChargeWh'] as double;
+    final daytimeGridServedWh = panelDetails['daytimeGridServedWh'] as double;
 
     final pvCurve = calculateDailyProductionCurve(
       totalPanels,
@@ -365,18 +509,12 @@ class SolarCalculationRepository {
     );
     final totalPvEnergyWh = pvCurve.fold(0.0, (sum, value) => sum + value);
 
-    final dailyBatteryRechargeWh = _requiredBatteryChargeWh(
-      nighttimeWh,
-      batteryEfficiency,
-      chargeEfficiency,
-    );
-    // UPS recharges its daily discharge from the grid; hybrid draws from the
-    // grid only the configured fraction of that same daily recharge energy.
-    // Using the full nominal battery energy here would over-estimate grid
-    // charging amps and charge time by the autonomy/DoD factors.
-    final gridChargeEnergyWh = systemMode == SystemMode.ups
-        ? dailyBatteryRechargeWh
-        : dailyBatteryRechargeWh * gridContributionPercent / 100.0;
+    // Grid charge energy is the amount the charger can actually deliver
+    // during the available grid hours, already capped by the requested
+    // dependency fraction in the panel details step. UPS recharges its full
+    // daily discharge from the grid; hybrid recharges only the configured
+    // fraction; off-grid and direct-on-grid recharge nothing from the grid.
+    final gridChargeEnergyWh = panelDetails['gridChargeEnergyWh'] as double;
     final gridChargingAmps =
         gridSchedule.gridOnHours > 0 && gridChargeEnergyWh > 0
         ? gridChargeEnergyWh / gridSchedule.gridOnHours / systemVoltage
@@ -387,6 +525,8 @@ class SolarCalculationRepository {
     final theoreticalChargeTime = gridChargingAmps > 0
         ? requiredBatteryEnergyWh / (gridChargingAmps * systemVoltage)
         : 0.0;
+    final gridChargeLimitedByHardware =
+        requestedGridChargeWh - gridChargeEnergyWh > 1.0;
 
     final warnings = <String>[
       'هذه النتائج تقديرية أولية وليست مخططاً تنفيذياً أو اعتماداً لمعيار NEC.',
@@ -394,10 +534,14 @@ class SolarCalculationRepository {
         'بيانات Isc غير متوفرة؛ لم يتم إخراج مقاس حماية PV نهائي.',
       if (systemMode == SystemMode.ups)
         'وضع UPS لا يستخدم الألواح الشمسية في هذا النموذج.',
-      if (systemMode == SystemMode.offGrid && gridContributionPercent > 0)
-        'تم تجاهل مساهمة الشبكة لأن النظام Off-grid.',
+      if (systemMode == SystemMode.offGrid && gridSchedule.gridOnHours > 0)
+        'تم تجاهل ساعات الوطنية المحفوظة (${gridSchedule.gridOnHours.toStringAsFixed(0)} ساعة) لأن النظام معرَّف بدون تيار وطني؛ ألغِ تفعيل «نظام بدون تيار وطني» إذا كانت الوطنية متوفرة فعلاً.',
       if (gridSchedule.gridOnHours == 0 && systemMode == SystemMode.ups)
         'لا توجد ساعات شبكة متاحة لحساب شحن UPS من الشبكة.',
+      if (daytimeGridServedWh > 0 && panelsForDaytime == 0)
+        'الوطنية تغطي كامل أحمال النهار خلال ساعات توفرها؛ لم تُحسب ألواح نهارية. إذا انقطعت الوطنية نهاراً فستحتاج ألواحاً لتغطية تلك الأحمال.',
+      if (gridChargeLimitedByHardware)
+        'قدرة الشحن خلال ساعات توفر الوطنية (${gridSchedule.gridOnHours.toStringAsFixed(0)} ساعة) لا تكفي لتغطية نسبة الاعتماد المطلوبة؛ تم احتساب ${gridChargeEnergyWh.toStringAsFixed(0)}Wh فعلياً من أصل ${requestedGridChargeWh.toStringAsFixed(0)}Wh، والباقي على الألواح. زِد ساعات الوطنية أو قدرة شاحن الإنفرتر.',
     ];
 
     var gelWarning = '';
@@ -426,7 +570,10 @@ class SolarCalculationRepository {
       ProtectionCalculationInputs(
         systemMode: systemMode,
         panelIscAmps: panelIsc,
-        requiredPanels: totalPanels,
+        // Protection must bound the largest array the site could install, so
+        // it is derived before the grid credit that reduces the recommended
+        // panel count.
+        requiredPanels: maximumArrayPanels,
         systemVoltageVolts: systemVoltage,
         gridVoltageVolts: gridVoltage,
         requiredInverterCapacityWatts: inverterCapacity,
@@ -471,6 +618,8 @@ class SolarCalculationRepository {
         'تحويل الأمبير إلى واط يفترض معامل قدرة 1.0 لأن معامل القدرة غير مدخل.',
         'PSH قيمة يومية متوسطة وليست ضماناً لإنتاج كل يوم.',
         'السعر تقديري ويستخدم سعر الواط وسعر أمبير البطارية كما أدخلهما المستخدم.',
+        'الأحمال النهارية التي تعمل أثناء ساعات توفر الوطنية تُغطى منها ولا تُحسب على الألواح في وضع Hybrid.',
+        'شحن البطاريات من الوطنية محدود بقدرة شاحن الإنفرتر (${inverterCapacity.toStringAsFixed(0)}W) مضروبة في ساعات التوفر وكفاءة الشحن.',
       ],
       warningsAr: warnings,
       electricalEstimateOnly: true,
@@ -530,12 +679,22 @@ class SolarCalculationRepository {
     );
   }
 
-  Map<String, dynamic> _emptyPanelsResult() => {
+  /// Zero-panel result used by UPS and by loads with no declared energy.
+  ///
+  /// UPS still reports a 100% grid contribution because its battery is charged
+  /// entirely from the national grid, matching what the input screen shows as a
+  /// locked value; without this the stored slider value would silently decide
+  /// the reported contribution.
+  Map<String, dynamic> _emptyPanelsResult(
+    SystemMode systemMode,
+    double gridChargeEnergyWh,
+  ) => {
     'daytimePanels': 0,
     'batteryPanels': 0,
     'totalPanels': 0,
-    'gridContributionPercent': 0.0,
+    'gridContributionPercent': systemMode == SystemMode.ups ? 100.0 : 0.0,
     'panelsSavedByGrid': 0,
+    'maximumArrayPanels': 0,
     'daytimePanelsExplanationAr': '',
     'daytimePanelsExplanationEn': '',
     'batteryPanelsExplanationAr': '',
@@ -543,7 +702,11 @@ class SolarCalculationRepository {
     'floatPreservationRecommendationAr': '',
     'panelDailyEnergyWh': 0.0,
     'requiredBatteryChargeWh': 0.0,
+    'requestedGridChargeWh': gridChargeEnergyWh,
+    'gridChargeEnergyWh': gridChargeEnergyWh,
     'remainingBatteryPvWh': 0.0,
+    'daytimeGridServedWh': 0.0,
+    'daytimePvEnergyWh': 0.0,
   };
 
   /// Daytime energy (Wh) derived from the hours the user declared for each

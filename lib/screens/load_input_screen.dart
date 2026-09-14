@@ -371,6 +371,15 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                           ref.read(systemModeProvider.notifier).state = value
                               ? SystemMode.ups
                               : SystemMode.hybrid;
+                          // UPS charges from the grid only, so persist the
+                          // 100% dependency the UI shows as locked instead of
+                          // leaving a stale slider value in the model.
+                          if (value) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(
+                                  gridChargeDependencyPercent: 100,
+                                );
+                          }
                         },
                 ),
               ),
@@ -468,14 +477,16 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                             ? '100'
                             : gridSchedule.gridChargeDependencyPercent
                                   .toStringAsFixed(0),
+                        // UPS charges from the grid only, so the dependency
+                        // is locked at the persisted 100%.
                         onChanged: systemMode == SystemMode.ups
                             ? null
                             : (value) {
                                 ref
                                     .read(gridScheduleProvider.notifier)
                                     .state = gridSchedule.copyWith(
-                                  gridChargeDependencyPercent: value,
-                                );
+                                      gridChargeDependencyPercent: value,
+                                    );
                               },
                       ),
                       if (systemMode == SystemMode.ups)
