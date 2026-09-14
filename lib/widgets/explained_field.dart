@@ -62,33 +62,30 @@ class ExplainedField extends StatelessWidget {
         children: [
           field,
           if (helperText != null && helperText!.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(helperText!, style: helperStyle),
           ],
           const SizedBox(height: 4),
           InkWell(
             onTap: () => showFieldExplanationSheet(context, explanation),
             borderRadius: BorderRadius.circular(6),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1.5),
-                    child: Icon(
-                      Icons.help_outline_rounded,
-                      size: 16,
-                      color: colorScheme.primary,
-                    ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 1.5),
+                  child: Icon(
+                    Icons.help_outline_rounded,
+                    size: 16,
+                    color: colorScheme.primary,
                   ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(triggerText, style: triggerStyle),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(triggerText, style: triggerStyle),
+                ),
+              ],
             ),
           ),
         ],

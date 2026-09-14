@@ -305,8 +305,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
             if (systemMode != SystemMode.directOnGrid)
               ExplainedField(
                 explanation: FieldHelpContent.batteryType,
-                helperText:
-                    'اختر نوع البطاريات التي ستدفعها فعلياً عند الشراء؛ يؤثر مباشرة على الحجم المحسوب.',
                 field: DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: AppStrings.batteryType,
@@ -342,7 +340,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
             ExplainedField(
               padding: const EdgeInsets.symmetric(horizontal: 4.0),
               explanation: FieldHelpContent.isOffGridSystem,
-              helperText: 'فعّله إذا لم تصلك الكهرباء الوطنية إطلاقاً.',
               field: SwitchListTile(
                 dense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -363,8 +360,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               ExplainedField(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 explanation: FieldHelpContent.upsMode,
-                helperText:
-                    'فعّله لمنظومة بطاريات تُشحن من الكهرباء الوطنية فقط دون ألواح شمسية.',
                 field: SwitchListTile(
                   dense: true,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -383,7 +378,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               ExplainedField(
                 explanation: FieldHelpContent.gridStartHour,
                 helperText:
-                    'الوقت الذي تبدأ فيه الكهرباء الوطنية بالوصول (0 = منتصف الليل).',
+                    'الوقت الذي يصل فيه التيار (0 = منتصف الليل).',
                 field: TextFormField(
                   initialValue: gridSchedule.gridStartHour.toString(),
                   decoration: const InputDecoration(
@@ -399,11 +394,11 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               ExplainedField(
                 explanation: FieldHelpContent.gridOnHours,
                 helperText:
-                    'عدد ساعات بقاء الكهرباء الوطنية يومياً (المدة وليس الوقت).',
+                    'مدة بقاء التيار الوطني يومياً (المدة وليس الوقت).',
                 field: TextFormField(
                   initialValue: gridSchedule.gridOnHours.toString(),
                   decoration: const InputDecoration(
@@ -419,11 +414,11 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               ExplainedField(
                 explanation: FieldHelpContent.gridOffHours,
                 helperText:
-                    'عدد ساعات انقطاع الكهرباء الوطنية يومياً (المدة وليس الوقت).',
+                    'مدة انقطاع التيار الوطني يومياً (المدة وليس الوقت).',
                 field: TextFormField(
                   initialValue: gridSchedule.gridOffHours.toString(),
                   decoration: const InputDecoration(
@@ -445,7 +440,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ExplainedField(
                   explanation: FieldHelpContent.gridChargeDependencyPercent,
                   helperText:
-                      'كم تريد أن تعتمد على الكهرباء الوطنية لشحن البطاريات؟',
+                      'نسبة شحن البطاريات القادمة من الكهرباء الوطنية.',
                   field: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -522,6 +517,7 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
         ),
         body: SafeArea(
           child: CustomScrollView(
+            cacheExtent: 800,
             slivers: [
               SliverToBoxAdapter(child: _buildGridSettings()),
               SliverToBoxAdapter(
