@@ -160,7 +160,7 @@ class SolarCalculationRepository {
       );
     }
     if (systemMode == SystemMode.ups || (daytimeWh <= 0 && nighttimeWh <= 0)) {
-      return _emptyPanelsResult();
+      return _emptyPanelsResult(systemMode);
     }
 
     final pvPerformanceFactor = 1.0 - energyLossPercentage / 100.0;
@@ -665,11 +665,17 @@ class SolarCalculationRepository {
     );
   }
 
-  Map<String, dynamic> _emptyPanelsResult() => {
+  /// Zero-panel result used by UPS and by loads with no declared energy.
+  ///
+  /// UPS still reports a 100% grid contribution because its battery is charged
+  /// entirely from the national grid, matching what the input screen shows as a
+  /// locked value; without this the stored slider value would silently decide
+  /// the reported contribution.
+  Map<String, dynamic> _emptyPanelsResult(SystemMode systemMode) => {
     'daytimePanels': 0,
     'batteryPanels': 0,
     'totalPanels': 0,
-    'gridContributionPercent': 0.0,
+    'gridContributionPercent': systemMode == SystemMode.ups ? 100.0 : 0.0,
     'panelsSavedByGrid': 0,
     'maximumArrayPanels': 0,
     'daytimePanelsExplanationAr': '',

@@ -452,57 +452,52 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (gridSchedule.gridOnHours > 0 &&
-                  systemMode != SystemMode.directOnGrid)
+              if (systemMode != SystemMode.directOnGrid)
                 ExplainedField(
                   explanation: FieldHelpContent.gridChargeDependencyPercent,
-                  helperText:
-                      'نسبة شحن البطاريات القادمة من الكهرباء الوطنية.',
+                  helperText: gridSchedule.gridOnHours > 0
+                      ? 'نسبة شحن البطاريات القادمة من الكهرباء الوطنية.'
+                      : 'لا توجد ساعات وطنية، لذلك لا يوجد خصم من الشبكة.',
                   field: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        systemMode == SystemMode.ups
-                            ? 'نسبة الاعتماد على الوطنية لشحن البطاريات: 100%'
-                            : 'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
+                        'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
                       ),
                       Slider(
-                        value: systemMode == SystemMode.ups
-                            ? 100.0
-                            : gridSchedule.gridChargeDependencyPercent,
+                        value: gridSchedule.gridChargeDependencyPercent,
                         min: 0,
                         max: 100,
                         divisions: 20,
-                        label: systemMode == SystemMode.ups
-                            ? '100'
-                            : gridSchedule.gridChargeDependencyPercent
-                                  .toStringAsFixed(0),
-                        onChanged: systemMode == SystemMode.ups
+                        label: gridSchedule.gridChargeDependencyPercent
+                            .toStringAsFixed(0),
+                        // Locked while the grid cannot charge: UPS has no PV
+                        // alternative, and hybrid without grid hours has
+                        // nothing to deduct from.
+                        onChanged:
+                            systemMode == SystemMode.ups ||
+                                gridSchedule.gridOnHours <= 0
                             ? null
                             : (value) {
                                 ref
                                     .read(gridScheduleProvider.notifier)
                                     .state = gridSchedule.copyWith(
-                                  gridChargeDependencyPercent: value,
-                                );
+                                      gridChargeDependencyPercent: value,
+                                    );
                               },
                       ),
-                      if (systemMode == SystemMode.ups)
-                        const Text(
-                          "🔒 تم تثبيت الشحن من الوطنية بنسبة 100% نظراً لعدم توفر ألواح شمسية كبديل.",
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                      if (systemMode == SystemMode.ups ||
+                          gridSchedule.gridOnHours <= 0)
+                        Text(
+                          systemMode == SystemMode.ups
+                              ? "🔒 تم تثبيت الشحن من الوطنية بنسبة 100% نظراً لعدم توفر ألواح شمسية كبديل."
+                              : "🔒 أدخل ساعات توفر الوطنية لتفعيل خصمها من شحن البطاريات ومن أحمال النهار.",
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
                     ],
-                  ),
-                ),
-              if (gridSchedule.gridOnHours <= 0 &&
-                  systemMode == SystemMode.hybrid)
-                ExplainedField(
-                  explanation: FieldHelpContent.gridChargeDependencyPercent,
-                  helperText: 'لا توجد ساعات وطنية، لذلك الشحن كله من الألواح.',
-                  field: const Text(
-                    'ساعات توفر الوطنية صفر، لذلك تُشحن البطاريات من الألواح الشمسية بنسبة 100% ولا يوجد خصم من الشبكة. أدخل ساعات التوفر والانقطاع (مجموعهما 24) لتفعيل خصم الوطنية من شحن البطاريات ومن أحمال النهار.',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ),
             ],
