@@ -159,8 +159,28 @@ class SolarCalculationRepository {
         'نسبة الفقد يجب أن تكون بين 0% و100% حصراً.',
       );
     }
+    final batteryEfficiency = _batteryEfficiency(gridSchedule.batteryType);
+    final requiredBatteryChargeWh = _requiredBatteryChargeWh(
+      nighttimeWh,
+      batteryEfficiency,
+      chargeEfficiency,
+    );
+    // UPS has no PV array, but the grid still recharges the daily discharge,
+    // so its grid charge energy must be reported even though no panel is
+    // sized. Everything else with no energy to serve needs no panels at all.
+    final upsGridChargeEnergyWh = systemMode == SystemMode.ups
+        ? math.min(
+            requiredBatteryChargeWh,
+            _deliverableGridChargeWh(
+              requestedEnergyWh: requiredBatteryChargeWh,
+              gridSchedule: gridSchedule,
+              chargerPowerLimitW: chargerPowerLimitW,
+              chargeEfficiency: chargeEfficiency,
+            ),
+          )
+        : 0.0;
     if (systemMode == SystemMode.ups || (daytimeWh <= 0 && nighttimeWh <= 0)) {
-      return _emptyPanelsResult(systemMode);
+      return _emptyPanelsResult(systemMode, upsGridChargeEnergyWh);
     }
 
     final pvPerformanceFactor = 1.0 - energyLossPercentage / 100.0;
@@ -169,12 +189,6 @@ class SolarCalculationRepository {
     _requireFinitePositive(panelDailyEnergyWh, 'الطاقة اليومية للوح');
 
     final daytimeDcEnergyWh = daytimeWh / inverterEfficiency;
-    final batteryEfficiency = _batteryEfficiency(gridSchedule.batteryType);
-    final requiredBatteryChargeWh = _requiredBatteryChargeWh(
-      nighttimeWh,
-      batteryEfficiency,
-      chargeEfficiency,
-    );
 
     // The fraction of the daily battery recharge that the national grid is
     // asked to cover. UPS is always 100% grid-charged, off-grid and
@@ -671,7 +685,10 @@ class SolarCalculationRepository {
   /// entirely from the national grid, matching what the input screen shows as a
   /// locked value; without this the stored slider value would silently decide
   /// the reported contribution.
-  Map<String, dynamic> _emptyPanelsResult(SystemMode systemMode) => {
+  Map<String, dynamic> _emptyPanelsResult(
+    SystemMode systemMode,
+    double gridChargeEnergyWh,
+  ) => {
     'daytimePanels': 0,
     'batteryPanels': 0,
     'totalPanels': 0,
@@ -685,8 +702,8 @@ class SolarCalculationRepository {
     'floatPreservationRecommendationAr': '',
     'panelDailyEnergyWh': 0.0,
     'requiredBatteryChargeWh': 0.0,
-    'requestedGridChargeWh': 0.0,
-    'gridChargeEnergyWh': 0.0,
+    'requestedGridChargeWh': gridChargeEnergyWh,
+    'gridChargeEnergyWh': gridChargeEnergyWh,
     'remainingBatteryPvWh': 0.0,
     'daytimeGridServedWh': 0.0,
     'daytimePvEnergyWh': 0.0,
