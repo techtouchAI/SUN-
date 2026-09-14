@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,8 @@ import 'package:solar_calculator/models/calculation_state.dart';
 import 'package:solar_calculator/models/grid_schedule_model.dart';
 import 'package:solar_calculator/models/load_model.dart';
 import 'package:solar_calculator/models/system_mode.dart';
+import 'package:solar_calculator/models/system_settings_model.dart';
+import 'package:solar_calculator/repositories/settings_persistence_repository.dart';
 import 'package:solar_calculator/screens/load_input_screen.dart';
 
 void main() {
@@ -27,6 +31,73 @@ void main() {
     await tester.pumpAndSettle();
     return container;
   }
+
+  testWidgets('waits for saved settings before accepting grid edits', (
+    tester,
+  ) async {
+    final repository = _DelayedSettingsRepository();
+    final container = ProviderContainer(
+      overrides: [
+        settingsPersistenceRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: LoadInputScreen()),
+      ),
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(sliderKey), findsNothing);
+
+    repository.loaded.complete(
+      const SystemSettingsModel(
+        gridSchedule: GridScheduleModel(
+          gridOnHours: 8,
+          gridOffHours: 16,
+          gridChargeDependencyPercent: 37,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(tester.widget<Slider>(find.byKey(sliderKey)).value, 37);
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, AppStrings.gridOnHours),
+          )
+          .initialValue,
+      '8.0',
+    );
+  });
+
+  testWidgets('grid hours can be edited in sequence without reverting input', (
+    tester,
+  ) async {
+    final container = await mount(tester);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, AppStrings.gridOnHours),
+      '8',
+    );
+    await tester.pump();
+    expect(container.read(gridScheduleProvider).gridOnHours, 8);
+    expect(container.read(systemSettingsProvider).gridSchedule.gridOnHours, 8);
+    expect(container.read(systemSettingsErrorProvider), isNotNull);
+    // An incomplete schedule must not replace the last valid saved settings.
+    final saved = await SettingsPersistenceRepository().loadSettings();
+    expect(saved.gridSchedule.gridOnHours, 0);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, AppStrings.gridOffHours),
+      '16',
+    );
+    await tester.pumpAndSettle();
+    expect(container.read(gridScheduleProvider).gridOnHours, 8);
+    expect(container.read(gridScheduleProvider).gridOffHours, 16);
+    expect(container.read(systemSettingsErrorProvider), isNull);
+  });
 
   testWidgets('grid percentage is discoverable before entering grid hours', (
     tester,
@@ -115,4 +186,11 @@ void main() {
       expect(find.byKey(sliderKey), findsNothing);
     }
   });
+}
+
+class _DelayedSettingsRepository extends SettingsPersistenceRepository {
+  final loaded = Completer<SystemSettingsModel>();
+
+  @override
+  Future<SystemSettingsModel> loadSettings() => loaded.future;
 }

@@ -513,6 +513,13 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
   Widget build(BuildContext context) {
     final loads = ref.watch(loadListProvider);
     final systemMode = ref.watch(systemModeProvider);
+    final settingsInitialization = ref.watch(systemSettingsInitializationProvider);
+    if (settingsInitialization.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.addElectricalLoads)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return DefaultTabController(
       length: 2,

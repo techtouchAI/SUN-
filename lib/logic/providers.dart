@@ -141,6 +141,7 @@ class SystemSettingsNotifier extends StateNotifier<SystemSettingsModel> {
   final void Function(SystemSettingsModel) _applyLegacySettings;
   final ValueChanged<String?> _reportError;
   bool isLoading = true;
+  late final Future<void> initialized;
   bool _syncingLegacySettings = false;
 
   SystemSettingsNotifier({
@@ -153,7 +154,7 @@ class SystemSettingsNotifier extends StateNotifier<SystemSettingsModel> {
        _applyLegacySettings = applyLegacySettings,
        _reportError = reportError,
        super(const SystemSettingsModel()) {
-    _loadInitialData();
+    initialized = _loadInitialData();
   }
 
   Future<void> _loadInitialData() async {
@@ -174,13 +175,16 @@ class SystemSettingsNotifier extends StateNotifier<SystemSettingsModel> {
 
   void updateFromLegacySettings() {
     if (_syncingLegacySettings) return;
+    final draft = _readLegacySettings();
     try {
-      update(_readLegacySettings());
+      update(draft);
     } catch (error) {
+      // Multi-field edits (e.g. grid on/off hours) can be temporarily invalid.
+      // Keep the draft visible and calculable as an invalid-input state, but
+      // never persist it until validation passes. Reverting each edit makes
+      // it impossible to finish entering a valid schedule.
+      state = draft;
       _reportError(error.toString());
-      _syncingLegacySettings = true;
-      _applyLegacySettings(state);
-      _syncingLegacySettings = false;
     }
   }
 
@@ -364,6 +368,12 @@ final systemSettingsProvider =
       });
       return notifier;
     });
+
+// Input screens must finish restoring saved settings before accepting edits;
+// otherwise the first calculation can overwrite those edits with saved values.
+final systemSettingsInitializationProvider = FutureProvider<void>((ref) {
+  return ref.watch(systemSettingsProvider.notifier).initialized;
+});
 
 final calculationStateProvider = Provider<CalculationState>((ref) {
   final loadState = ref.watch(loadListProvider);
