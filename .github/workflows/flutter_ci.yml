@@ -47,10 +47,10 @@ jobs:
           flutter test --coverage > test-output.txt 2>&1
           rc=$?
           if [ $rc -ne 0 ]; then
-            name=$(grep -oE '[^ ]*\.dart[^ ]* \[E\]' test-output.txt | head -3 | perl -pe 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
-            echo "::error title=Failing test::${name}"
-            msg=$(tail -n 60 test-output.txt | perl -pe 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
-            echo "::error title=Test output tail::${msg}"
+            block=$(grep -n -A 45 '\[E\]' test-output.txt | head -120 | perl -pe 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+            echo "::error title=Failure block::${block}"
+            block2=$(grep -E '❌|🚫|Expected:|Actual:|Which:|EXCEPTION CAUGHT|The following' test-output.txt | head -40 | perl -pe 's/%/%25/g; s/\r/%0D/g; s/\n/%0A/g')
+            echo "::error title=Failure keys::${block2}"
           fi
           exit $rc
 
