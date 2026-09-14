@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../logic/providers.dart';
 import '../logic/app_strings.dart';
+import '../logic/field_help_content.dart';
 import '../models/system_mode.dart';
 import '../repositories/solar_calculation_repository.dart';
+import '../widgets/explained_field.dart';
 
 enum SettingsSection { pvTopology, dcCable }
 
@@ -75,6 +77,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ref: ref,
                 label: AppStrings.solarWattPriceLabel,
                 provider: solarWattPriceProvider,
+                explanation: FieldHelpContent.solarWattPrice,
+                helperText: 'سعر الواط الواحد للألواح = سعر اللوح ÷ قدرته.',
               ),
               const SizedBox(height: 16),
               _buildPriceInput(
@@ -82,6 +86,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ref: ref,
                 label: AppStrings.batteryAmperePriceLabel,
                 provider: batteryAmperePriceProvider,
+                explanation: FieldHelpContent.batteryAmperePrice,
+                helperText: 'سعر الأمبير الواحد = سعر البطارية ÷ سعتها بالأمبير.',
               ),
               const SizedBox(height: 16),
               _buildPriceInput(
@@ -89,6 +95,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ref: ref,
                 label: AppStrings.wiringCostLabel,
                 provider: wiringCostProvider,
+                explanation: FieldHelpContent.wiringCost,
+                helperText: 'اكتب 0 إذا لم تحدد التكلفة بعد.',
               ),
 
               const SizedBox(height: 16),
@@ -98,6 +106,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'سعر الصرف (IQD)',
                 provider: iqdExchangeRateProvider,
                 suffix: ' IQD',
+                explanation: FieldHelpContent.iqdExchangeRate,
+                helperText: 'قيمة الدولار الواحد بالدينار العراقي حسب السوق.',
               ),
               const SizedBox(height: 16),
               _buildPriceInput(
@@ -106,6 +116,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'جهد الشبكة (V)',
                 provider: gridVoltageProvider,
                 suffix: ' V',
+                explanation: FieldHelpContent.gridVoltage,
+                helperText: 'المعيار في العراق هو 220 فولت.',
               ),
               const Divider(),
               const SizedBox(height: 16),
@@ -120,6 +132,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'جهد النظام (V)',
                 provider: systemVoltageProvider,
                 suffix: ' V',
+                explanation: FieldHelpContent.systemVoltage,
+                helperText: '12 أو 24 أو 48 فولت؛ 48 هو الأنسب لمعظم المنازل.',
               ),
               const SizedBox(height: 16),
               _buildPriceInput(
@@ -128,6 +142,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'ساعات الذروة (PSH)',
                 provider: peakSunHoursProvider,
                 suffix: ' ساعات',
+                explanation: FieldHelpContent.peakSunHours,
+                helperText: 'متوسط ساعات الشمس الفعالة؛ في العراق بين 4.5 و5.5.',
               ),
               const SizedBox(height: 16),
               _buildPriceInput(
@@ -136,6 +152,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'نسبة الفقد (%)',
                 provider: energyLossPercentageProvider,
                 suffix: ' %',
+                explanation: FieldHelpContent.energyLossPercentage,
+                helperText: 'ضياع الأسلاك والعاكس والحرارة والغبار؛ 30% قيمة شائعة.',
               ),
               const SizedBox(height: 16),
               _buildPriceInput(
@@ -144,6 +162,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 label: 'أيام التغطية/الغيوم',
                 provider: daysOfAutonomyProvider,
                 suffix: ' أيام',
+                explanation: FieldHelpContent.daysOfAutonomy,
+                helperText: 'يوم واحد يكفي مع توفر الكهرباء الوطنية.',
               ),
               const Divider(),
               const SizedBox(height: 16),
@@ -159,6 +179,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: 'قدرة اللوح المخصصة (Watt)',
                   provider: panelCapacityProvider,
                   suffix: ' W',
+                  explanation: FieldHelpContent.panelCapacity,
+                  helperText: 'قدرة اللوح الذي تنوي شراءه كما في كتيبه.',
                   onChangedCallback: (parsedValue) {
                     final interpolatedIsc =
                         SolarCalculationRepository.getInterpolatedIsc(
@@ -179,30 +201,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   provider: panelIscProvider,
                   suffix: ' A',
                   keyString: ref.watch(panelIscProvider).toString(),
+                  explanation: FieldHelpContent.panelIsc,
+                  helperText: 'أقصى تيار للوح (Short Circuit Current) من كتيب اللوح.',
                 ),
                 const SizedBox(height: 16),
               ],
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: 'مكان تركيب الإينفيرتر',
-                  border: OutlineInputBorder(),
+              ExplainedField(
+                explanation: FieldHelpContent.inverterLocation,
+                helperText: 'يؤثر الاختيار على توصية درجة الحماية (IP).',
+                field: DropdownButtonFormField<String>(
+                  decoration: const InputDecoration(
+                    labelText: 'مكان تركيب الإينفيرتر',
+                    border: OutlineInputBorder(),
+                  ),
+                  initialValue: ref.watch(inverterLocationProvider),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'indoor',
+                      child: Text('داخلي (Indoor)'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'outdoor',
+                      child: Text('خارجي (Outdoor)'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      ref.read(inverterLocationProvider.notifier).state = value;
+                    }
+                  },
                 ),
-                initialValue: ref.watch(inverterLocationProvider),
-                items: const [
-                  DropdownMenuItem(
-                    value: 'indoor',
-                    child: Text('داخلي (Indoor)'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'outdoor',
-                    child: Text('خارجي (Outdoor)'),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    ref.read(inverterLocationProvider.notifier).state = value;
-                  }
-                },
               ),
               const Divider(),
               const SizedBox(height: 16),
@@ -232,12 +260,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ref: ref,
                         label: 'عدد الألواح على التوالي لكل مسار',
                         provider: pvModulesPerStringProvider,
+                        explanation: FieldHelpContent.pvModulesPerString,
+                        helperText: 'اختياري؛ اتركه فارغاً للاحتساب التلقائي.',
                       ),
                       const SizedBox(height: 16),
                       _buildOptionalIntInput(
                         ref: ref,
                         label: 'عدد المسارات على التوازي',
                         provider: pvParallelStringsProvider,
+                        explanation: FieldHelpContent.pvParallelStrings,
+                        helperText: 'اختياري؛ اتركه فارغاً للاحتساب التلقائي.',
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -259,12 +291,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       suffix: ' m',
                       provider: dcCableLengthMetersProvider,
                       allowZero: false,
+                      explanation: FieldHelpContent.dcCableLength,
+                      helperText: 'المسافة بين الألواح والعاكس باتجاه واحد.',
                     ),
                     const SizedBox(height: 16),
                     _buildOptionalDropdown(
                       ref: ref,
                       label: 'مادة الموصل',
                       provider: dcCableMaterialProvider,
+                      explanation: FieldHelpContent.dcCableMaterial,
+                      helperText: 'النحاس أفضل توصيلاً؛ الألمنيوم أرخص.',
                       items: const [
                         DropdownMenuItem(value: 'copper', child: Text('نحاس')),
                         DropdownMenuItem(
@@ -278,6 +314,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref: ref,
                       label: 'تصنيف عزل الكابل',
                       provider: dcCableInsulationProvider,
+                      explanation: FieldHelpContent.dcCableInsulation,
+                      helperText: 'مكتوب على الكابل نفسه (70°C أو 90°C).',
                       items: const [
                         DropdownMenuItem(value: '70C', child: Text('70°C')),
                         DropdownMenuItem(value: '90C', child: Text('90°C')),
@@ -288,6 +326,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ref: ref,
                       label: 'طريقة تمديد كابل DC',
                       provider: dcCableInstallationMethodProvider,
+                      explanation: FieldHelpContent.dcCableInstallationMethod,
+                      helperText: 'اختر الطريقة الفعلية لتمديد الكابل.',
                       items: const [
                         DropdownMenuItem(
                           value: 'conduit',
@@ -311,12 +351,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       suffix: ' °C',
                       provider: dcCableAmbientTemperatureProvider,
                       allowZero: true,
+                      explanation:
+                          FieldHelpContent.dcCableAmbientTemperature,
+                      helperText: 'أعلى حرارة متوقعة حول الكابل؛ اتركه فارغاً لقيمة آمنة.',
                     ),
                     const SizedBox(height: 16),
                     _buildOptionalIntInput(
                       ref: ref,
                       label: 'عدد الموصلات الحاملة للتيار',
                       provider: dcCableLoadedConductorsProvider,
+                      explanation: FieldHelpContent.dcCableLoadedConductors,
+                      helperText: 'سلكان (موجب وسالب) في أغلب المنظومات.',
                     ),
                   ],
                 ),
@@ -351,25 +396,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     String suffix = '\$',
     void Function(double)? onChangedCallback,
     String? keyString,
+    FieldExplanation? explanation,
+    String? helperText,
   }) {
-    return TextFormField(
-      key: keyString != null ? Key(keyString) : null,
-      initialValue: keyString ?? ref.read(provider).toString(),
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        suffixText: suffix,
-      ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      onChanged: (value) {
-        final parsedValue = double.tryParse(value);
-        if (parsedValue != null && parsedValue >= 0) {
-          ref.read(provider.notifier).state = parsedValue;
-          if (onChangedCallback != null) {
-            onChangedCallback(parsedValue);
+    return ExplainedField(
+      explanation: explanation ?? _placeholderExplanation(label),
+      helperText: helperText,
+      field: TextFormField(
+        key: keyString != null ? Key(keyString) : null,
+        initialValue: keyString ?? ref.read(provider).toString(),
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          suffixText: suffix,
+        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        onChanged: (value) {
+          final parsedValue = double.tryParse(value);
+          if (parsedValue != null && parsedValue >= 0) {
+            ref.read(provider.notifier).state = parsedValue;
+            if (onChangedCallback != null) {
+              onChangedCallback(parsedValue);
+            }
           }
-        }
-      },
+        },
+      ),
     );
   }
 
@@ -379,30 +430,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required StateProvider<double?> provider,
     required bool allowZero,
     String suffix = '',
+    FieldExplanation? explanation,
+    String? helperText,
   }) {
     final currentValue = ref.watch(provider);
-    return TextFormField(
-      key: ValueKey('$label-$currentValue'),
-      initialValue: currentValue?.toString() ?? '',
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-        suffixText: suffix,
+    return ExplainedField(
+      explanation: explanation ?? _placeholderExplanation(label),
+      helperText: helperText,
+      field: TextFormField(
+        key: ValueKey('$label-$currentValue'),
+        initialValue: currentValue?.toString() ?? '',
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          suffixText: suffix,
+        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        onChanged: (value) {
+          final trimmed = value.trim();
+          if (trimmed.isEmpty) {
+            ref.read(provider.notifier).state = null;
+            return;
+          }
+          final parsedValue = double.tryParse(trimmed);
+          if (parsedValue != null &&
+              parsedValue.isFinite &&
+              (allowZero ? parsedValue >= 0 : parsedValue > 0)) {
+            ref.read(provider.notifier).state = parsedValue;
+          }
+        },
       ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      onChanged: (value) {
-        final trimmed = value.trim();
-        if (trimmed.isEmpty) {
-          ref.read(provider.notifier).state = null;
-          return;
-        }
-        final parsedValue = double.tryParse(trimmed);
-        if (parsedValue != null &&
-            parsedValue.isFinite &&
-            (allowZero ? parsedValue >= 0 : parsedValue > 0)) {
-          ref.read(provider.notifier).state = parsedValue;
-        }
-      },
     );
   }
 
@@ -410,27 +467,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required WidgetRef ref,
     required String label,
     required StateProvider<int?> provider,
+    FieldExplanation? explanation,
+    String? helperText,
   }) {
     final currentValue = ref.watch(provider);
-    return TextFormField(
-      key: ValueKey('$label-$currentValue'),
-      initialValue: currentValue?.toString() ?? '',
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
+    return ExplainedField(
+      explanation: explanation ?? _placeholderExplanation(label),
+      helperText: helperText,
+      field: TextFormField(
+        key: ValueKey('$label-$currentValue'),
+        initialValue: currentValue?.toString() ?? '',
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        keyboardType: TextInputType.number,
+        onChanged: (value) {
+          final trimmed = value.trim();
+          if (trimmed.isEmpty) {
+            ref.read(provider.notifier).state = null;
+            return;
+          }
+          final parsedValue = int.tryParse(trimmed);
+          if (parsedValue != null && parsedValue > 0) {
+            ref.read(provider.notifier).state = parsedValue;
+          }
+        },
       ),
-      keyboardType: TextInputType.number,
-      onChanged: (value) {
-        final trimmed = value.trim();
-        if (trimmed.isEmpty) {
-          ref.read(provider.notifier).state = null;
-          return;
-        }
-        final parsedValue = int.tryParse(trimmed);
-        if (parsedValue != null && parsedValue > 0) {
-          ref.read(provider.notifier).state = parsedValue;
-        }
-      },
     );
   }
 
@@ -439,16 +502,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required String label,
     required StateProvider<String?> provider,
     required List<DropdownMenuItem<String>> items,
+    FieldExplanation? explanation,
+    String? helperText,
   }) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
+    return ExplainedField(
+      explanation: explanation ?? _placeholderExplanation(label),
+      helperText: helperText,
+      field: DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+        ),
+        initialValue: ref.watch(provider),
+        isExpanded: true,
+        items: items,
+        onChanged: (value) => ref.read(provider.notifier).state = value,
       ),
-      initialValue: ref.watch(provider),
-      isExpanded: true,
-      items: items,
-      onChanged: (value) => ref.read(provider.notifier).state = value,
+    );
+  }
+
+  /// Fallback used only for fields that deliberately ship without a
+  /// dedicated explanation, so the rendered UI stays consistent.
+  FieldExplanation _placeholderExplanation(String label) {
+    return FieldExplanation(
+      title: 'شرح الحقل: $label',
+      points: ['اترك القيمة الافتراضية إذا لم تكن متأكداً من المطلوب.'],
     );
   }
 }
