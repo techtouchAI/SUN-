@@ -452,12 +452,11 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (gridSchedule.gridOnHours > 0 &&
-                  systemMode != SystemMode.directOnGrid)
+              if (systemMode != SystemMode.directOnGrid)
                 ExplainedField(
                   explanation: FieldHelpContent.gridChargeDependencyPercent,
                   helperText:
-                      'نسبة شحن البطاريات القادمة من الكهرباء الوطنية.',
+                      'تُخصم النسبة المختارة من طاقة شحن البطاريات قبل حساب الألواح؛ 100% تلغي ألواح الشحن فقط، وليس ألواح أحمال النهار.',
                   field: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -467,12 +466,13 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                             : 'نسبة الاعتماد على الوطنية لشحن البطاريات: ${gridSchedule.gridChargeDependencyPercent.toStringAsFixed(0)}%',
                       ),
                       Slider(
+                        key: const ValueKey('grid-charge-dependency'),
                         value: systemMode == SystemMode.ups
                             ? 100.0
                             : gridSchedule.gridChargeDependencyPercent,
                         min: 0,
                         max: 100,
-                        divisions: 20,
+                        divisions: 100,
                         label: systemMode == SystemMode.ups
                             ? '100'
                             : gridSchedule.gridChargeDependencyPercent
@@ -489,6 +489,11 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                     );
                               },
                       ),
+                      if (gridSchedule.gridOnHours <= 0)
+                        const Text(
+                          'أدخل ساعات توفر الوطنية لتطبيق النسبة؛ بدون توفرها تُحسب ألواح شحن البطاريات بالكامل في النظام الهجين.',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       if (systemMode == SystemMode.ups)
                         const Text(
                           "🔒 تم تثبيت الشحن من الوطنية بنسبة 100% نظراً لعدم توفر ألواح شمسية كبديل.",
@@ -508,6 +513,13 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
   Widget build(BuildContext context) {
     final loads = ref.watch(loadListProvider);
     final systemMode = ref.watch(systemModeProvider);
+    final settingsInitialization = ref.watch(systemSettingsInitializationProvider);
+    if (settingsInitialization.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text(AppStrings.addElectricalLoads)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return DefaultTabController(
       length: 2,

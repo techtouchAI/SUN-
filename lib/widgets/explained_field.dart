@@ -2,22 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../logic/field_help_content.dart';
 
-/// Wraps a form field together with its clarification, rendered below the
-/// field:
-///  1. the field itself;
-///  2. an optional short helper line describing what to write;
-///  3. a tappable trigger sentence that opens a detailed bullet-point
-///     explanation sheet.
-///
-/// Used across the input screens so every ambiguous field is explained in a
-/// single, consistent way.
+/// Places an icon-only help button at the trailing edge of its field, with
+/// an optional short helper line below. The button follows text direction
+/// (left in Arabic) and opens the detailed bullet-point explanation sheet.
+/// Used across input screens for consistent placement and accessibility.
 class ExplainedField extends StatelessWidget {
   const ExplainedField({
     super.key,
     required this.field,
     required this.explanation,
     this.helperText,
-    this.triggerText = FieldHelpContent.triggerText,
     this.padding = EdgeInsets.zero,
   });
 
@@ -31,9 +25,6 @@ class ExplainedField extends StatelessWidget {
   /// Short one-line clarification rendered directly under the field.
   final String? helperText;
 
-  /// Sentence rendered under the field that opens the explanation sheet.
-  final String triggerText;
-
   /// Outer padding applied around the whole block, useful to align the
   /// clarification with dense tiles inside cards.
   final EdgeInsetsGeometry padding;
@@ -46,13 +37,6 @@ class ExplainedField extends StatelessWidget {
       color: colorScheme.onSurfaceVariant,
       height: 1.35,
     );
-    final triggerStyle = theme.textTheme.bodySmall?.copyWith(
-      color: colorScheme.primary,
-      fontWeight: FontWeight.w600,
-      height: 1.35,
-      decoration: TextDecoration.underline,
-      decorationColor: colorScheme.primary.withValues(alpha: 0.45),
-    );
 
     return Padding(
       padding: padding,
@@ -60,34 +44,29 @@ class ExplainedField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          field,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: field),
+              IconButton(
+                tooltip: 'شرح الحقل: ${explanation.title}',
+                onPressed: () =>
+                    showFieldExplanationSheet(context, explanation),
+                icon: const Icon(Icons.help_outline_rounded),
+                iconSize: 20,
+                color: colorScheme.primary,
+                // Keep a comfortable touch target without a separate text row.
+                constraints: const BoxConstraints.tightFor(
+                  width: 48,
+                  height: 48,
+                ),
+              ),
+            ],
+          ),
           if (helperText != null && helperText!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(helperText!, style: helperStyle),
           ],
-          const SizedBox(height: 4),
-          InkWell(
-            onTap: () => showFieldExplanationSheet(context, explanation),
-            borderRadius: BorderRadius.circular(6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 1.5),
-                  child: Icon(
-                    Icons.help_outline_rounded,
-                    size: 16,
-                    color: colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(triggerText, style: triggerStyle),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -104,9 +83,7 @@ Future<void> showFieldExplanationSheet(
     isScrollControlled: true,
     showDragHandle: true,
     backgroundColor: Theme.of(context).colorScheme.surface,
-    builder: (sheetContext) => _FieldExplanationSheet(
-      explanation: explanation,
-    ),
+    builder: (sheetContext) => _FieldExplanationSheet(explanation: explanation),
   );
 }
 

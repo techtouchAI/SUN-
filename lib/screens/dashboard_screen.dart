@@ -262,6 +262,7 @@ class DashboardScreen extends ConsumerWidget {
                           result.breakdown.daytimePanelsExplanationAr,
                           if (systemMode != SystemMode.directOnGrid) ...[
                             '\n${AppStrings.panelsBattery}: ${result.panelsForBatteries} لوح',
+                            'نسبة الاعتماد المخططة على الوطنية لشحن البطاريات: ${result.gridContributionPercent.toStringAsFixed(0)}%',
                             result.breakdown.batteryPanelsExplanationAr,
                             if (result
                                 .breakdown

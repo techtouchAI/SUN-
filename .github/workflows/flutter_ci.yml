@@ -42,7 +42,45 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        run: flutter test --coverage
+        id: tests
+        run: flutter test --coverage --file-reporter "json:$RUNNER_TEMP/flutter-test-results.jsonl"
+
+      - name: Annotate failed tests
+        if: ${{ failure() && steps.tests.outcome == 'failure' }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import defaultdict
+          from pathlib import Path
+
+          report = Path(os.environ['RUNNER_TEMP']) / 'flutter-test-results.jsonl'
+          if not report.exists():
+              print('::error::Flutter failed before creating its test report; see the Test step log.')
+              raise SystemExit(0)
+          names = {}
+          messages = defaultdict(list)
+          failed = set()
+          for line in report.read_text().splitlines():
+              event = json.loads(line)
+              kind = event.get('type')
+              test_id = event.get('testID')
+              if kind == 'testStart':
+                  names[event['test']['id']] = event['test']['name']
+              elif kind == 'print':
+                  messages[test_id].append(event['message'])
+              elif kind == 'error':
+                  failed.add(test_id)
+                  messages[test_id].append(event['error'])
+                  messages[test_id].append(event.get('stackTrace', ''))
+              elif kind == 'testDone' and event.get('result') in ('error', 'failure'):
+                  failed.add(test_id)
+          for test_id in sorted(failed):
+              detail = names.get(test_id, 'Flutter test') + '\n' + '\n'.join(messages[test_id])
+              detail = detail[:12000].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+              print(f'::error title=Flutter test failed::{detail}')
+          PY
 
   build:
     name: Build ${{ matrix.target }}

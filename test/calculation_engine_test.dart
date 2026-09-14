@@ -489,7 +489,7 @@ void gridDeductionRules() {
     expect(result.requiredPanels, 3);
   });
 
-  test('grid charge delivery is capped by charger power and grid hours', () {
+  test('100% grid split removes battery PV even when charging is limited', () {
     final result = engine.calculateSystem(
       [
         load(name: 'Day', day: 4, night: 0, power: 500),
@@ -508,13 +508,85 @@ void gridDeductionRules() {
       energyLossPercentage: 30,
     );
 
-    // Two grid hours at the inverter charger rating cannot cover the whole
-    // daily recharge, so the shortfall stays on the solar side.
-    expect(result.gridContributionPercent, greaterThan(0));
-    expect(result.gridContributionPercent, lessThan(100));
-    expect(result.panelsForBatteries, greaterThan(0));
-    expect(result.breakdown.warningsAr.join(' '), contains('قدرة الشحن'));
+    // Hardware limits still constrain delivered energy and trigger a warning,
+    // but must not silently change the user's planned PV allocation.
+    expect(result.gridContributionPercent, 100);
+    expect(result.panelsForBatteries, 0);
+    expect(result.requiredPanels, result.panelsForDaytime);
+    expect(result.panelsForDaytime, greaterThan(0));
+    expect(result.requiredGridChargingAmps, greaterThan(0));
+    expect(result.breakdown.warningsAr.join(' '), contains('عجز شحن'));
+    expect(
+      result.breakdown.warningsAr.join(' '),
+      contains('لم يُضف إلى الألواح'),
+    );
   });
+
+  test('every grid percentage reduces charging energy before rounding', () {
+    int? previousPanels;
+    for (var percent = 0; percent <= 100; percent++) {
+      final details = engine.calculatePanelsDetails(
+        daytimeWh: 3000,
+        nighttimeWh: 8000,
+        continuousDaytimeWatts: 500,
+        panelCapacity: 540,
+        systemMode: SystemMode.hybrid,
+        gridSchedule: GridScheduleModel(
+          gridStartHour: 20,
+          gridOnHours: 2,
+          gridOffHours: 22,
+          gridChargeDependencyPercent: percent.toDouble(),
+        ),
+        peakSunHours: 4.5,
+        energyLossPercentage: 30,
+        chargeEfficiency: 0.85,
+        chargerPowerLimitW: 100,
+      );
+      final fullCharge = details['requiredBatteryChargeWh'] as double;
+      final solarCharge = fullCharge * (1 - percent / 100);
+      final dailyPanelEnergy = details['panelDailyEnergyWh'] as double;
+      final expectedPanels = ((3000 / 0.9 + solarCharge) / dailyPanelEnergy)
+          .ceil();
+      final totalPanels = details['totalPanels'] as int;
+      expect(details['gridContributionPercent'], closeTo(percent, 0.0001));
+      expect(details['remainingBatteryPvWh'], closeTo(solarCharge, 0.0001));
+      expect(totalPanels, expectedPanels);
+      expect(details['daytimePanels'], 2);
+      expect(details['batteryPanels'], totalPanels - 2);
+      expect(
+        details['panelsSavedByGrid'],
+        (details['maximumArrayPanels'] as int) - totalPanels,
+      );
+      if (previousPanels != null) {
+        expect(totalPanels, lessThanOrEqualTo(previousPanels));
+      }
+      if (percent == 100) {
+        expect(details['batteryPanels'], 0);
+        expect(details['gridChargeEnergyWh'], lessThan(fullCharge));
+        expect(details['gridChargeEnergyWh'], closeTo(153, 0.0001));
+      }
+      previousPanels = totalPanels;
+    }
+  });
+
+  test(
+    'stored grid percentage gives no battery PV credit without grid hours',
+    () {
+      final result = engine.calculateSystem(
+        [load(name: 'Night', day: 0, night: 8, power: 1000)],
+        gridVoltage: 220,
+        systemMode: SystemMode.hybrid,
+        gridSchedule: const GridScheduleModel(
+          gridOnHours: 0,
+          gridOffHours: 24,
+          gridChargeDependencyPercent: 100,
+        ),
+      );
+      expect(result.gridContributionPercent, 0);
+      expect(result.panelsForBatteries, greaterThan(0));
+      expect(result.requiredGridChargingAmps, 0);
+    },
+  );
 
   test('panel details expose the un-credited array bound for protection', () {
     final details = engine.calculatePanelsDetails(
