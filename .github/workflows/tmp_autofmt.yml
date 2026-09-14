@@ -82,7 +82,15 @@ jobs:
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
 
       - name: Analyze
-        run: flutter analyze
+        run: |
+          set -uo pipefail
+          flutter analyze 2>&1 | tee /tmp/analyze.txt
+          status=${PIPESTATUS[0]}
+          grep -nE 'error|warning|info|issues found|No issues' /tmp/analyze.txt \
+            | head -n 50 | while IFS= read -r line; do
+              printf '::error::analyze %s\n' "$line"
+            done
+          exit "$status"
 
       - name: Test
         run: |
