@@ -371,6 +371,15 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                           ref.read(systemModeProvider.notifier).state = value
                               ? SystemMode.ups
                               : SystemMode.hybrid;
+                          // UPS charges from the grid only, so persist the
+                          // 100% dependency the UI shows as locked instead of
+                          // leaving a stale slider value in the model.
+                          if (value) {
+                            ref.read(gridScheduleProvider.notifier).state =
+                                gridSchedule.copyWith(
+                                  gridChargeDependencyPercent: 100,
+                                );
+                          }
                         },
                 ),
               ),
@@ -484,6 +493,16 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                           style: TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                     ],
+                  ),
+                ),
+              if (gridSchedule.gridOnHours <= 0 &&
+                  systemMode == SystemMode.hybrid)
+                ExplainedField(
+                  explanation: FieldHelpContent.gridChargeDependencyPercent,
+                  helperText: 'لا توجد ساعات وطنية، لذلك الشحن كله من الألواح.',
+                  field: const Text(
+                    'ساعات توفر الوطنية صفر، لذلك تُشحن البطاريات من الألواح الشمسية بنسبة 100% ولا يوجد خصم من الشبكة. أدخل ساعات التوفر والانقطاع (مجموعهما 24) لتفعيل خصم الوطنية من شحن البطاريات ومن أحمال النهار.',
+                    style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ),
             ],

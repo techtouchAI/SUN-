@@ -7,6 +7,7 @@ import 'package:solar_calculator/repositories/solar_calculation_repository.dart'
 
 void main() {
   final engine = SolarCalculationRepository();
+  gridDeductionRules();
 
   LoadModel load({
     required String name,
@@ -320,4 +321,222 @@ void main() {
       );
     },
   );
+}
+
+/// Regression coverage for the national-grid deduction rules: 100% grid
+/// charging must zero the battery PV allocation, delivered grid energy is
+/// bounded by charger power and grid hours, and daytime loads overlapping the
+/// grid window must not be sized as solar panels.
+void gridDeductionRules() {
+  final engine = SolarCalculationRepository();
+
+  LoadModel load({
+    required String name,
+    required double day,
+    required double night,
+    double power = 100,
+  }) {
+    return LoadModel(
+      name: name,
+      unit: PowerUnit.watt,
+      powerValue: power,
+      dailyUsageHours: day + night,
+      daytimeHours: day,
+      nighttimeHours: night,
+    );
+  }
+
+  test('100% grid charging zeroes the battery PV requirement', () {
+    final result = engine.calculateSystem(
+      [
+        load(name: 'Day', day: 5, night: 0, power: 5000),
+        load(name: 'Night', day: 0, night: 8, power: 1000),
+      ],
+      gridVoltage: 220,
+      systemMode: SystemMode.hybrid,
+      gridSchedule: const GridScheduleModel(
+        gridStartHour: 12,
+        gridOnHours: 10,
+        gridOffHours: 14,
+        gridChargeDependencyPercent: 100,
+      ),
+      panelCapacity: 540,
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+    );
+
+    expect(result.gridContributionPercent, closeTo(100, 0.001));
+    expect(result.panelsForBatteries, 0);
+    expect(result.requiredPanels, result.panelsForDaytime);
+    expect(result.panelsSavedByGrid, greaterThan(0));
+    expect(
+      result.breakdown.batteryPanelsExplanationAr,
+      contains('طاقة شحن البطارية المطلوبة قبل الشبكة:'),
+    );
+    expect(
+      result.breakdown.batteryPanelsExplanationAr,
+      contains('المتبقي من الطاقة الشمسية: 0Wh'),
+    );
+    expect(
+      result.breakdown.batteryPanelsExplanationAr,
+      contains('ألواح لشحن البطاريات: 0 لوح'),
+    );
+  });
+
+  test('off-grid ignores a stored grid schedule and reports it', () {
+    final result = engine.calculateSystem(
+      [load(name: 'Night', day: 0, night: 8, power: 1000)],
+      gridVoltage: 220,
+      systemMode: SystemMode.offGrid,
+      gridSchedule: const GridScheduleModel(
+        gridStartHour: 12,
+        gridOnHours: 10,
+        gridOffHours: 14,
+        gridChargeDependencyPercent: 100,
+      ),
+      panelCapacity: 540,
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+    );
+
+    expect(result.gridContributionPercent, 0);
+    expect(result.panelsForBatteries, greaterThan(0));
+    expect(result.breakdown.warningsAr.join(' '), contains('بدون تيار وطني'));
+  });
+
+  test('UPS normalizes the grid charge dependency to 100%', () {
+    final result = engine.calculateSystem(
+      [load(name: 'Night', day: 0, night: 4, power: 1000)],
+      gridVoltage: 220,
+      systemMode: SystemMode.ups,
+      gridSchedule: const GridScheduleModel(
+        gridOnHours: 10,
+        gridOffHours: 14,
+        gridChargeDependencyPercent: 0,
+        batteryType: 'Lithium',
+      ),
+    );
+
+    expect(result.gridContributionPercent, closeTo(100, 0.001));
+    expect(result.requiredPanels, 0);
+    expect(result.requiredGridChargingAmps, greaterThan(0));
+    expect(result.suggestedChargePriority, contains('Utility First'));
+  });
+
+  test('daytime loads inside the grid window are not sized as solar panels', () {
+    final loads = [load(name: 'Day', day: 12, night: 0, power: 500)];
+    final withGrid = engine.calculateSystem(
+      loads,
+      gridVoltage: 220,
+      systemMode: SystemMode.hybrid,
+      gridSchedule: const GridScheduleModel(
+        gridStartHour: 12,
+        gridOnHours: 10,
+        gridOffHours: 14,
+        gridChargeDependencyPercent: 100,
+      ),
+      panelCapacity: 540,
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+    );
+    final withoutGrid = engine.calculateSystem(
+      loads,
+      gridVoltage: 220,
+      systemMode: SystemMode.hybrid,
+      gridSchedule: const GridScheduleModel(
+        gridOnHours: 0,
+        gridOffHours: 24,
+        gridChargeDependencyPercent: 100,
+      ),
+      panelCapacity: 540,
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+    );
+
+    // 6000Wh of declared daytime energy; the grid window 12:00-22:00 covers
+    // the 12:00-18:00 part of it, so 3000Wh stays on the solar side.
+    expect(withGrid.daytimeConsumptionWh, closeTo(6000, 0.001));
+    expect(withoutGrid.panelsForDaytime, 4);
+    expect(withGrid.panelsForDaytime, 2);
+    expect(withGrid.requiredPanels, 2);
+    expect(
+      withGrid.breakdown.daytimePanelsExplanationAr,
+      contains('غطّت الوطنية منها 3000Wh'),
+    );
+  });
+
+  test('partial daytime grid overlap deducts only the overlapping hours', () {
+    final result = engine.calculateSystem(
+      [load(name: 'Day', day: 12, night: 0, power: 500)],
+      gridVoltage: 220,
+      systemMode: SystemMode.hybrid,
+      gridSchedule: const GridScheduleModel(
+        gridStartHour: 15,
+        gridOnHours: 6,
+        gridOffHours: 18,
+        gridChargeDependencyPercent: 100,
+      ),
+      panelCapacity: 540,
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+    );
+
+    // Grid covers 15:00-18:00 only: 1500Wh of the 6000Wh daytime energy.
+    expect(result.panelsForDaytime, 3);
+    expect(result.requiredPanels, 3);
+  });
+
+  test('grid charge delivery is capped by charger power and grid hours', () {
+    final result = engine.calculateSystem(
+      [
+        load(name: 'Day', day: 4, night: 0, power: 500),
+        load(name: 'Night', day: 0, night: 8, power: 500),
+      ],
+      gridVoltage: 220,
+      systemMode: SystemMode.hybrid,
+      gridSchedule: const GridScheduleModel(
+        gridStartHour: 20,
+        gridOnHours: 2,
+        gridOffHours: 22,
+        gridChargeDependencyPercent: 100,
+      ),
+      panelCapacity: 540,
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+    );
+
+    // Two grid hours at the inverter charger rating cannot cover the whole
+    // daily recharge, so the shortfall stays on the solar side.
+    expect(result.gridContributionPercent, greaterThan(0));
+    expect(result.gridContributionPercent, lessThan(100));
+    expect(result.panelsForBatteries, greaterThan(0));
+    expect(result.breakdown.warningsAr.join(' '), contains('قدرة الشحن'));
+  });
+
+  test('panel details expose the un-credited array bound for protection', () {
+    final details = engine.calculatePanelsDetails(
+      daytimeWh: 3000,
+      nighttimeWh: 8000,
+      continuousDaytimeWatts: 500,
+      panelCapacity: 540,
+      systemMode: SystemMode.hybrid,
+      gridSchedule: const GridScheduleModel(
+        gridStartHour: 12,
+        gridOnHours: 10,
+        gridOffHours: 14,
+        gridChargeDependencyPercent: 100,
+      ),
+      peakSunHours: 4.5,
+      energyLossPercentage: 30,
+      chargeEfficiency: 0.85,
+    );
+
+    expect(details['batteryPanels'], 0);
+    expect(details['remainingBatteryPvWh'], closeTo(0, 0.001));
+    expect(details['gridChargeEnergyWh'], details['requiredBatteryChargeWh']);
+    expect(
+      details['maximumArrayPanels'],
+      greaterThan(details['totalPanels'] as int),
+    );
+  });
 }
