@@ -1,5 +1,7 @@
-=== HEAD: d57b614099911de9ebddef6653d2d6300787c2b8 ===
+=== HEAD: 0f273085dc1da17c2382c5cae81fa5244f1f6666 ===
 === dart format ===
+ ci-diag.txt | 63 +------------------------------------------------------------
+ 1 file changed, 1 insertion(+), 62 deletions(-)
 
 === flutter analyze ===
 Resolving dependencies...
@@ -54,10 +56,182 @@ Got dependencies!
 46 packages have newer versions incompatible with dependency constraints.
 Try `flutter pub outdated` for more information.
 Analyzing SUN-...                                               
-
-   info • Unnecessary braces in a string interpolation. Try removing the braces • lib/repositories/solar_calculation_repository.dart:260:213 • unnecessary_brace_in_string_interps
-
-1 issue found. (ran in 16.8s)
+No issues found! (ran in 11.6s)
+analyze_exit=0
 
 === flutter test (tail 200) ===
-(test step did not run)
+Resolving dependencies...
+Downloading packages...
+  archive 4.0.9 (4.3.0 available)
+  cli_util 0.4.2 (0.6.0 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.2.1 (2.0.0 available)
+  dio 5.9.2 (5.11.1 available)
+  dio_web_adapter 2.1.2 (2.2.2 available)
+  equatable 2.0.8 (2.1.0 available)
+  flutter_riverpod 2.6.1 (3.4.3 available)
+  hooks 2.0.2 (2.2.0 available)
+  image 4.8.0 (4.10.1 available)
+  jni 1.0.0 (1.0.3 available)
+  jni_flutter 1.0.1 (1.0.3 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  mime 2.0.0 (2.1.0 available)
+  objective_c 9.4.1 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  package_info_plus 10.1.0 (10.2.1 available)
+  path_provider_linux 2.2.1 (2.2.2 available)
+  path_provider_platform_interface 2.1.2 (2.1.3 available)
+  pdf 3.12.0 (3.13.0 available)
+  permission_handler 12.0.3 (13.0.2 available)
+  permission_handler_android 13.0.1 (14.1.0 available)
+  permission_handler_apple 9.4.10 (9.6.1 available)
+  permission_handler_html 0.1.3+5 (0.1.4+1 available)
+  permission_handler_platform_interface 4.3.0 (4.4.1 available)
+  permission_handler_windows 0.2.1 (0.2.2 available)
+  platform 3.1.6 (3.2.0 available)
+  posix 6.5.0 (6.5.2 available)
+  printing 5.14.3 (5.15.0 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  qr 3.0.2 (4.0.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  riverpod 2.6.1 (3.4.3 available)
+  shared_preferences_android 2.4.23 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  test_api 0.7.12 (0.7.14 available)
+  url_launcher_android 6.3.30 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vm_service 15.2.0 (15.3.0 available)
+  win32 6.3.0 (6.4.0 available)
+  xml 6.6.1 (7.0.1 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+46 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+
+::group::✅ Passing tests
+✅ /home/runner/work/SUN-/SUN-/test/safety_protection_details_test.dart: canonical presentation keeps four unique results in requested order
+::endgroup::
+::group::❌ /home/runner/work/SUN-/SUN-/test/widget_test.dart: App starts with Load Input Screen (failed)
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Watt (واط)": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///home/runner/work/SUN-/SUN-/test/widget_test.dart:11:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///home/runner/work/SUN-/SUN-/test/widget_test.dart line 11
+The test description was:
+  App starts with Load Input Screen
+════════════════════════════════════════════════════════════════════════════════════════════════════
+Test failed. See exception logs above.
+The test description was: App starts with Load Input Screen
+
+::endgroup::
+::group::✅ Passing tests
+✅ /home/runner/work/SUN-/SUN-/test/safety_protection_details_test.dart: shows only four concise requested protection categories
+✅ /home/runner/work/SUN-/SUN-/test/safety_protection_details_test.dart: routes only missing PV and cable results to their input kinds
+✅ /home/runner/work/SUN-/SUN-/test/safety_protection_details_test.dart: shows valid panel factor pairs, marks the saved topology, and explains saved cable inputs
+✅ /home/runner/work/SUN-/SUN-/test/persistence_test.dart: saves and loads versioned data
+✅ /home/runner/work/SUN-/SUN-/test/persistence_test.dart: serializes concurrent saves without overwriting the newest snapshot
+✅ /home/runner/work/SUN-/SUN-/test/persistence_test.dart: recovers from corrupted primary using backup
+✅ /home/runner/work/SUN-/SUN-/test/persistence_test.dart: reports corruption when no backup is available
+✅ /home/runner/work/SUN-/SUN-/test/result_presentation_regression_test.dart: production chart labels are safe for the 24-hour curve
+✅ /home/runner/work/SUN-/SUN-/test/result_presentation_regression_test.dart: PDF summary keeps no-night battery and protection states concise
+✅ /home/runner/work/SUN-/SUN-/test/settings_protection_inputs_test.dart: shows optional saved PV and DC cable protection inputs
+✅ /home/runner/work/SUN-/SUN-/test/protection_regression_suite_test.dart: Data sufficiency and unavailable-state regressions uses explicit unavailable states and never uses zero as Unknown
+✅ /home/runner/work/SUN-/SUN-/test/protection_regression_suite_test.dart: Data sufficiency and unavailable-state regressions Isc plus panel count never implies a PV-array topology
+✅ /home/runner/work/SUN-/SUN-/test/protection_regression_suite_test.dart: Data sufficiency and unavailable-state regressions invalid prerequisites do not preserve a prior DC-bus value
+✅ /home/runner/work/SUN-/SUN-/test/protection_regression_suite_test.dart: Calculation correctness and current-source regressions derives only the documented inverter DC-bus and AC-output currents
+✅ /home/runner/work/SUN-/SUN-/test/protection_regression_suite_test.dart: Calculation correctness and current-source regressions calculateSystem rebuilds from current state after a prerequisite is removed
+✅ /home/runner/work/SUN-/SUN-/test/protection_regression_suite_test.dart: Safety boundary and traceability regressions does not expose a breaker, cable-size, or compliance recommendation
+✅ /home/runner/work/SUN-/SUN-/test/protection_regression_suite_test.dart: Safety boundary and traceability regressions numeric results include input, rule, result, and validation trace
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_service_test.dart: derives inverter DC-bus and AC-output currents from SUN inputs
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_service_test.dart: never invents PV-array current or DC conductor size without data
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_service_test.dart: derives PV-array current only from matching saved topology
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_service_test.dart: rejects topology that does not match SUN panel count
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_service_test.dart: recognizes complete cable data without inventing a conductor size
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_service_test.dart: changes computed currents whenever existing source values change
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_service_test.dart: uses explicit states for invalid and not-applicable configurations
+✅ /home/runner/work/SUN-/SUN-/test/version_comparator_test.dart: build increment is an available update
+✅ /home/runner/work/SUN-/SUN-/test/version_comparator_test.dart: same version and build is not an update
+✅ /home/runner/work/SUN-/SUN-/test/version_comparator_test.dart: downgrade is not an update
+✅ /home/runner/work/SUN-/SUN-/test/version_comparator_test.dart: invalid versions throw a typed update failure
+✅ /home/runner/work/SUN-/SUN-/test/dashboard_calculation_state_test.dart: shows no-night-load state instead of a zero battery bank
+✅ /home/runner/work/SUN-/SUN-/test/validation_test.dart: accepts 0 and 24 hours as boundary values
+✅ /home/runner/work/SUN-/SUN-/test/validation_test.dart: rejects negative and over-24 load hours
+✅ /home/runner/work/SUN-/SUN-/test/validation_test.dart: rejects invalid load power and startup multiplier
+✅ /home/runner/work/SUN-/SUN-/test/validation_test.dart: requires a consistent explicit schedule without overlapping periods
+✅ /home/runner/work/SUN-/SUN-/test/validation_test.dart: rejects NaN and infinite engineering values
+✅ /home/runner/work/SUN-/SUN-/test/validation_test.dart: requires a complete 24-hour grid schedule
+✅ /home/runner/work/SUN-/SUN-/test/dashboard_calculation_state_test.dart: keeps panel Isc synchronized when panel wattage changes
+✅ /home/runner/work/SUN-/SUN-/test/dashboard_calculation_state_test.dart: opens PV topology settings from unavailable PV protection
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: selects the single universal APK by its exact name
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: rejects missing universal APK, split APK and HTML asset
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: rejects malformed digest, non-GitHub URL and duplicate APK
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: rejects universal APK assets without a positive published size
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: respects retry-after before the GitHub rate-limit reset header
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: uses GitHub rate-limit reset time when retry-after is unavailable
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: uses a conservative delay when GitHub omits rate-limit headers
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: parses a full GitHub release payload directly
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: classifies 403 and 429 responses as rate-limit backoff windows
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: does not offer an old release after a 403 response
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: uses the latest GitHub response on every update check
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: combines PackageInfo version and Android build number for OTA
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: does not offer an identical release and Android build as an update
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: verifies and promotes an APK atomically while retaining the final file
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: rejects APK promotion when the size or checksum is wrong
+✅ /home/runner/work/SUN-/SUN-/test/update_asset_test.dart: cleans up a failed partial APK without deleting a verified APK
+✅ /home/runner/work/SUN-/SUN-/test/system_settings_persistence_test.dart: persists project PV topology and DC cable installation data
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: 100% grid charging zeroes the battery PV requirement
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: off-grid ignores a stored grid schedule and reports it
+::endgroup::
+::group::❌ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: UPS normalizes the grid charge dependency to 100% (failed)
+Expected: a numeric value within <0.001> of <100>
+  Actual: <0.0>
+   Which:  differs by <100.0>
+
+package:matcher                                     expect
+package:flutter_test/src/widget_tester.dart 473:18  expect
+test/calculation_engine_test.dart 420:5             gridDeductionRules.<fn>
+::endgroup::
+::group::✅ Passing tests
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: daytime loads inside the grid window are not sized as solar panels
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: partial daytime grid overlap deducts only the overlapping hours
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: grid charge delivery is capped by charger power and grid hours
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: panel details expose the un-credited array bound for protection
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: uses explicit day/night hours and does not distribute 40/60 implicitly
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: grid contribution is applied to energy before panel rounding
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: battery PV recharge replenishes discharged energy without DoD twice
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: combines daytime and battery PV energy before panel rounding
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: applies a 50% grid fraction before battery panel rounding
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: direct-on-grid has no battery or battery-charging PV requirement
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: system modes do not leak PV or grid priority into UPS and off-grid
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: losses near the upper bound remain finite and 100 percent is rejected
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: zero, negative and out-of-range engineering inputs are rejected
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: custom operating periods are used for peak and energy
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: declared daytime hours beyond 12 stay daytime with no phantom battery
+✅ /home/runner/work/SUN-/SUN-/test/calculation_engine_test.dart: UPS grid charging uses daily recharge energy and not the full nominal bank
+✅ /home/runner/work/SUN-/SUN-/test/input_parser_test.dart: parses western and Arabic decimal separators
+✅ /home/runner/work/SUN-/SUN-/test/input_parser_test.dart: rejects blank, malformed and non-finite values
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_integration_test.dart: connects existing SUN settings to correctly named current results
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_integration_test.dart: does not retain stale current values when load and panel inputs change
+✅ /home/runner/work/SUN-/SUN-/test/electrical_protection_integration_test.dart: passes saved topology and cable data into the protection report
+✅ /home/runner/work/SUN-/SUN-/test/application_flow_test.dart: create, calculate, save, restart and reload use one consistent flow
+✅ /home/runner/work/SUN-/SUN-/test/application_flow_test.dart: failed calculation has no zero-valued system result fallback
+::endgroup::
+
+::error::80 tests passed, 2 failed.
