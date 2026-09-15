@@ -394,7 +394,10 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                         initialValue: gridSchedule.gridStartHour.toString(),
                         decoration: const InputDecoration(
                           labelText: 'ساعة بدء التوفر',
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          helperMaxLines: 2,
                         ),
+                        textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
                         onChanged: (value) {
                           final val = double.tryParse(value);
@@ -414,7 +417,10 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                         initialValue: gridSchedule.gridOnHours.toString(),
                         decoration: const InputDecoration(
                           labelText: AppStrings.gridOnHours,
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          helperMaxLines: 2,
                         ),
+                        textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
                         onChanged: (value) {
                           final val = double.tryParse(value);
@@ -434,7 +440,10 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                         initialValue: gridSchedule.gridOffHours.toString(),
                         decoration: const InputDecoration(
                           labelText: AppStrings.gridOffHours,
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          helperMaxLines: 2,
                         ),
+                        textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
                         onChanged: (value) {
                           final val = double.tryParse(value);
