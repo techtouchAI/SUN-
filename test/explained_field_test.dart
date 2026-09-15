@@ -18,7 +18,6 @@ void main() {
         home: Scaffold(
           body: ExplainedField(
             explanation: explanation,
-            helperText: 'المدة بالساعات وليس الوقت.',
             field: TextFormField(
               decoration: const InputDecoration(labelText: 'ساعات التوفر'),
             ),
@@ -29,8 +28,8 @@ void main() {
 
     expect(find.textContaining('إذا لم تعرف ماذا تكتب'), findsNothing);
     expect(find.textContaining('اضغط هنا لشرح'), findsNothing);
+    expect(find.textContaining('المدة بالساعات'), findsNothing);
     expect(find.byIcon(Icons.help_outline_rounded), findsOneWidget);
-    expect(find.text('المدة بالساعات وليس الوقت.'), findsOneWidget);
     expect(find.byTooltip('شرح الحقل: ${explanation.title}'), findsOneWidget);
     expect(tester.getSize(find.byType(IconButton)), const Size(48, 48));
 

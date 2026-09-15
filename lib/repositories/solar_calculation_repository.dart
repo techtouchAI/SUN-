@@ -296,8 +296,9 @@ class SolarCalculationRepository {
   ///
   /// UPS locks this to 100% because it has no PV array to charge from,
   /// off-grid and direct-on-grid never charge the battery from the grid, and
-  /// hybrid uses the user-selected dependency only while the grid is
-  /// actually available.
+  /// hybrid always uses the user-selected percentage so 100% zeroes battery
+  /// PV panels. Deliverable energy is estimated separately from grid hours
+  /// and charger power; any shortfall is warned about, not added back to PV.
   double _effectiveGridChargeFraction(
     SystemMode systemMode,
     GridScheduleModel gridSchedule,
@@ -309,7 +310,6 @@ class SolarCalculationRepository {
       case SystemMode.directOnGrid:
         return 0.0;
       case SystemMode.hybrid:
-        if (gridSchedule.gridOnHours <= 0) return 0.0;
         final percent = gridSchedule.gridChargeDependencyPercent;
         return (percent / 100.0).clamp(0.0, 1.0);
     }
@@ -317,8 +317,9 @@ class SolarCalculationRepository {
 
   /// Energy the charger can actually put into the battery while the grid is
   /// available: `charger power × grid hours × charge efficiency`, converted to
-  /// the AC side of the charger. Falls back to the requested energy when no
-  /// charger limit or grid window is known.
+  /// the AC side of the charger. Without grid hours nothing is deliverable;
+  /// without a known charger limit the full requested energy is assumed once
+  /// hours are available.
   double _deliverableGridChargeWh({
     required double requestedEnergyWh,
     required GridScheduleModel gridSchedule,
@@ -326,12 +327,12 @@ class SolarCalculationRepository {
     required double chargeEfficiency,
   }) {
     if (requestedEnergyWh <= 0) return 0.0;
+    final onHours = gridSchedule.gridOnHours;
+    if (!onHours.isFinite || onHours <= 0) return 0.0;
     final limit = chargerPowerLimitW;
     if (limit == null || !limit.isFinite || limit <= 0) {
       return requestedEnergyWh;
     }
-    final onHours = gridSchedule.gridOnHours;
-    if (!onHours.isFinite || onHours <= 0) return requestedEnergyWh;
     final acPowerW = limit * inverterEfficiency;
     return acPowerW * onHours * chargeEfficiency;
   }
@@ -537,7 +538,9 @@ class SolarCalculationRepository {
         'لا توجد ساعات شبكة متاحة لحساب شحن UPS من الشبكة.',
       if (daytimeGridServedWh > 0 && panelsForDaytime == 0)
         'الوطنية تغطي كامل أحمال النهار خلال ساعات توفرها؛ لم تُحسب ألواح نهارية. إذا انقطعت الوطنية نهاراً فستحتاج ألواحاً لتغطية تلك الأحمال.',
-      if (gridChargeLimitedByHardware)
+      if (gridChargeLimitedByHardware && gridSchedule.gridOnHours <= 0)
+        'نسبة الاعتماد على الوطنية لشحن البطاريات ${(gridContributionPercent).toStringAsFixed(0)}% خُصمت من ألواح الشحن، لكن ساعات توفر الوطنية = 0 فلا يمكن تنفيذ الشحن فعلياً. أدخل ساعات التوفر أو اخفض النسبة قبل تنفيذ المنظومة.',
+      if (gridChargeLimitedByHardware && gridSchedule.gridOnHours > 0)
         'قدرة الشحن خلال ساعات توفر الوطنية (${gridSchedule.gridOnHours.toStringAsFixed(0)} ساعة) لا تكفي لتغطية نسبة الاعتماد المطلوبة؛ تم احتساب ${gridChargeEnergyWh.toStringAsFixed(0)}Wh فعلياً من أصل ${requestedGridChargeWh.toStringAsFixed(0)}Wh، يوجد عجز شحن قدره ${(requestedGridChargeWh - gridChargeEnergyWh).toStringAsFixed(0)}Wh لم يُضف إلى الألواح التزاماً بالنسبة المختارة. زِد ساعات الوطنية أو قدرة الشاحن، أو اخفض نسبة الاعتماد على الوطنية قبل تنفيذ المنظومة.',
     ];
 

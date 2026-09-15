@@ -106,7 +106,10 @@ void main() {
     final slider = tester.widget<Slider>(find.byKey(sliderKey));
     expect(slider.divisions, 100);
     expect(slider.onChanged, isNotNull);
-    expect(find.textContaining('أدخل ساعات توفر الوطنية'), findsOneWidget);
+    // Long campaign sentence must stay gone; only the ? help icon remains.
+    expect(find.textContaining('أدخل ساعات توفر الوطنية'), findsNothing);
+    expect(find.textContaining('اضغط هنا لشرح'), findsNothing);
+    expect(find.byIcon(Icons.help_outline_rounded), findsWidgets);
 
     slider.onChanged!(37);
     await tester.pump();
@@ -119,6 +122,35 @@ void main() {
       find.text('نسبة الاعتماد على الوطنية لشحن البطاريات: 37%'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('100% grid dependency zeroes battery panels without grid hours', (
+    tester,
+  ) async {
+    final container = await mount(tester);
+    container.read(loadListProvider.notifier).addLoad(
+      LoadModel(
+        name: 'Night load',
+        unit: PowerUnit.watt,
+        powerValue: 1000,
+        dailyUsageHours: 8,
+        daytimeHours: 0,
+        nighttimeHours: 8,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Default schedule has 0 grid hours and 100% dependency.
+    expect(container.read(gridScheduleProvider).gridOnHours, 0);
+    expect(
+      container.read(gridScheduleProvider).gridChargeDependencyPercent,
+      100,
+    );
+    final result =
+        (container.read(calculationStateProvider) as CalculationReady).result;
+    expect(result.panelsForBatteries, 0);
+    expect(result.gridContributionPercent, 100);
+    expect(result.requiredGridChargingAmps, 0);
   });
 
   testWidgets('changing grid percentage recalculates battery panels only', (

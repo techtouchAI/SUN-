@@ -570,7 +570,7 @@ void gridDeductionRules() {
   });
 
   test(
-    'stored grid percentage gives no battery PV credit without grid hours',
+    'selected grid percentage zeroes battery PV even without grid hours',
     () {
       final result = engine.calculateSystem(
         [load(name: 'Night', day: 0, night: 8, power: 1000)],
@@ -582,9 +582,13 @@ void gridDeductionRules() {
           gridChargeDependencyPercent: 100,
         ),
       );
-      expect(result.gridContributionPercent, 0);
-      expect(result.panelsForBatteries, greaterThan(0));
+      // Planned split still zeroes battery PV; without hours nothing is
+      // deliverable so charging amps stay 0 and a shortfall warning appears.
+      expect(result.gridContributionPercent, 100);
+      expect(result.panelsForBatteries, 0);
+      expect(result.requiredPanels, result.panelsForDaytime);
       expect(result.requiredGridChargingAmps, 0);
+      expect(result.breakdown.warningsAr.join(' '), contains('ساعات توفر'));
     },
   );
 
