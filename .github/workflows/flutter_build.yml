@@ -11,6 +11,12 @@ on:
         description: 'User-facing OTA release message.'
         required: false
         type: string
+  # API-triggered release for tokens that cannot create workflow_dispatch
+  # events (e.g. GitHub App integration tokens). Behavior is identical to a
+  # manual dispatch with empty inputs: pubspec.yaml version and the
+  # ota_release.json message are used.
+  repository_dispatch:
+    types: [release]
 
 concurrency:
   group: flutter-release-${{ github.ref }}
@@ -33,7 +39,7 @@ jobs:
           persist-credentials: false
 
       - name: Apply requested OTA version
-        if: ${{ inputs.release_version != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_version != '' }}
         shell: bash
         env:
           RELEASE_VERSION: ${{ inputs.release_version }}
@@ -54,7 +60,7 @@ jobs:
       - name: Prepare OTA release message
         shell: bash
         env:
-          RELEASE_MESSAGE: ${{ inputs.release_message }}
+          RELEASE_MESSAGE: ${{ github.event_name == 'workflow_dispatch' && inputs.release_message || '' }}
         run: |
           set -euo pipefail
           metadata_version="$(jq -r '.version // empty' ota_release.json)"
