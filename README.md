@@ -55,14 +55,14 @@ required_battery_charge_Wh = (night_energy_Wh / inverter_efficiency) / (battery_
 
 `required_battery_charge_Wh` هي طاقة الشحن اليومية (إعادة تعبئة تفريغ ليلة واحدة). عمق التفريغ `DoD` وأيام الاستقلالية يكبّران **سعة البطارية** فقط، ولا يدخلان في طاقة الشحن اليومية ولا في عدد الألواح؛ فالألواح تعيد شحن ما فُرّغ كل يوم وليس السعة الاسمية كاملة كل يوم. كفاءة العاكس تُطبَّق مرة واحدة على جهة التفريغ، وكفاءة البطارية وكفاءة الشحن تُطبَّق كلٌّ منهما مرة واحدة.
 
-خيار «نسبة الاعتماد على الوطنية لشحن البطاريات» ظاهر في شاشة إدخال الأحمال ضمن إعدادات البطاريات والكهرباء الوطنية، ويمكن ضبطه من 0 إلى 100 بخطوة 1%. لا يُطبّق الخصم في النظام الهجين دون ساعات توفر وطنية.
+خيار «نسبة الاعتماد على الوطنية لشحن البطاريات» ظاهر في شاشة إدخال الأحمال ضمن إعدادات البطاريات والكهرباء الوطنية، ويمكن ضبطه من 0 إلى 100 بخطوة 1%. تُخصم النسبة مباشرة من طاقة شحن البطاريات قبل حساب الألواح؛ عند 100% يصبح عدد ألواح شحن البطاريات صفراً. بدون ساعات توفر تظهر تحذيرات عجز الشحن دون إعادة الألواح.
 
 تحسب طاقة اللوح قبل التقريب، ثم يطبق أثر الشبكة على الطاقة المطلوبة لا على عدد الألواح المقرب:
 
 ```text
 panel_daily_energy_Wh = panel_power_W × PSH × (1 − PV_loss_fraction)
 
-grid_charge_fraction       = UPS: 1.0 | Off-grid/Direct: 0.0 | Hybrid: نسبة المستخدم عند grid_on_hours > 0
+grid_charge_fraction       = UPS: 1.0 | Off-grid/Direct: 0.0 | Hybrid: نسبة المستخدم (0–100%)
 requested_grid_charge_Wh   = required_battery_charge_Wh × grid_charge_fraction
 deliverable_grid_charge_Wh = charger_power_W × inverter_efficiency × grid_on_hours × charge_efficiency
 grid_charge_energy_Wh      = min(requested_grid_charge_Wh, deliverable_grid_charge_Wh)

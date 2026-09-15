@@ -390,7 +390,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   Expanded(
                     child: ExplainedField(
                       explanation: FieldHelpContent.gridStartHour,
-                      helperText: 'الوقت (0 = منتصف الليل).',
                       field: TextFormField(
                         initialValue: gridSchedule.gridStartHour.toString(),
                         decoration: const InputDecoration(
@@ -411,7 +410,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   Expanded(
                     child: ExplainedField(
                       explanation: FieldHelpContent.gridOnHours,
-                      helperText: 'المدة بالساعات وليس الوقت.',
                       field: TextFormField(
                         initialValue: gridSchedule.gridOnHours.toString(),
                         decoration: const InputDecoration(
@@ -432,7 +430,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   Expanded(
                     child: ExplainedField(
                       explanation: FieldHelpContent.gridOffHours,
-                      helperText: 'المدة بالساعات وليس الوقت.',
                       field: TextFormField(
                         initialValue: gridSchedule.gridOffHours.toString(),
                         decoration: const InputDecoration(
@@ -455,8 +452,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
               if (systemMode != SystemMode.directOnGrid)
                 ExplainedField(
                   explanation: FieldHelpContent.gridChargeDependencyPercent,
-                  helperText:
-                      'تُخصم النسبة المختارة من طاقة شحن البطاريات قبل حساب الألواح؛ 100% تلغي ألواح الشحن فقط، وليس ألواح أحمال النهار.',
                   field: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -489,14 +484,9 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                     );
                               },
                       ),
-                      if (gridSchedule.gridOnHours <= 0)
-                        const Text(
-                          'أدخل ساعات توفر الوطنية لتطبيق النسبة؛ بدون توفرها تُحسب ألواح شحن البطاريات بالكامل في النظام الهجين.',
-                          style: TextStyle(fontSize: 12),
-                        ),
                       if (systemMode == SystemMode.ups)
                         const Text(
-                          "🔒 تم تثبيت الشحن من الوطنية بنسبة 100% نظراً لعدم توفر ألواح شمسية كبديل.",
+                          'تم تثبيت الشحن من الوطنية بنسبة 100%.',
                           style: TextStyle(color: Colors.grey, fontSize: 12),
                         ),
                     ],
@@ -581,8 +571,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                     ExplainedField(
                                       explanation:
                                           FieldHelpContent.powerCapacity,
-                                      helperText:
-                                          'اكتب قدرة الجهاز كما هي في ملصقه، واختر وحدتها من القائمة المجاورة.',
                                       field: Row(
                                         children: [
                                           Expanded(
@@ -657,8 +645,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                     ExplainedField(
                                       explanation:
                                           FieldHelpContent.daytimeUsageHours,
-                                      helperText:
-                                          'عدد ساعات عمل هذا الجهاز نهاراً (المدة وليس وقت التشغيل).',
                                       field: TextFormField(
                                         controller:
                                             _daytimeHoursController,
@@ -675,8 +661,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                       explanation:
                                           FieldHelpContent
                                               .nighttimeUsageHours,
-                                      helperText:
-                                          'عدد ساعات عمل هذا الجهاز ليلاً (المدة وليس وقت التشغيل).',
                                       field: TextFormField(
                                         controller:
                                             _nighttimeHoursController,
@@ -695,8 +679,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                       ),
                                       explanation:
                                           FieldHelpContent.isInverterAc,
-                                      helperText:
-                                          'يظهر هذا الخيار عند اختيار وحدة (طن)؛ يؤثر على هامش تيار البدء.',
                                       field: SwitchListTile(
                                         title: const Text(
                                           AppStrings.isInverterAC,
@@ -741,8 +723,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                     ExplainedField(
                                       explanation:
                                           FieldHelpContent.quickPowerAmpere,
-                                      helperText:
-                                          'الاستهلاك الكلي للمنزل بالأمبير وقت ذروة التشغيل.',
                                       field: TextFormField(
                                         controller: _quickPowerController,
                                         decoration: const InputDecoration(
@@ -757,8 +737,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                     ExplainedField(
                                       explanation:
                                           FieldHelpContent.daytimeUsageHours,
-                                      helperText:
-                                          'عدد ساعات عمل الأحمال نهاراً (المدة وليس وقت التشغيل).',
                                       field: TextFormField(
                                         controller:
                                             _quickDaytimeHoursController,
@@ -775,8 +753,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                                       explanation:
                                           FieldHelpContent
                                               .nighttimeUsageHours,
-                                      helperText:
-                                          'عدد ساعات عمل الأحمال ليلاً (المدة وليس وقت التشغيل).',
                                       field: TextFormField(
                                         controller:
                                             _quickNighttimeHoursController,
@@ -813,8 +789,6 @@ class _LoadInputScreenState extends ConsumerState<LoadInputScreen> {
                   child: ExplainedField(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     explanation: FieldHelpContent.daytimeOnlyMode,
-                    helperText:
-                        'فعّله إذا كانت جميع أحمالك تعمل نهاراً فقط ولا تحتاج بطاريات.',
                     field: SwitchListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
