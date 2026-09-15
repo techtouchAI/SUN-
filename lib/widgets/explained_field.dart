@@ -13,7 +13,14 @@ class ExplainedField extends StatelessWidget {
     required this.explanation,
     this.helperText,
     this.padding = EdgeInsets.zero,
+    this.compactWidthThreshold = 220,
   });
+
+  /// Below this available width the help button moves underneath the field
+  /// instead of sitting beside it. A 48px trailing button eats most of the
+  /// room inside narrow columns (e.g. the three grid-hours fields), which
+  /// truncates `labelText` to "ساعات …". Stacking keeps labels fully visible.
+  final double compactWidthThreshold;
 
   /// The field being explained (a [TextFormField], a [DropdownButtonFormField],
   /// a [SwitchListTile], a [Slider], ...).
@@ -38,36 +45,58 @@ class ExplainedField extends StatelessWidget {
       height: 1.35,
     );
 
+    Widget helpButton({required bool compact}) => IconButton(
+      tooltip: 'شرح الحقل: ${explanation.title}',
+      onPressed: () => showFieldExplanationSheet(context, explanation),
+      icon: const Icon(Icons.help_outline_rounded),
+      iconSize: 20,
+      color: colorScheme.primary,
+      visualDensity: compact ? VisualDensity.compact : VisualDensity.standard,
+      padding: compact ? EdgeInsets.zero : const EdgeInsets.all(8),
+      // Keep a comfortable touch target without a separate text row.
+      constraints: BoxConstraints.tightFor(
+        width: compact ? 36 : 48,
+        height: compact ? 36 : 48,
+      ),
+    );
+
     return Padding(
       padding: padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact =
+              constraints.maxWidth.isFinite &&
+              constraints.maxWidth < compactWidthThreshold;
+
+          return Column(
+            crossAxisAlignment: isCompact
+                ? CrossAxisAlignment.stretch
+                : CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(child: field),
-              IconButton(
-                tooltip: 'شرح الحقل: ${explanation.title}',
-                onPressed: () =>
-                    showFieldExplanationSheet(context, explanation),
-                icon: const Icon(Icons.help_outline_rounded),
-                iconSize: 20,
-                color: colorScheme.primary,
-                // Keep a comfortable touch target without a separate text row.
-                constraints: const BoxConstraints.tightFor(
-                  width: 48,
-                  height: 48,
+              if (isCompact) ...[
+                // Narrow column: the field keeps the full width so its label
+                // never gets ellipsized, and the help button drops below it.
+                field,
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: helpButton(compact: true),
                 ),
-              ),
+              ] else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: field),
+                    helpButton(compact: false),
+                  ],
+                ),
+              if (helperText != null && helperText!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(helperText!, style: helperStyle),
+              ],
             ],
-          ),
-          if (helperText != null && helperText!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(helperText!, style: helperStyle),
-          ],
-        ],
+          );
+        },
       ),
     );
   }
