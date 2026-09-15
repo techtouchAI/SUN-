@@ -128,16 +128,18 @@ void main() {
     tester,
   ) async {
     final container = await mount(tester);
-    container.read(loadListProvider.notifier).addLoad(
-      LoadModel(
-        name: 'Night load',
-        unit: PowerUnit.watt,
-        powerValue: 1000,
-        dailyUsageHours: 8,
-        daytimeHours: 0,
-        nighttimeHours: 8,
-      ),
-    );
+    container
+        .read(loadListProvider.notifier)
+        .addLoad(
+          LoadModel(
+            name: 'Night load',
+            unit: PowerUnit.watt,
+            powerValue: 1000,
+            dailyUsageHours: 8,
+            daytimeHours: 0,
+            nighttimeHours: 8,
+          ),
+        );
     await tester.pumpAndSettle();
 
     // Default schedule has 0 grid hours and 100% dependency.

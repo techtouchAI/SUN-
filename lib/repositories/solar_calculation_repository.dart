@@ -539,7 +539,7 @@ class SolarCalculationRepository {
       if (daytimeGridServedWh > 0 && panelsForDaytime == 0)
         'الوطنية تغطي كامل أحمال النهار خلال ساعات توفرها؛ لم تُحسب ألواح نهارية. إذا انقطعت الوطنية نهاراً فستحتاج ألواحاً لتغطية تلك الأحمال.',
       if (gridChargeLimitedByHardware && gridSchedule.gridOnHours <= 0)
-        'نسبة الاعتماد على الوطنية لشحن البطاريات ${(gridContributionPercent).toStringAsFixed(0)}% خُصمت من ألواح الشحن، لكن ساعات توفر الوطنية = 0 فلا يمكن تنفيذ الشحن فعلياً. أدخل ساعات التوفر أو اخفض النسبة قبل تنفيذ المنظومة.',
+        'نسبة الاعتماد على الوطنية لشحن البطاريات ${gridContributionPercent.toStringAsFixed(0)}% خُصمت من ألواح الشحن، لكن ساعات توفر الوطنية = 0 فلا يمكن تنفيذ الشحن فعلياً. أدخل ساعات التوفر أو اخفض النسبة قبل تنفيذ المنظومة.',
       if (gridChargeLimitedByHardware && gridSchedule.gridOnHours > 0)
         'قدرة الشحن خلال ساعات توفر الوطنية (${gridSchedule.gridOnHours.toStringAsFixed(0)} ساعة) لا تكفي لتغطية نسبة الاعتماد المطلوبة؛ تم احتساب ${gridChargeEnergyWh.toStringAsFixed(0)}Wh فعلياً من أصل ${requestedGridChargeWh.toStringAsFixed(0)}Wh، يوجد عجز شحن قدره ${(requestedGridChargeWh - gridChargeEnergyWh).toStringAsFixed(0)}Wh لم يُضف إلى الألواح التزاماً بالنسبة المختارة. زِد ساعات الوطنية أو قدرة الشاحن، أو اخفض نسبة الاعتماد على الوطنية قبل تنفيذ المنظومة.',
     ];
