@@ -73,7 +73,11 @@ void main() {
       // Narrow columns keep the field full width so the label is never
       // truncated; the compact help button moves underneath the field.
       expect(fieldRect.width, 140);
-      expect(tester.getSize(find.byType(IconButton)), const Size(36, 36));
+      final helpSize = tester.getSize(find.byType(IconButton));
+      // Material may pad the compact target past the requested 36px, but it
+      // must stay smaller than the standard 48px wide-mode button.
+      expect(helpSize.width, allOf(greaterThanOrEqualTo(36), lessThan(48)));
+      expect(helpSize.height, allOf(greaterThanOrEqualTo(36), lessThan(48)));
       expect(helpRect.top, fieldRect.bottom);
       if (direction == TextDirection.rtl) {
         expect(helpRect.right, fieldRect.right);
