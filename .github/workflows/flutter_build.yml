@@ -2,11 +2,6 @@ name: Flutter Release
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - golden-version
-    paths-ignore:
-      - 'README.md'
     inputs:
       release_version:
         description: 'Flutter version in the form 1.0.19+569. Leave empty to use pubspec.yaml.'
