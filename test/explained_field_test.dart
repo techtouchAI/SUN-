@@ -46,7 +46,7 @@ void main() {
   });
 
   for (final direction in TextDirection.values) {
-    testWidgets('help stays beside its field in narrow $direction layouts', (
+    testWidgets('help drops below the field in narrow $direction layouts', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -70,6 +70,46 @@ void main() {
 
       final fieldRect = tester.getRect(find.byType(TextFormField));
       final helpRect = tester.getRect(find.byType(IconButton));
+      // Narrow columns keep the field full width so the label is never
+      // truncated; the compact help button moves underneath the field.
+      expect(fieldRect.width, 140);
+      expect(tester.getSize(find.byType(IconButton)), const Size(36, 36));
+      expect(helpRect.top, fieldRect.bottom);
+      if (direction == TextDirection.rtl) {
+        expect(helpRect.right, fieldRect.right);
+      } else {
+        expect(helpRect.left, fieldRect.left);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final direction in TextDirection.values) {
+    testWidgets('help stays beside its field in wide $direction layouts', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Directionality(
+              textDirection: direction,
+              child: SizedBox(
+                width: 320,
+                child: ExplainedField(
+                  explanation: explanation,
+                  field: TextFormField(
+                    decoration: const InputDecoration(labelText: 'الساعات'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final fieldRect = tester.getRect(find.byType(TextFormField));
+      final helpRect = tester.getRect(find.byType(IconButton));
+      expect(tester.getSize(find.byType(IconButton)), const Size(48, 48));
       expect(helpRect.top, fieldRect.top);
       if (direction == TextDirection.rtl) {
         expect(helpRect.right, fieldRect.left);
